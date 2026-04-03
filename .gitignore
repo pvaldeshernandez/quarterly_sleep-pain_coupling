@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytensor_cache/
+*.egg-info/
+
+# MATLAB
+*.asv
+
+# Data (real data never committed)
+data/real/
+
+# Large neuroimaging files
+*.nii
+*.nii.gz
+*.mat
+# Exception: atlas NIfTIs in rois/atlases/
+!matlab/rois/atlases/*.nii.gz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
