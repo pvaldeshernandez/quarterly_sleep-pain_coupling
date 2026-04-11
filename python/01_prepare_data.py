@@ -749,7 +749,7 @@ def create_lagged_variables(df):
 # Data Loading (Real vs. Synthetic)
 # ===================================================================
 
-def load_real_data():
+def load_real_data(data_dir=None):
     """Load real quarterly data with gateway imputation.
 
     Gateway imputation: When the gateway question indicates no pain at a
@@ -758,15 +758,23 @@ def load_real_data():
     they had no pain to rate). This is structurally missing data with a
     known value, not imputation of unknown values.
 
+    Parameters
+    ----------
+    data_dir : str, optional
+        Directory containing ``quarterly_data_long.csv`` and
+        ``participants_wideformat.xlsx``. Defaults to :data:`DATA_DIR`.
+
     Returns
     -------
     df : DataFrame
         Quarterly data with gateway imputation applied, restricted to Q1-Q11.
     """
+    if data_dir is None:
+        data_dir = DATA_DIR
     print("  Loading real quarterly data...")
 
-    quarterly = pd.read_csv(os.path.join(DATA_DIR, "quarterly_data_long.csv"))
-    wide = pd.read_excel(os.path.join(DATA_DIR, "participants_wideformat.xlsx"))
+    quarterly = pd.read_csv(os.path.join(data_dir, "quarterly_data_long.csv"))
+    wide = pd.read_excel(os.path.join(data_dir, "participants_wideformat.xlsx"))
 
     # Gateway imputation: q1=0 (no knee pain) -> set q2/q3/q4 NaN to 0
     knee_gate = quarterly["q1_knee_pain"] == 0
@@ -805,7 +813,7 @@ def load_real_data():
     return quarterly
 
 
-def load_synthetic_data():
+def load_synthetic_data(data_dir=None):
     """Load synthetic quarterly data (factor scores already computed).
 
     The synthetic dataset has columns: subject_id, quarter, pain_severity,
@@ -813,14 +821,28 @@ def load_synthetic_data():
     contrast_factor, and sleep_factor that would be produced by the factor
     analysis on real data.
 
+    Parameters
+    ----------
+    data_dir : str, optional
+        Directory containing ``synthetic/quarterly_data_long.csv`` and
+        ``synthetic/participants_wideformat.csv``. If this points directly
+        at a folder containing those CSVs (with or without the
+        ``synthetic/`` suffix), both conventions are tried. Defaults to
+        :data:`DATA_DIR`.
+
     Returns
     -------
     df : DataFrame
         With columns renamed to match the real data pipeline.
     """
+    if data_dir is None:
+        data_dir = DATA_DIR
     print("  Loading synthetic data (factor analysis pre-computed)...")
 
-    synth_dir = os.path.join(DATA_DIR, "synthetic")
+    # Accept either `data/` (with a synthetic/ subfolder) or a directory
+    # that directly contains the synthetic CSVs.
+    candidate = os.path.join(data_dir, "synthetic")
+    synth_dir = candidate if os.path.isdir(candidate) else data_dir
 
     # Load quarterly data
     quarterly = pd.read_csv(os.path.join(synth_dir, "quarterly_data_long.csv"))
@@ -869,6 +891,19 @@ def main():
         "--interpolate", action="store_true",
         help="Linearly interpolate single interior gaps in factor scores"
     )
+    parser.add_argument(
+        "--data-dir", default=None,
+        help="Override input data directory (default: data/). The raw "
+             "quarterly items and participants_wideformat.xlsx are read "
+             "from here for real data, and synthetic/*.csv for --synthetic."
+    )
+    parser.add_argument(
+        "--output-dir", default=None,
+        help="Override output directory for the processed CSV and factor-"
+             "model JSON. Default: data/ for real, data/synthetic/ for "
+             "--synthetic. Downstream steps must be pointed at this same "
+             "directory via their own --data-dir flag."
+    )
     args = parser.parse_args()
 
     print("=" * 70)
@@ -879,15 +914,19 @@ def main():
     else:
         print("  Mode: REAL DATA (full factor analysis pipeline)")
 
+    # Resolve input data directory. For steps 1–5, this is where the
+    # raw quarterly items and participants_wideformat files live.
+    data_dir = args.data_dir if args.data_dir else DATA_DIR
+
     # ------------------------------------------------------------------
     # Stage 1: Load data and compute factor scores
     # ------------------------------------------------------------------
     if args.synthetic:
         # Synthetic data already has factor scores — skip factor analysis
-        df = load_synthetic_data()
+        df = load_synthetic_data(data_dir)
     else:
         # Real data: load raw items and run full factor analysis
-        df = load_real_data()
+        df = load_real_data(data_dir)
 
         # Calibrate the 2-factor PAF model on the 8 pain items
         pain_model = calibrate_pain_factors(df, use_polychoric=args.polychoric)
@@ -952,7 +991,15 @@ def main():
     # in synthetic data)
     output_cols = [c for c in output_cols if c in df.columns]
 
-    if args.synthetic:
+    # Resolve output directory. Semantics:
+    #   - --output-dir wins if set (write directly into that folder)
+    #   - else synthetic writes to data/synthetic/
+    #   - else real writes to data/
+    if args.output_dir:
+        out_dir = args.output_dir
+        out_path = os.path.join(out_dir, "processed_data.csv" if args.synthetic
+                                else "processed_data_contrast.csv")
+    elif args.synthetic:
         out_path = os.path.join(DATA_DIR, "synthetic", "processed_data.csv")
     else:
         out_path = os.path.join(DATA_DIR, "processed_data_contrast.csv")
@@ -979,7 +1026,9 @@ def main():
             "sleep_mean": sleep_params["sleep_mean"],
             "sleep_sd": sleep_params["sleep_sd"],
         }
-        params_file = os.path.join(DATA_DIR, "factor_model_params_contrast.json")
+        params_dir = args.output_dir if args.output_dir else DATA_DIR
+        params_file = os.path.join(params_dir, "factor_model_params_contrast.json")
+        os.makedirs(params_dir, exist_ok=True)
         with open(params_file, "w") as f:
             json.dump(params, f, indent=2)
         print(f"  Factor model parameters saved: {params_file}")

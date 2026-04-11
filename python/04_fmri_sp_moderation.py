@@ -260,10 +260,27 @@ def main():
     parser.add_argument(
         "--synthetic", action="store_true",
         help="Use synthetic data instead of real neuroimaging files")
+    parser.add_argument(
+        "--data-dir", default=None,
+        help="Override input data directory (default: data/). The processed "
+             "CSV from step 01 and the ROI value CSVs are read from here.")
+    parser.add_argument(
+        "--output-dir", default=None,
+        help="Override output directory. Default: results/ for real data, "
+             "results/synthetic/ for --synthetic.")
     args = parser.parse_args()
 
     t0_total = time.time()
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+
+    # Resolve directories
+    data_dir = args.data_dir if args.data_dir else DATA_DIR
+    if args.output_dir:
+        results_dir = args.output_dir
+    elif args.synthetic:
+        results_dir = os.path.join(RESULTS_DIR, "synthetic")
+    else:
+        results_dir = RESULTS_DIR
+    os.makedirs(results_dir, exist_ok=True)
 
     # ------------------------------------------------------------------
     # Step 1: Load coupling data
@@ -272,7 +289,7 @@ def main():
     print("STEP 1: Loading coupling data")
     print("=" * 70)
     df_full, model_df, unique_ids, id_map = load_data(
-        DATA_DIR, synthetic=args.synthetic)
+        data_dir, synthetic=args.synthetic)
 
     # ------------------------------------------------------------------
     # Step 2: Load fMRI ROI moderator values
@@ -293,11 +310,11 @@ def main():
         # Load from real neuroimaging files via the library loaders
         print("\n  Loading Krause ROIs...")
         moderators, labels, raw_stats = load_fmri_krause_rois(
-            DATA_DIR, synthetic=False)
+            data_dir, synthetic=False)
 
         print("\n  Loading ACC ROI...")
         acc_mod, acc_label, acc_stats = load_acc_roi(
-            DATA_DIR, synthetic=False)
+            data_dir, synthetic=False)
         if acc_mod:
             moderators["Right_dACC_MCC"] = acc_mod
             labels["Right_dACC_MCC"] = acc_label
@@ -319,6 +336,7 @@ def main():
 
     all_results = []      # Accumulate results for the summary CSV
     jn_results = []       # Accumulate JN boundary results
+    krause_aggregate = {} # ROI -> dict of arrays for Figure S5 aggregated npz
 
     # Define the ordered list of ROIs to test.
     # Krause ROIs first (for sign concordance), then ACC.
@@ -422,6 +440,29 @@ def main():
             "elapsed_s": elapsed,
         })
 
+        # --- Accumulate draws for the aggregated Krause npz ---
+        # Figure S5 plots the four non-NAcc Krause ROIs as a 2x2 merge
+        # of JN panels. The figure reads a single aggregated npz that
+        # has per-ROI keys ``<ROI>_a2_draws``, ``<ROI>_gamma_sp_draws``,
+        # ``<ROI>_X_vals``, ``<ROI>_raw_mean``, ``<ROI>_raw_sd``. We
+        # build that accumulator here so no refitting is needed.
+        roi_stats_agg = raw_stats.get(roi_name, {"mean": 0.0, "sd": 1.0})
+        X_vals_z_agg = np.array(
+            [X_person[sid] for sid in valid_ids if sid in X_person])
+        if roi_name in (
+            "Right_S1", "Right_Middle_Insula",
+            "Left_Thalamus", "Left_Anterior_Insula",
+        ):
+            krause_aggregate[roi_name] = dict(
+                a2_draws=a2_draws,
+                gamma_sp_draws=gamma_sp,
+                b1_draws=b1_draws,
+                gamma_ps_draws=gamma_ps,
+                X_vals=X_vals_z_agg,
+                raw_mean=roi_stats_agg["mean"],
+                raw_sd=roi_stats_agg["sd"],
+            )
+
         # --- Save posterior draws for significant ROIs ---
         # We save full posteriors for NAcc and ACC to enable JN figure
         # generation without re-fitting.
@@ -449,7 +490,7 @@ def main():
             else:
                 npz_name = f"{roi_name.lower()}_posterior_draws.npz"
 
-            npz_path = os.path.join(RESULTS_DIR, npz_name)
+            npz_path = os.path.join(results_dir, npz_name)
 
             # Get raw ROI values for back-transformation
             roi_stats = raw_stats.get(roi_name, {"mean": 0.0, "sd": 1.0})
@@ -548,16 +589,28 @@ def main():
 
     # Save the main results CSV (all 7 ROIs)
     results_df = pd.DataFrame(all_results)
-    csv_path = os.path.join(RESULTS_DIR, "fmri_sp_moderation_results.csv")
+    csv_path = os.path.join(results_dir, "fmri_sp_moderation_results.csv")
     results_df.to_csv(csv_path, index=False)
     print(f"  Saved: {csv_path}")
 
     # Save JN results if any boundaries were found
     if jn_results:
         jn_df = pd.DataFrame(jn_results)
-        jn_csv = os.path.join(RESULTS_DIR, "fmri_sp_jn_results.csv")
+        jn_csv = os.path.join(results_dir, "fmri_sp_jn_results.csv")
         jn_df.to_csv(jn_csv, index=False)
         print(f"  Saved: {jn_csv}")
+
+    # Save the aggregated Krause posterior draws for Figure S5
+    if krause_aggregate:
+        krause_npz_path = os.path.join(
+            results_dir, "krause_roi_posterior_draws.npz")
+        krause_save = {}
+        for roi_name, arrays in krause_aggregate.items():
+            for key, val in arrays.items():
+                krause_save[f"{roi_name}_{key}"] = np.asarray(val)
+        np.savez(krause_npz_path, **krause_save)
+        print(f"  Saved: {krause_npz_path}  "
+              f"({len(krause_aggregate)} ROIs)")
 
     # ------------------------------------------------------------------
     # Final summary

@@ -316,9 +316,14 @@ def run_modality(modality_name, moderators, labels, raw_stats,
         One dict per ROI with moderation results.
     jn_results : list of dict
         JN boundary information for ROIs with p < 0.10.
+    roi_draws : dict
+        ROI -> dict of posterior arrays (b1_draws, gamma_ps_draws,
+        gamma_sp_draws, X_vals, raw_mean, raw_sd). Consumed by
+        ``save_arousal_aggregate`` to build the Figure S7/S8 npz.
     """
     results = []
     jn_results = []
+    roi_draws = {}
 
     # Ordered ROI list (same order as ATLAS_AROUSAL_ROIS definition)
     roi_order = list(ATLAS_AROUSAL_ROIS.keys())
@@ -406,6 +411,20 @@ def run_modality(modality_name, moderators, labels, raw_stats,
             "elapsed_s": elapsed,
         })
 
+        # --- Accumulate posterior draws for Figures S7/S8 ---
+        # The figure reads per-ROI keys from a single aggregated npz.
+        X_vals_z_agg = np.array(
+            [X_person[sid] for sid in valid_ids if sid in X_person])
+        roi_stats_agg = raw_stats.get(roi_name, {"mean": 0.0, "sd": 1.0})
+        roi_draws[roi_name] = dict(
+            b1_draws=b1_draws,
+            gamma_ps_draws=gamma_ps,
+            gamma_sp_draws=gamma_sp,
+            X_vals=X_vals_z_agg,
+            raw_mean=roi_stats_agg["mean"],
+            raw_sd=roi_stats_agg["sd"],
+        )
+
         # --- Johnson-Neyman analysis ---
         # Run for ROIs with suggestive PS moderation (p < 0.10)
         if ps_p < 0.10:
@@ -448,7 +467,7 @@ def run_modality(modality_name, moderators, labels, raw_stats,
                 print(f"      z={z_val:+d} (raw={raw_val:.4f}): "
                       f"coupling={m:.3f} [{lo:.3f}, {hi:.3f}]{sig}")
 
-    return results, jn_results
+    return results, jn_results, roi_draws
 
 
 # ===================================================================
@@ -462,10 +481,26 @@ def main():
     parser.add_argument(
         "--synthetic", action="store_true",
         help="Use synthetic data instead of real neuroimaging files")
+    parser.add_argument(
+        "--data-dir", default=None,
+        help="Override input data directory (default: data/).")
+    parser.add_argument(
+        "--output-dir", default=None,
+        help="Override output directory. Default: results/ for real data, "
+             "results/synthetic/ for --synthetic.")
     args = parser.parse_args()
 
     t0_total = time.time()
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+
+    # Resolve directories
+    data_dir = args.data_dir if args.data_dir else DATA_DIR
+    if args.output_dir:
+        results_dir = args.output_dir
+    elif args.synthetic:
+        results_dir = os.path.join(RESULTS_DIR, "synthetic")
+    else:
+        results_dir = RESULTS_DIR
+    os.makedirs(results_dir, exist_ok=True)
 
     # ------------------------------------------------------------------
     # Step 1: Load coupling data
@@ -474,7 +509,7 @@ def main():
     print("STEP 1: Loading coupling data")
     print("=" * 70)
     df_full, model_df, unique_ids, id_map = load_data(
-        DATA_DIR, synthetic=args.synthetic)
+        data_dir, synthetic=args.synthetic)
 
     # ------------------------------------------------------------------
     # Step 2: Load fMRI arousal ROI values
@@ -487,7 +522,7 @@ def main():
         fmri_mods, fmri_labels, fmri_stats = _load_synthetic_fmri_arousal()
     else:
         fmri_mods, fmri_labels, fmri_stats = load_fmri_atlas_arousal(
-            DATA_DIR, synthetic=False)
+            data_dir, synthetic=False)
 
     print(f"  Loaded {len(fmri_mods)} fMRI arousal ROIs")
     for roi_name, values in fmri_mods.items():
@@ -504,7 +539,7 @@ def main():
         vbm_mods, vbm_labels, vbm_stats = _load_synthetic_vbm_arousal()
     else:
         vbm_mods, vbm_labels, vbm_stats = load_vbm_atlas_arousal(
-            DATA_DIR, synthetic=False)
+            data_dir, synthetic=False)
 
     print(f"  Loaded {len(vbm_mods)} VBM arousal ROIs")
     for roi_name, values in vbm_mods.items():
@@ -517,7 +552,7 @@ def main():
     print("STEP 3: Running fMRI BOLD arousal PS moderation models")
     print("=" * 70)
 
-    fmri_results, fmri_jn = run_modality(
+    fmri_results, fmri_jn, fmri_roi_draws = run_modality(
         "fMRI BOLD", fmri_mods, fmri_labels, fmri_stats,
         model_df, unique_ids, id_map)
 
@@ -528,7 +563,7 @@ def main():
     print("STEP 4: Running VBM GM volume arousal PS moderation models")
     print("=" * 70)
 
-    vbm_results, vbm_jn = run_modality(
+    vbm_results, vbm_jn, vbm_roi_draws = run_modality(
         "VBM GM volume", vbm_mods, vbm_labels, vbm_stats,
         model_df, unique_ids, id_map)
 
@@ -572,7 +607,7 @@ def main():
     if fmri_results:
         fmri_df = pd.DataFrame(fmri_results)
         fmri_csv = os.path.join(
-            RESULTS_DIR, "arousal_fmri_moderation_results.csv")
+            results_dir, "arousal_fmri_moderation_results.csv")
         fmri_df.to_csv(fmri_csv, index=False)
         print(f"  Saved: {fmri_csv}")
 
@@ -580,15 +615,37 @@ def main():
     if vbm_results:
         vbm_df = pd.DataFrame(vbm_results)
         vbm_csv = os.path.join(
-            RESULTS_DIR, "arousal_vbm_moderation_results.csv")
+            results_dir, "arousal_vbm_moderation_results.csv")
         vbm_df.to_csv(vbm_csv, index=False)
         print(f"  Saved: {vbm_csv}")
+
+    # Save aggregated posterior draws for Figures S7 (fMRI) and S8 (VBM).
+    # Each ROI is saved with a prefix so the figure code can iterate
+    # over `<ROI>_b1_draws`, `<ROI>_gamma_ps_draws`, etc.
+    def _save_aggregate(path, roi_draws_dict):
+        if not roi_draws_dict:
+            return
+        flat = {}
+        for roi_name, arrays in roi_draws_dict.items():
+            for key, val in arrays.items():
+                flat[f"{roi_name}_{key}"] = np.asarray(val)
+        np.savez(path, **flat)
+        print(f"  Saved: {path}  ({len(roi_draws_dict)} ROIs)")
+
+    _save_aggregate(
+        os.path.join(results_dir, "fmri_arousal_posterior_draws.npz"),
+        fmri_roi_draws,
+    )
+    _save_aggregate(
+        os.path.join(results_dir, "vbm_arousal_posterior_draws.npz"),
+        vbm_roi_draws,
+    )
 
     # Save JN results (combined across modalities)
     all_jn = fmri_jn + vbm_jn
     if all_jn:
         jn_df = pd.DataFrame(all_jn)
-        jn_csv = os.path.join(RESULTS_DIR, "arousal_jn_results.csv")
+        jn_csv = os.path.join(results_dir, "arousal_jn_results.csv")
         jn_df.to_csv(jn_csv, index=False)
         print(f"  Saved: {jn_csv}")
 

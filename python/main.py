@@ -84,8 +84,27 @@ def _format_duration(seconds):
     return f"{seconds:.1f}s"
 
 
-def _run_step(step, synthetic, python_exe):
-    """Run one pipeline step as a subprocess, returning elapsed time."""
+def _run_step(step, synthetic, python_exe, data_dir=None, output_dir=None,
+              figures_dir=None, interpolate=False):
+    """Run one pipeline step as a subprocess, returning elapsed time.
+
+    Parameters
+    ----------
+    step : dict
+        Pipeline step definition (with "number", "label", "script" keys).
+    synthetic : bool
+        Forward --synthetic to the sub-script.
+    python_exe : str
+        Python interpreter to use.
+    data_dir : str, optional
+        Forward --data-dir to the sub-script.
+    output_dir : str, optional
+        Forward --output-dir to the sub-script.
+    figures_dir : str, optional
+        Forward --figures-dir to the sub-script (only step 6 uses it).
+    interpolate : bool
+        Forward --interpolate to step 1 (ignored by other steps).
+    """
     script = step["script"]
     label = step["label"]
     number = step["number"]
@@ -99,9 +118,38 @@ def _run_step(step, synthetic, python_exe):
     if synthetic:
         cmd.append("--synthetic")
 
+    # Step 1's output is the processed data CSV — it goes into
+    # --output-dir if that's set, otherwise the default data/. For
+    # step 1, the meaning of --data-dir is "where to find the raw
+    # inputs" and --output-dir is "where to put the processed CSV".
+    # For all other steps, --data-dir points at the processed CSV.
+    if number == 1:
+        # Step 1 reads raw inputs from data_dir and writes processed
+        # output to output_dir. When running a sandbox, we typically
+        # leave the raw data where it is and redirect the processed
+        # output into the sandbox folder.
+        if data_dir:
+            cmd.extend(["--data-dir", data_dir])
+        if output_dir:
+            cmd.extend(["--output-dir", output_dir])
+        if interpolate:
+            cmd.append("--interpolate")
+    else:
+        # Steps 2-6: both flags point at the sandbox if used.
+        # --data-dir is where to find the processed CSV (which is
+        # produced by step 1 into output_dir).
+        effective_data_dir = data_dir or output_dir
+        if effective_data_dir:
+            cmd.extend(["--data-dir", effective_data_dir])
+        if output_dir:
+            cmd.extend(["--output-dir", output_dir])
+        if number == 6 and figures_dir:
+            cmd.extend(["--figures-dir", figures_dir])
+
     print(f"\n{'=' * 60}")
     print(f"  Step {number}: {label}")
     print(f"  Script: {os.path.basename(script)}")
+    print(f"  Command: {' '.join(cmd)}")
     print(f"{'=' * 60}\n")
 
     t0 = time.time()
@@ -127,14 +175,18 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  python python/main.py                  "
-            "# Full pipeline, real data\n"
-            "  python python/main.py --synthetic      "
+            "  python python/main.py                              "
+            "# Full pipeline, real data, default paths\n"
+            "  python python/main.py --synthetic                  "
             "# Full pipeline, synthetic data\n"
-            "  python python/main.py --step 3         "
+            "  python python/main.py --step 3                     "
             "# Start from step 3\n"
-            "  python python/main.py --step 6         "
+            "  python python/main.py --step 6                     "
             "# Regenerate figures only\n"
+            "  python python/main.py --output-dir sandbox/run1    "
+            "# Sandbox run with all outputs under sandbox/run1/\n"
+            "  python python/main.py --synthetic "
+            "--output-dir sandbox/synth    # Sandbox synthetic run\n"
         ),
     )
     parser.add_argument(
@@ -145,10 +197,52 @@ def main():
         "--step", type=int, default=1, choices=range(1, len(STEPS) + 1),
         help="Start from this step number (default: 1).",
     )
+    parser.add_argument(
+        "--data-dir", default=None,
+        help="Override input raw data directory (default: data/). "
+             "Step 1 reads raw quarterly items and participants_wideformat "
+             "from here. If --output-dir is set but --data-dir is not, "
+             "the default data/ is still used for raw inputs.",
+    )
+    parser.add_argument(
+        "--output-dir", default=None,
+        help="Override output directory where all results, posterior draws, "
+             "and figures are written. Useful for sandbox runs that must "
+             "not touch the default results/ and figures/ folders. "
+             "Step 1 writes processed_data_contrast.csv here; steps 2-5 "
+             "read from here and write their own outputs here; step 6 "
+             "writes figures to {output-dir}/figures/.",
+    )
+    parser.add_argument(
+        "--figures-dir", default=None,
+        help="Override figure output directory (default: {output-dir}/figures "
+             "if --output-dir is set, else figures/).",
+    )
+    parser.add_argument(
+        "--no-interpolate", action="store_true",
+        help="Disable linear interpolation of single interior gaps in step 1. "
+             "By default (to match the published sample of 229/1818), step 1 "
+             "runs with --interpolate, which fills single missing quarters "
+             "between observed ones and allows 13 additional subjects with "
+             "short but interpolable segments to contribute to the model.",
+    )
     args = parser.parse_args()
 
     python_exe = sys.executable
     mode_label = "SYNTHETIC" if args.synthetic else "REAL"
+
+    # Resolve absolute paths for clarity in the log
+    def _resolve_abs(path):
+        if path is None:
+            return None
+        return path if os.path.isabs(path) else os.path.join(REPO_ROOT, path)
+
+    abs_output_dir = _resolve_abs(args.output_dir)
+    abs_data_dir = _resolve_abs(args.data_dir)
+    abs_figures_dir = _resolve_abs(args.figures_dir)
+
+    if abs_output_dir:
+        os.makedirs(abs_output_dir, exist_ok=True)
 
     print()
     print("=" * 60)
@@ -157,15 +251,32 @@ def main():
     print(f"  Starting from step: {args.step}")
     print(f"  Python: {python_exe}")
     print(f"  Repo:   {REPO_ROOT}")
+    if abs_data_dir:
+        print(f"  Data:   {abs_data_dir}")
+    if abs_output_dir:
+        print(f"  Output: {abs_output_dir}")
+    if abs_figures_dir:
+        print(f"  Figs:   {abs_figures_dir}")
     print("=" * 60)
 
     step_times = {}
     t_total_start = time.time()
 
+    # By default we interpolate single gaps to match the published sample
+    # of 229 subjects / 1818 observations. Users who want the stricter
+    # no-interpolation sample (216/1571) can pass --no-interpolate.
+    interpolate = not args.no_interpolate and not args.synthetic
+
     for step in STEPS:
         if step["number"] < args.step:
             continue
-        elapsed = _run_step(step, args.synthetic, python_exe)
+        elapsed = _run_step(
+            step, args.synthetic, python_exe,
+            data_dir=abs_data_dir,
+            output_dir=abs_output_dir,
+            figures_dir=abs_figures_dir,
+            interpolate=interpolate,
+        )
         step_times[step["number"]] = (step["label"], elapsed)
 
     t_total = time.time() - t_total_start

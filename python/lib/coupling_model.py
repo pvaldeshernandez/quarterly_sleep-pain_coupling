@@ -168,13 +168,26 @@ def load_data(data_dir, synthetic=False):
     Parameters
     ----------
     data_dir : str
-        Path to the top-level ``data/`` directory of the repository.
-        For real data: expects ``data/processed_data_contrast.csv``.
-        For synthetic data: expects ``data/synthetic/processed_data.csv``.
+        Path containing the processed CSV. The loader tries the standard
+        layouts first and falls back to looking directly inside
+        ``data_dir``:
+
+          * Real data:
+              ``{data_dir}/processed_data_contrast.csv``         (default)
+              ``{data_dir}/processed_data.csv``                  (sandbox)
+
+          * Synthetic data:
+              ``{data_dir}/synthetic/processed_data.csv``        (default)
+              ``{data_dir}/processed_data.csv``                  (sandbox)
+
+        Passing a sandbox directory (where the processed CSV sits at the
+        top level) works for both modes without having to create a
+        ``synthetic/`` subfolder.
     synthetic : bool, default False
-        If True, load from the ``synthetic/`` subdirectory. Synthetic data
-        preserves the statistical structure of the original dataset but
-        contains no identifiable information.
+        If True, interpret the processed CSV as synthetic (already has
+        pre-computed factor scores and no factor-analysis parameters
+        file). Synthetic data preserves the statistical structure of the
+        original dataset but contains no identifiable information.
 
     Returns
     -------
@@ -189,11 +202,26 @@ def load_data(data_dir, synthetic=False):
     id_map : dict
         Mapping from subject ID to integer index {ID: int}.
     """
-    # Choose the appropriate CSV file
+    # Build a search list of candidate CSV paths and take the first one
+    # that exists. This supports both the legacy layout (data/, with a
+    # synthetic/ subfolder) and the sandbox layout (a single directory
+    # where the processed CSV sits at the top level).
     if synthetic:
-        csv_path = os.path.join(data_dir, "synthetic", "processed_data.csv")
+        candidates = [
+            os.path.join(data_dir, "synthetic", "processed_data.csv"),
+            os.path.join(data_dir, "processed_data.csv"),
+        ]
     else:
-        csv_path = os.path.join(data_dir, "processed_data_contrast.csv")
+        candidates = [
+            os.path.join(data_dir, "processed_data_contrast.csv"),
+            os.path.join(data_dir, "processed_data.csv"),
+        ]
+
+    csv_path = next((p for p in candidates if os.path.exists(p)), None)
+    if csv_path is None:
+        raise FileNotFoundError(
+            f"No processed data found in {data_dir!r}. Tried: {candidates}"
+        )
 
     df = pd.read_csv(csv_path)
 

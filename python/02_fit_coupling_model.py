@@ -184,6 +184,54 @@ def save_coupling_results(idata, model_df, unique_ids, results_dir, synthetic):
     print(f"  Saved: {results_csv}")
 
     # ------------------------------------------------------------------
+    # Per-person coupling estimates (for Figures 2 and 3)
+    # ------------------------------------------------------------------
+    # Each person's coupling slope is a2 + u_sp_i (for Sleep->Pain) or
+    # b1 + u_ps_i (for Pain->Sleep). We combine the population draws
+    # with the person-specific random effects to get the full posterior
+    # distribution of every person's slope, then summarise with mean +
+    # 95% credible interval. The resulting DataFrame has one row per
+    # subject with columns:
+    #   ID              - participant identifier
+    #   beta_sp_mean    - posterior mean of lambda_sp_i
+    #   beta_sp_ci_lo   - 2.5 percentile
+    #   beta_sp_ci_hi   - 97.5 percentile
+    #   beta_sp_prob_neg - P(slope < 0 | data)
+    #   beta_ps_mean    - same for lambda_ps_i
+    #   beta_ps_ci_lo
+    #   beta_ps_ci_hi
+    #   beta_ps_prob_neg
+    # Figure generation scripts read this file (not the single-row
+    # coupling_results.csv) for the boxstrip+forest panels.
+    a2_flat = idata.posterior["a2"].values.reshape(-1)
+    b1_flat = idata.posterior["b1"].values.reshape(-1)
+    u_sp_flat = idata.posterior["u_sp"].values.reshape(-1, n_persons)
+    u_ps_flat = idata.posterior["u_ps"].values.reshape(-1, n_persons)
+
+    lambda_sp_i = a2_flat[:, None] + u_sp_flat   # (n_draws, n_persons)
+    lambda_ps_i = b1_flat[:, None] + u_ps_flat
+
+    person_rows = []
+    for i, pid in enumerate(unique_ids):
+        sp_draws = lambda_sp_i[:, i]
+        ps_draws = lambda_ps_i[:, i]
+        person_rows.append({
+            "ID": pid,
+            "beta_sp_mean": float(np.mean(sp_draws)),
+            "beta_sp_ci_lo": float(np.percentile(sp_draws, 2.5)),
+            "beta_sp_ci_hi": float(np.percentile(sp_draws, 97.5)),
+            "beta_sp_prob_neg": float((sp_draws < 0).mean()),
+            "beta_ps_mean": float(np.mean(ps_draws)),
+            "beta_ps_ci_lo": float(np.percentile(ps_draws, 2.5)),
+            "beta_ps_ci_hi": float(np.percentile(ps_draws, 97.5)),
+            "beta_ps_prob_neg": float((ps_draws < 0).mean()),
+        })
+    person_df = pd.DataFrame(person_rows)
+    person_csv = os.path.join(results_dir, "person_coupling_estimates.csv")
+    person_df.to_csv(person_csv, index=False)
+    print(f"  Saved: {person_csv}  ({len(person_df)} subjects)")
+
+    # ------------------------------------------------------------------
     # Generate human-readable summary text
     # ------------------------------------------------------------------
     summary_path = os.path.join(results_dir, "coupling_summary.txt")
@@ -378,10 +426,30 @@ def main():
         "--no-agesex", action="store_true",
         help="Omit age and sex moderation from the full model"
     )
+    parser.add_argument(
+        "--data-dir", default=None,
+        help="Override data directory (default: data/ or data/synthetic/). "
+             "If set, the script reads processed_data_contrast.csv from here."
+    )
+    parser.add_argument(
+        "--output-dir", default=None,
+        help="Override output directory. All results, summaries, and "
+             "posterior draws are written here. Default: results/ for real "
+             "data, results/synthetic/ for synthetic."
+    )
     args = parser.parse_args()
 
-    # Determine output directory
-    results_dir = RESULTS_DIR
+    # Resolve data directory
+    data_dir = args.data_dir if args.data_dir else DATA_DIR
+
+    # Resolve output directory: --output-dir wins; otherwise fall back to
+    # the legacy behavior (results/ for real, results/synthetic/ for synth).
+    if args.output_dir:
+        results_dir = args.output_dir
+    elif args.synthetic:
+        results_dir = os.path.join(RESULTS_DIR, "synthetic")
+    else:
+        results_dir = RESULTS_DIR
     os.makedirs(results_dir, exist_ok=True)
 
     print("=" * 70)
@@ -402,7 +470,7 @@ def main():
     # ------------------------------------------------------------------
     print("\n  Loading processed data...")
     df_full, model_df, unique_ids, id_map = load_data(
-        DATA_DIR, synthetic=args.synthetic
+        data_dir, synthetic=args.synthetic
     )
 
     # ------------------------------------------------------------------
@@ -434,7 +502,7 @@ def main():
         print("=" * 70)
         print("  Fitting 4 nested models for LOO comparison...")
         print("  (This will take approximately 4x the single-model fitting time)")
-        comparison = compute_loo_comparison(DATA_DIR, synthetic=args.synthetic)
+        comparison = compute_loo_comparison(data_dir, synthetic=args.synthetic)
         save_loo_comparison(comparison, results_dir)
 
     print("\n" + "=" * 70)

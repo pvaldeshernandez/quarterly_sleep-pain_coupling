@@ -161,9 +161,28 @@ def main():
         "--synthetic", action="store_true",
         help="Use synthetic data paths"
     )
+    parser.add_argument(
+        "--data-dir", default=None,
+        help="(Accepted for interface consistency with other steps but "
+             "unused — step 3 reads only from --output-dir.)"
+    )
+    parser.add_argument(
+        "--output-dir", default=None,
+        help="Directory containing step-02 posterior draws and where "
+             "step-03 results will be written. Default: results/ for "
+             "real data, results/synthetic/ for synthetic."
+    )
     args = parser.parse_args()
 
-    os.makedirs(RESULTS_DIR, exist_ok=True)
+    # Resolve output directory (step 3 reads the step-2 output and writes
+    # its own results alongside, so the directory must match)
+    if args.output_dir:
+        results_dir = args.output_dir
+    elif args.synthetic:
+        results_dir = os.path.join(RESULTS_DIR, "synthetic")
+    else:
+        results_dir = RESULTS_DIR
+    os.makedirs(results_dir, exist_ok=True)
 
     print("=" * 70)
     print("CONTRAST MODERATION AND JOHNSON-NEYMAN ANALYSIS")
@@ -172,7 +191,7 @@ def main():
     # ------------------------------------------------------------------
     # Load saved posterior draws from script 02
     # ------------------------------------------------------------------
-    posterior_path = os.path.join(RESULTS_DIR, "contrast_posterior_draws.npz")
+    posterior_path = os.path.join(results_dir, "contrast_posterior_draws.npz")
     if not os.path.exists(posterior_path):
         print(
             f"\n  ERROR: Posterior draws not found at {posterior_path}\n"
@@ -299,7 +318,7 @@ def main():
     # These come from a3 and b3 in the posterior draws.
     # Since a3 and b3 are not saved in the npz, we compute from the
     # coupling_results.csv if available, or note them as N/A.
-    coupling_csv = os.path.join(RESULTS_DIR, "coupling_results.csv")
+    coupling_csv = os.path.join(results_dir, "coupling_results.csv")
     if os.path.exists(coupling_csv):
         coupling_df = pd.read_csv(coupling_csv)
         for code_var, direction, description in [
@@ -343,14 +362,14 @@ def main():
                 "p_twotail": 2 * min(vals["prob_neg"], 1 - vals["prob_neg"]),
             })
 
-    results_csv = os.path.join(RESULTS_DIR, "contrast_moderation_results.csv")
+    results_csv = os.path.join(results_dir, "contrast_moderation_results.csv")
     pd.DataFrame(results_rows).to_csv(results_csv, index=False)
     print(f"\n  Saved: {results_csv}")
 
     # ------------------------------------------------------------------
     # Save JN boundary information as text
     # ------------------------------------------------------------------
-    jn_path = os.path.join(RESULTS_DIR, "contrast_jn_boundary.txt")
+    jn_path = os.path.join(results_dir, "contrast_jn_boundary.txt")
     with open(jn_path, "w") as f:
         f.write("Johnson-Neyman Analysis: Contrast Moderation of Coupling\n")
         f.write("=" * 60 + "\n\n")

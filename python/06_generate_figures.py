@@ -70,14 +70,42 @@ from coupling_model import compute_jn_curve
 # Helpers
 # ===================================================================
 
-def _resolve_paths(synthetic):
-    """Return (data_dir, results_dir, figures_dir) for real or synthetic mode."""
-    data_dir = os.path.join(REPO_ROOT, "data")
-    if synthetic:
+def _resolve_paths(synthetic, data_dir_override=None,
+                   output_dir_override=None, figures_dir_override=None):
+    """Return (data_dir, results_dir, figures_dir) for real or synthetic mode.
+
+    Parameters
+    ----------
+    synthetic : bool
+        If True, default paths point at ``results/synthetic/`` and
+        ``figures/synthetic/``.
+    data_dir_override : str, optional
+        Use this directory for input data instead of ``data/``.
+    output_dir_override : str, optional
+        Use this directory for reading posterior draws / result CSVs.
+        Overrides the synthetic/real default for ``results_dir``.
+    figures_dir_override : str, optional
+        Use this directory for writing figures. If None and
+        ``output_dir_override`` is given, figures are written into
+        ``output_dir_override/figures``; otherwise defaults are used.
+    """
+    data_dir = data_dir_override if data_dir_override else os.path.join(
+        REPO_ROOT, "data"
+    )
+    if output_dir_override:
+        results_dir = output_dir_override
+    elif synthetic:
         results_dir = os.path.join(REPO_ROOT, "results", "synthetic")
-        figures_dir = os.path.join(REPO_ROOT, "figures", "synthetic")
     else:
         results_dir = os.path.join(REPO_ROOT, "results")
+
+    if figures_dir_override:
+        figures_dir = figures_dir_override
+    elif output_dir_override:
+        figures_dir = os.path.join(output_dir_override, "figures")
+    elif synthetic:
+        figures_dir = os.path.join(REPO_ROOT, "figures", "synthetic")
+    else:
         figures_dir = os.path.join(REPO_ROOT, "figures")
     return data_dir, results_dir, figures_dir
 
@@ -91,19 +119,44 @@ def _file_exists(path, label):
 
 
 def _parse_population_params(summary_path):
-    """Parse population-level coupling params from coupling_summary.txt."""
+    """Parse population-level coupling params from coupling_summary.txt.
+
+    Accepts both the current one-line format written by
+    ``02_fit_coupling_model.py``::
+
+        Sleep->Pain (a2/lambda_sp): 0.0100 [-0.0251, 0.0449]  P(< 0) = 0.289
+
+    and the older multi-line format with explicit ``Population:`` /
+    ``P(beta < 0) =`` labels.
+    """
     with open(summary_path) as f:
         text = f.read()
 
     params = {}
-    for direction, label in [("sp", "Sleep->Pain (a2)"),
-                              ("ps", "Pain->Sleep (b1)")]:
-        block = re.search(
-            re.escape(label) + r".*?Population: mean=([-\d.]+), "
-            r"95% CI=\[([-\d.]+), ([-\d.]+)\].*?"
-            r"P\(beta < 0\) = ([\d.]+)",
-            text, re.DOTALL,
+    for direction, label_prefix in [
+        ("sp", "Sleep->Pain (a2"),
+        ("ps", "Pain->Sleep (b1"),
+    ]:
+        # Current format: "Label: MEAN [CI_LO, CI_HI]  P(< 0) = PROB"
+        # where Label might be "Sleep->Pain (a2)" or
+        # "Sleep->Pain (a2/lambda_sp)".
+        pattern = (
+            re.escape(label_prefix) + r"[^)]*\):\s*"
+            r"([-\d.]+)\s*\[([-\d.]+),\s*([-\d.]+)\]\s*"
+            r"P\(<\s*0\)\s*=\s*([\d.]+)"
         )
+        block = re.search(pattern, text)
+        if not block:
+            # Legacy format: Population: mean=..., 95% CI=[...]
+            # P(beta < 0) = ...
+            legacy = re.search(
+                re.escape(label_prefix) + r".*?Population:\s*mean=([-\d.]+),\s*"
+                r"95% CI=\[([-\d.]+),\s*([-\d.]+)\].*?"
+                r"P\(beta\s*<\s*0\)\s*=\s*([\d.]+)",
+                text, re.DOTALL,
+            )
+            block = legacy
+
         if block:
             params[direction] = {
                 "beta": float(block.group(1)),
@@ -156,25 +209,71 @@ def _find_segments(quarters_with_data):
     return segments
 
 
+def _find_processed_csv(data_dir, synthetic):
+    """Return the first existing processed-data CSV for this mode.
+
+    Supports both the legacy layout (data/processed_data_contrast.csv
+    for real, data/synthetic/processed_data.csv for synthetic) and the
+    sandbox layout (processed_data.csv or processed_data_contrast.csv
+    directly inside data_dir).
+    """
+    if synthetic:
+        candidates = [
+            os.path.join(data_dir, "synthetic", "processed_data.csv"),
+            os.path.join(data_dir, "processed_data.csv"),
+        ]
+    else:
+        candidates = [
+            os.path.join(data_dir, "processed_data_contrast.csv"),
+            os.path.join(data_dir, "processed_data.csv"),
+        ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _find_raw_quarterly_csv(data_dir, synthetic):
+    """Return the raw quarterly CSV path if it exists.
+
+    Falls back to the default ``data/`` folder under the repo root when
+    not found in ``data_dir`` (this supports sandbox layouts where only
+    the processed CSV is copied and the raw inputs stay in the repo).
+    """
+    default_data = os.path.join(REPO_ROOT, "data")
+    if synthetic:
+        candidates = [
+            os.path.join(data_dir, "synthetic", "quarterly_data_long.csv"),
+            os.path.join(data_dir, "quarterly_data_long.csv"),
+            os.path.join(default_data, "synthetic", "quarterly_data_long.csv"),
+        ]
+    else:
+        candidates = [
+            os.path.join(data_dir, "quarterly_data_long.csv"),
+            os.path.join(default_data, "quarterly_data_long.csv"),
+        ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def generate_figure1(data_dir, results_dir, figures_dir, synthetic):
     """Figure 1: Data availability grid (participants x quarters)."""
     print("  Figure 1: Data availability grid")
 
-    if synthetic:
-        csv_path = os.path.join(data_dir, "synthetic", "processed_data.csv")
-    else:
-        csv_path = os.path.join(data_dir, "processed_data_contrast.csv")
-
-    if not _file_exists(csv_path, "Figure 1"):
+    csv_path = _find_processed_csv(data_dir, synthetic)
+    if csv_path is None:
+        print(f"  SKIP Figure 1: processed data CSV not found in {data_dir}")
         return
 
     proc = pd.read_csv(csv_path)
 
     # For synthetic data we don't have the raw quarterly_data_long with
     # individual items, so we treat all processed points as "observed"
+    raw_path = _find_raw_quarterly_csv(data_dir, synthetic)
     if synthetic:
-        raw_path = os.path.join(data_dir, "synthetic", "quarterly_data_long.csv")
-        if os.path.exists(raw_path):
+        if raw_path is not None:
             raw = pd.read_csv(raw_path)
             raw["has_both_raw"] = (
                 raw["pain_severity"].notna() & raw["sleep_quality"].notna()
@@ -182,8 +281,7 @@ def generate_figure1(data_dir, results_dir, figures_dir, synthetic):
         else:
             raw = None
     else:
-        raw_path = os.path.join(data_dir, "quarterly_data_long.csv")
-        if os.path.exists(raw_path):
+        if raw_path is not None:
             raw = pd.read_csv(raw_path)
             raw = raw[raw["quarter"] >= 1].copy()
             pain_items = [
@@ -480,19 +578,27 @@ def _make_coupling_figure(df, pop_params, direction, title_label, fname,
 
 
 def generate_figures2_3(data_dir, results_dir, figures_dir, synthetic):
-    """Figures 2 and 3: Person-specific coupling (boxstrip + forest)."""
+    """Figures 2 and 3: Person-specific coupling (boxstrip + forest).
+
+    Reads the per-person posterior summaries from
+    ``person_coupling_estimates.csv`` (produced by
+    ``02_fit_coupling_model.py``) and the population-level summary from
+    ``coupling_summary.txt``. The per-person CSV has one row per
+    subject with ``beta_sp_mean``, ``beta_sp_ci_lo/hi``,
+    ``beta_ps_mean``, ``beta_ps_ci_lo/hi`` columns.
+    """
     print("  Figure 2: Pain-to-sleep coupling")
     print("  Figure 3: Sleep-to-pain coupling")
 
-    csv_path = os.path.join(results_dir, "coupling_results.csv")
+    person_csv = os.path.join(results_dir, "person_coupling_estimates.csv")
     summary_path = os.path.join(results_dir, "coupling_summary.txt")
 
-    if not _file_exists(csv_path, "Figures 2-3"):
+    if not _file_exists(person_csv, "Figures 2-3"):
         return
     if not _file_exists(summary_path, "Figures 2-3"):
         return
 
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(person_csv)
     pop_params = _parse_population_params(summary_path)
 
     _make_coupling_figure(df, pop_params, "ps",
@@ -776,9 +882,15 @@ def generate_figure5(data_dir, results_dir, figures_dir, synthetic):
     u_sp_mean = d["u_sp_mean"]
     person_x_z = d["person_x_z"]
     X_vals = d["X_vals"]
-    nacc_mean = float(d["nacc_mean"])
-    nacc_sd = float(d["nacc_sd"])
-    raw_nacc_vals = d["raw_nacc_vals"]
+    # Accept either ROI-specific keys (nacc_mean/nacc_sd/raw_nacc_vals)
+    # or the generic keys written by step 4 (roi_mean/roi_sd/X_vals).
+    nacc_mean = float(d["nacc_mean"] if "nacc_mean" in d.files else d["roi_mean"])
+    nacc_sd = float(d["nacc_sd"] if "nacc_sd" in d.files else d["roi_sd"])
+    if "raw_nacc_vals" in d.files:
+        raw_nacc_vals = d["raw_nacc_vals"]
+    else:
+        # Back-transform from z-scored X_vals
+        raw_nacc_vals = X_vals * nacc_sd + nacc_mean
 
     # Compute median and 1.5*IQR fences
     q1_raw = np.percentile(raw_nacc_vals, 25)
@@ -849,9 +961,14 @@ def generate_figure6(data_dir, results_dir, figures_dir, synthetic):
     u_sp_mean = d["u_sp_mean"]
     person_x_z = d["person_x_z"]
     X_vals = d["X_vals"]
-    acc_mean = float(d["acc_mean"])
-    acc_sd = float(d["acc_sd"])
-    raw_acc_vals = d["raw_acc_vals"]
+    # Accept either ROI-specific keys (acc_mean/acc_sd/raw_acc_vals)
+    # or the generic keys written by step 4 (roi_mean/roi_sd/X_vals).
+    acc_mean = float(d["acc_mean"] if "acc_mean" in d.files else d["roi_mean"])
+    acc_sd = float(d["acc_sd"] if "acc_sd" in d.files else d["roi_sd"])
+    if "raw_acc_vals" in d.files:
+        raw_acc_vals = d["raw_acc_vals"]
+    else:
+        raw_acc_vals = X_vals * acc_sd + acc_mean
 
     q1_raw = np.percentile(raw_acc_vals, 25)
     q3_raw = np.percentile(raw_acc_vals, 75)
@@ -958,17 +1075,30 @@ def generate_figure_s2(data_dir, results_dir, figures_dir, synthetic):
     """Figure S2: Convergent validity scatter plots."""
     print("  Figure S2: Convergent validity scatter plots")
 
-    if synthetic:
-        proc_path = os.path.join(data_dir, "synthetic", "processed_data.csv")
-        wide_path = os.path.join(data_dir, "synthetic",
-                                 "participants_wideformat.csv")
-    else:
-        proc_path = os.path.join(data_dir, "processed_data_contrast.csv")
-        wide_path = os.path.join(data_dir, "participants_wideformat.xlsx")
-
-    if not _file_exists(proc_path, "Figure S2"):
+    # Processed CSV: use the flexible resolver.
+    proc_path = _find_processed_csv(data_dir, synthetic)
+    if proc_path is None:
+        print(f"  SKIP Figure S2: processed data CSV not found in {data_dir}")
         return
-    if not _file_exists(wide_path, "Figure S2"):
+
+    # Wide participants file: fall back to the default data/ if the
+    # sandbox directory doesn't contain it.
+    default_data = os.path.join(REPO_ROOT, "data")
+    if synthetic:
+        wide_candidates = [
+            os.path.join(data_dir, "synthetic", "participants_wideformat.csv"),
+            os.path.join(data_dir, "participants_wideformat.csv"),
+            os.path.join(default_data, "synthetic", "participants_wideformat.csv"),
+        ]
+    else:
+        wide_candidates = [
+            os.path.join(data_dir, "participants_wideformat.xlsx"),
+            os.path.join(data_dir, "participants_wideformat.csv"),
+            os.path.join(default_data, "participants_wideformat.xlsx"),
+        ]
+    wide_path = next((p for p in wide_candidates if os.path.exists(p)), None)
+    if wide_path is None:
+        print(f"  SKIP Figure S2: participants file not found")
         return
 
     from scipy import stats as sp_stats
@@ -1345,11 +1475,31 @@ def main():
         "--synthetic", action="store_true",
         help="Read from results/synthetic/ and save to figures/synthetic/.",
     )
+    parser.add_argument(
+        "--data-dir", default=None,
+        help="Override input data directory (default: data/).",
+    )
+    parser.add_argument(
+        "--output-dir", default=None,
+        help="Override directory containing saved posterior draws / "
+             "result CSVs (default: results/ or results/synthetic/).",
+    )
+    parser.add_argument(
+        "--figures-dir", default=None,
+        help="Override directory where figure PNGs are written. If not "
+             "set but --output-dir is set, figures go into "
+             "{output-dir}/figures.",
+    )
     args = parser.parse_args()
 
     setup_style()
 
-    data_dir, results_dir, figures_dir = _resolve_paths(args.synthetic)
+    data_dir, results_dir, figures_dir = _resolve_paths(
+        args.synthetic,
+        data_dir_override=args.data_dir,
+        output_dir_override=args.output_dir,
+        figures_dir_override=args.figures_dir,
+    )
     os.makedirs(figures_dir, exist_ok=True)
 
     mode_label = "SYNTHETIC" if args.synthetic else "REAL"

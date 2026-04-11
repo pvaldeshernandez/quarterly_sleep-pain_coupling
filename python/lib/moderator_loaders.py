@@ -56,6 +56,35 @@ warnings.filterwarnings("ignore")
 
 
 # ===================================================================
+# Path resolution
+# ===================================================================
+#
+# Raw neuroimaging directories (fmri_contrasts, spm_nomask, vbm,
+# atlases) can live outside the ``data/`` directory that the user
+# passes via ``--data-dir``. This is common in sandbox runs where
+# only the processed CSV is redirected into a fresh folder while the
+# large image directories stay in the repo's default data/. The
+# helper below looks for a subdirectory first in the user-provided
+# data_dir, then falls back to the default ``{repo}/data/``.
+
+_DEFAULT_DATA_DIR = os.path.normpath(
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "..", "data",
+    )
+)
+
+
+def _resolve_raw_data_path(data_dir, subdir):
+    """Return ``{data_dir}/{subdir}`` if it exists, else the default."""
+    primary = os.path.join(data_dir, subdir)
+    if os.path.isdir(primary):
+        return primary
+    fallback = os.path.join(_DEFAULT_DATA_DIR, subdir)
+    return fallback
+
+
+# ===================================================================
 # ROI Definitions
 # ===================================================================
 
@@ -303,8 +332,8 @@ def load_fmri_krause_rois(data_dir, synthetic=False):
 
     # Determine paths based on masking convention
     # NAcc uses GM-masked images; others use unmasked re-estimated images
-    fmri_masked_dir = os.path.join(data_dir, "fmri_contrasts")
-    fmri_unmasked_dir = os.path.join(data_dir, "spm_nomask")
+    fmri_masked_dir = _resolve_raw_data_path(data_dir, "fmri_contrasts")
+    fmri_unmasked_dir = _resolve_raw_data_path(data_dir, "spm_nomask")
 
     # Load a reference image to get the affine and shape
     # (any subject's contrast image will do)
@@ -395,7 +424,7 @@ def load_acc_roi(data_dir, synthetic=False):
     # Real data
     import nibabel as nib
 
-    fmri_dir = os.path.join(data_dir, "spm_nomask")  # unmasked contrasts
+    fmri_dir = _resolve_raw_data_path(data_dir, "spm_nomask")  # unmasked
     ref_ids = sorted(os.listdir(fmri_dir))
     ref_path = os.path.join(fmri_dir, ref_ids[0], "con_0001.nii")
     ref_img = nib.load(ref_path)
@@ -482,12 +511,12 @@ def load_fmri_atlas_arousal(data_dir, synthetic=False):
     import nibabel as nib
     from nilearn.image import resample_to_img
 
-    atlas_dir = os.path.join(data_dir, "atlases")
+    atlas_dir = _resolve_raw_data_path(data_dir, "atlases")
 
     # Determine fMRI source directory based on masking convention
     # Most ROIs use unmasked; LH uses GM-masked
-    fmri_masked_dir = os.path.join(data_dir, "fmri_contrasts")
-    fmri_unmasked_dir = os.path.join(data_dir, "spm_nomask")
+    fmri_masked_dir = _resolve_raw_data_path(data_dir, "fmri_contrasts")
+    fmri_unmasked_dir = _resolve_raw_data_path(data_dir, "spm_nomask")
     default_fmri_dir = (
         fmri_unmasked_dir if os.path.isdir(fmri_unmasked_dir)
         else fmri_masked_dir
@@ -635,8 +664,8 @@ def load_vbm_atlas_arousal(data_dir, synthetic=False):
     import glob as glob_mod
     from nilearn.image import resample_to_img
 
-    atlas_dir = os.path.join(data_dir, "atlases")
-    vbm_dir = os.path.join(data_dir, "vbm")
+    atlas_dir = _resolve_raw_data_path(data_dir, "atlases")
+    vbm_dir = _resolve_raw_data_path(data_dir, "vbm")
 
     # Find all smoothed modulated GM images
     pattern = os.path.join(vbm_dir, "smwc1*_ses-01_T1w.nii")
