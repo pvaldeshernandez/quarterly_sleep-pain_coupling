@@ -31,27 +31,20 @@ two classes of response:
 
 Translating these findings to our observational coupling framework:
 
-  - For S1, greater task activation reflects stronger nociceptive encoding.
-    If sleep deprivation amplifies this, then individuals with *less*
-    baseline S1 activation may be more susceptible to sleep-induced pain
-    amplification.  The Krause framework predicts a NEGATIVE gamma_sp for
-    S1 (but empirically, the sign was positive in the Krause sign-test
-    analysis using the original masked images; the direction was
-    re-evaluated with unmasked images and remained consistent with the
-    overall sign concordance).
+  - For S1, sleep deprivation *amplifies* the pain-evoked response.
+    Higher baseline S1 activation therefore indexes a brain already in the
+    "amplified" regime, which predicts stronger (more negative) sleep-to-
+    pain coupling. Expected sign: NEGATIVE gamma_sp.
 
-  - For NAcc, thalamus, and insula, greater activation reflects stronger
-    endogenous pain modulation.  Sleep deprivation blunts this, so
-    individuals with lower baseline activation in these regions should show
-    stronger sleep-to-pain coupling (worse sleep -> more pain).  This
-    predicts POSITIVE gamma_sp: higher activation = weaker coupling
-    (better modulation) and lower activation = stronger coupling.
+  - For NAcc, thalamus, anterior insula, and middle insula, sleep
+    deprivation *blunts* the pain-evoked response. Greater baseline
+    activation reflects stronger endogenous pain modulation and therefore
+    weaker (less negative) coupling. Expected sign: POSITIVE gamma_sp.
 
-**Sign Concordance Test**: All 6 Krause ROIs showed the predicted sign
-direction (positive gamma_sp).  Under the null hypothesis that each ROI
-has a 50% chance of matching the predicted sign, the probability of 6/6
-concordance is (1/2)^6 = 0.016 -- evidence for the framework even though
-individual ROIs are mostly null.
+**Sign Concordance Test**: Under the null hypothesis that each ROI has a
+50% chance of matching the predicted sign, the probability of all 6 Krause
+ROIs matching is (1/2)^6 = 0.016 (exact one-sided sign test), even when
+individual ROIs are individually null.
 
 **Sardi et al. (2018) Cerebral Cortex 28:3816-3828** demonstrated that the
 anterior cingulate cortex (ACC) and nucleus accumbens (NAcc) are parallel
@@ -138,12 +131,14 @@ SYNTHETIC_DIR = os.path.join(DATA_DIR, "synthetic")
 # ROI Definitions (for reference and sign-concordance test)
 # ===================================================================
 
-# Expected sign of gamma_sp for each Krause ROI, based on the
-# amplification (S1) vs. blunting (subcortical) framework.
-# All are predicted positive in the sign-concordance analysis
-# (see memory/MEMORY.md and Table 5 of manuscript).
+# Expected sign of gamma_sp for each Krause ROI. S1 (where sleep
+# deprivation *amplifies* pain-evoked activation) is predicted to
+# have gamma_sp < 0; the other five ROIs (where sleep deprivation
+# *blunts* activation) are predicted to have gamma_sp > 0. All six
+# matching these signs gives the manuscript's (1/2)^6 = 0.016 sign
+# test result.
 EXPECTED_SIGNS = {
-    "Right_S1":             "+",
+    "Right_S1":             "-",
     "Right_Middle_Insula":  "+",
     "Left_Thalamus":        "+",
     "Left_Anterior_Insula": "+",
@@ -575,10 +570,27 @@ def main():
                 n_concordant += 1
 
     n_tested = len(krause_names)
-    # Under H0: each ROI has 50% chance of matching -> Binomial(n, 0.5)
-    sign_p = 0.5 ** n_tested  # probability of all n matching
+    # Under H0: each ROI has 50% chance of matching -> Binomial(n, 0.5).
+    # The one-sided sign-test p-value is P(X >= n_concordant) under
+    # Binomial(n_tested, 0.5). When n_concordant == n_tested this
+    # reduces to (1/2)^n_tested, matching the manuscript's claim.
+    from math import comb
+    sign_p = sum(
+        comb(n_tested, k) * 0.5 ** n_tested
+        for k in range(n_concordant, n_tested + 1)
+    )
     print(f"  {n_concordant}/{n_tested} ROIs match predicted sign")
-    print(f"  Sign concordance p = (1/2)^{n_tested} = {sign_p:.4f}")
+    if n_concordant == n_tested:
+        print(
+            f"  Sign concordance p = (1/2)^{n_tested} = {sign_p:.4f} "
+            f"(one-sided exact binomial)"
+        )
+    else:
+        print(
+            f"  Sign concordance p = P(X >= {n_concordant} | "
+            f"Binomial({n_tested}, 0.5)) = {sign_p:.4f} "
+            f"(one-sided exact binomial)"
+        )
 
     # ------------------------------------------------------------------
     # Step 5: Save results

@@ -11,6 +11,12 @@ __pycache__/
 # Data (real data never committed)
 data/real/
 
+# Sandbox: commit the audit markdown files at the top level, but
+# never commit the fitted model outputs under subdirectories
+# (posterior draws, processed participant data, logs).
+sandbox/*/
+!sandbox/*.md
+
 # Large neuroimaging files
 *.nii
 *.nii.gz

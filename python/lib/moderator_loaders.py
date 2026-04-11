@@ -91,14 +91,22 @@ def _resolve_raw_data_path(data_dir, subdir):
 # --- Krause et al. (2019) J Neurosci 39:2291-2300 ---
 # Regions mediating sleep deprivation -> pain sensitivity.
 # MNI coordinates and radii from Table 1 of the original paper.
-# Expected sign of gamma_sp: positive for all ROIs (greater activation
-# in pain-processing regions should strengthen sleep-to-pain coupling).
+#
+# Expected sign of gamma_sp:
+#   S1:              negative
+#   Middle insula:   positive
+#   Thalamus:        positive
+#   Anterior insula: positive
+#   Left NAcc:       positive
+#   Right NAcc:      positive
+# All six estimated gamma_sp values matching this pattern gives the
+# manuscript's p = (1/2)^6 = 0.016 sign test.
 KRAUSE_ROIS = {
     "Right_S1": {
         "label": "Right Somatosensory Cortex (S1)",
         "mni": (36, -45, 59),
         "radius_mm": 8,
-        "expected_sign_sp": "+",
+        "expected_sign_sp": "-",
         "mask": "unmasked",
     },
     "Right_Middle_Insula": {

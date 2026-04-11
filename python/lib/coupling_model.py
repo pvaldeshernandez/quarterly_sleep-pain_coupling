@@ -305,6 +305,9 @@ def load_data(data_dir, synthetic=False):
 
 def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        X_person=None, include_agesex=True,
+                       include_sp=True, include_ps=True,
+                       idata_kwargs=None,
+                       cores=None,
                        progressbar=True):
     """Fit the Bayesian VARX(1) model with contrast and optional moderators.
 
@@ -327,8 +330,25 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         Subjects not in X_person are excluded from the analysis.
     include_agesex : bool, default True
         Whether to include Age (z-scored) and Sex (centered) as moderators
-        of the coupling slopes. Set to False for simpler nested models
-        (e.g., in LOO-CV comparison).
+        of the coupling slopes. Set to False for simpler nested models.
+    include_sp : bool, default True
+        Whether to include the Sleep->Pain cross-lagged coupling path.
+        When False, the population slope lambda_sp, the person-specific
+        random effects u_sp, tau_sp, and all SP moderators are removed
+        from the model. The contrast-by-sleep interaction (omega_sp) is
+        also removed, since it requires the SP path. Setting False is
+        used in the LOO-CV comparison to test whether removing the SP
+        pathway degrades out-of-sample prediction.
+    include_ps : bool, default True
+        Same as ``include_sp`` but for the Pain->Sleep cross-lagged
+        coupling path. Setting both to False gives the null model with
+        only autoregressions, intercepts, contrast direct effects, and
+        correlated innovations.
+    idata_kwargs : dict, optional
+        Extra keyword arguments forwarded to ``pm.sample`` via its
+        ``idata_kwargs``. Use ``{"log_likelihood": True}`` to compute
+        and store the pointwise log-likelihood required by
+        ``az.loo`` / ``az.compare``.
     progressbar : bool, default True
         Whether to display MCMC progress bars during sampling.
 
@@ -392,70 +412,76 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
     with pm.Model() as model:
 
         # --- Fixed effects (weakly informative priors) ---
-        # Pain equation parameters
+        # Pain equation parameters (autoregression, intercept, contrast
+        # direct effect, and — if the SP path is enabled — the SP
+        # coupling slope and its contrast interaction).
         a0 = pm.Normal("a0", mu=0, sigma=5)   # mu_p: intercept
         a1 = pm.Normal("a1", mu=0, sigma=5)   # phi_p: pain AR
-        a2 = pm.Normal("a2", mu=0, sigma=5)   # lambda_sp: SP coupling
         a3 = pm.Normal("a3", mu=0, sigma=5)   # delta_p: contrast -> pain
-        a4 = pm.Normal("a4", mu=0, sigma=5)   # omega_sp: sleep*contrast
+        if include_sp:
+            a2 = pm.Normal("a2", mu=0, sigma=5)  # lambda_sp: SP coupling
+            a4 = pm.Normal("a4", mu=0, sigma=5)  # omega_sp: sleep*contrast
 
-        # Sleep equation parameters
+        # Sleep equation parameters (analogous).
         b0 = pm.Normal("b0", mu=0, sigma=5)   # mu_s: intercept
-        b1 = pm.Normal("b1", mu=0, sigma=5)   # lambda_ps: PS coupling
         b2 = pm.Normal("b2", mu=0, sigma=5)   # phi_s: sleep AR
         b3 = pm.Normal("b3", mu=0, sigma=5)   # delta_s: contrast -> sleep
-        b4 = pm.Normal("b4", mu=0, sigma=5)   # omega_ps: pain*contrast
+        if include_ps:
+            b1 = pm.Normal("b1", mu=0, sigma=5)  # lambda_ps: PS coupling
+            b4 = pm.Normal("b4", mu=0, sigma=5)  # omega_ps: pain*contrast
 
         # --- Age & Sex moderation of coupling slopes (gamma ~ N(0,1)) ---
-        if include_agesex:
+        # Only attach to whichever coupling direction is present.
+        if include_agesex and include_sp:
             g_sp_age = pm.Normal("g_sp_age", mu=0, sigma=1)
             g_sp_sex = pm.Normal("g_sp_sex", mu=0, sigma=1)
+        if include_agesex and include_ps:
             g_ps_age = pm.Normal("g_ps_age", mu=0, sigma=1)
             g_ps_sex = pm.Normal("g_ps_sex", mu=0, sigma=1)
 
         # --- External moderator (Aim 2 analyses only) ---
-        if has_moderator:
+        # Also tied to whichever coupling direction is present.
+        if has_moderator and include_sp:
             gamma_sp = pm.Normal("gamma_sp", mu=0, sigma=1)
+        if has_moderator and include_ps:
             gamma_ps = pm.Normal("gamma_ps", mu=0, sigma=1)
 
         # --- Person-specific random coupling slopes ---
-        # tau controls the between-person heterogeneity in coupling
-        tau_sp = pm.HalfCauchy("tau_sp", beta=1)
-        tau_ps = pm.HalfCauchy("tau_ps", beta=1)
-        u_sp = pm.Normal("u_sp", mu=0, sigma=tau_sp, shape=n_persons)
-        u_ps = pm.Normal("u_ps", mu=0, sigma=tau_ps, shape=n_persons)
+        # tau controls the between-person heterogeneity in coupling.
+        # Random effects are only sampled for directions that are
+        # present in the model.
+        if include_sp:
+            tau_sp = pm.HalfCauchy("tau_sp", beta=1)
+            u_sp = pm.Normal("u_sp", mu=0, sigma=tau_sp, shape=n_persons)
+        if include_ps:
+            tau_ps = pm.HalfCauchy("tau_ps", beta=1)
+            u_ps = pm.Normal("u_ps", mu=0, sigma=tau_ps, shape=n_persons)
 
         # --- Assemble person-varying coupling slopes ---
-        # Start with population mean + person random effect
-        a2_i = a2 + u_sp[idx]   # lambda_{sp,it} = lambda_sp + u_{sp,i}
-        b1_i = b1 + u_ps[idx]   # lambda_{ps,it} = lambda_ps + u_{ps,i}
-
-        # Add demographic moderation (centered, so main effects are at
-        # the sample average of age and sex)
-        if include_agesex:
-            a2_i = a2_i + g_sp_age * age_z + g_sp_sex * sex_c
-            b1_i = b1_i + g_ps_age * age_z + g_ps_sex * sex_c
-
-        # Add external moderator (z-scored person-level variable)
-        if has_moderator:
-            a2_i = a2_i + gamma_sp * X_obs
-            b1_i = b1_i + gamma_ps * X_obs
+        # If the corresponding direction is disabled, a2_i / b1_i stay
+        # at zero and the corresponding cross-lag term drops out of the
+        # linear predictor below.
+        if include_sp:
+            a2_i = a2 + u_sp[idx]
+            if include_agesex:
+                a2_i = a2_i + g_sp_age * age_z + g_sp_sex * sex_c
+            if has_moderator:
+                a2_i = a2_i + gamma_sp * X_obs
+        if include_ps:
+            b1_i = b1 + u_ps[idx]
+            if include_agesex:
+                b1_i = b1_i + g_ps_age * age_z + g_ps_sex * sex_c
+            if has_moderator:
+                b1_i = b1_i + gamma_ps * X_obs
 
         # --- Linear predictors ---
-        mu_pain = (
-            a0
-            + a1 * pain_lag         # autoregressive
-            + a2_i * sleep_lag      # cross-lagged (sleep -> pain)
-            + a3 * contrast_lag     # direct contrast effect
-            + a4 * sleep_x_contrast  # contrast x sleep interaction
-        )
-        mu_sleep = (
-            b0
-            + b1_i * pain_lag       # cross-lagged (pain -> sleep)
-            + b2 * sleep_lag        # autoregressive
-            + b3 * contrast_lag     # direct contrast effect
-            + b4 * pain_x_contrast   # contrast x pain interaction
-        )
+        mu_pain = a0 + a1 * pain_lag + a3 * contrast_lag
+        if include_sp:
+            mu_pain = mu_pain + a2_i * sleep_lag + a4 * sleep_x_contrast
+
+        mu_sleep = b0 + b2 * sleep_lag + b3 * contrast_lag
+        if include_ps:
+            mu_sleep = mu_sleep + b1_i * pain_lag + b4 * pain_x_contrast
 
         # --- Correlated innovations via Cholesky trick ---
         # See module docstring for why this is ~100x faster than MvNormal.
@@ -483,7 +509,7 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         )
 
         # --- MCMC sampling ---
-        idata = pm.sample(
+        sample_kwargs = dict(
             draws=N_SAMPLES,
             tune=N_TUNE,
             chains=N_CHAINS,
@@ -497,6 +523,11 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             # checked manually via ArviZ summary after sampling.
             compute_convergence_checks=False,
         )
+        if cores is not None:
+            sample_kwargs["cores"] = cores
+        if idata_kwargs is not None:
+            sample_kwargs["idata_kwargs"] = idata_kwargs
+        idata = pm.sample(**sample_kwargs)
 
     return idata, sub_df, valid_ids
 
@@ -506,24 +537,39 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
 # ===================================================================
 
 def compute_loo_comparison(data_dir, synthetic=False):
-    """Fit four nested models and compare via LOO-CV.
+    """Fit four nested coupling-direction models and compare via LOO-CV.
 
-    The four models form a nested hierarchy to test whether each component
-    improves out-of-sample prediction:
+    The four models test whether each cross-lagged coupling direction
+    improves out-of-sample prediction. All four share the same
+    baseline structure (intercepts, autoregressions, contrast direct
+    effects delta_p/delta_s, correlated innovations); they differ only
+    in whether the Sleep->Pain and Pain->Sleep paths are included:
 
-      M1: Base VARX(1) -- AR + cross-lag only (no contrast, no age/sex)
-      M2: + pain localization contrast (direct + interaction)
-      M3: + age and sex moderation of coupling slopes
-      M4: + contrast x coupling interaction (full model)
+      full:    both directions present (lambda_sp, lambda_ps, u_sp, u_ps,
+               and the corresponding age/sex and contrast interactions).
+      no_PS:   Pain->Sleep direction removed (lambda_ps = 0, no u_ps,
+               no omega_ps, no g_ps_age/sex). Equivalently, SP-only.
+      no_SP:   Sleep->Pain direction removed (lambda_sp = 0, no u_sp,
+               no omega_sp, no g_sp_age/sex). Equivalently, PS-only.
+      null:    both cross-lagged paths removed. Only AR + contrast
+               direct effects + correlated innovations remain.
 
-    LOO-CV (Leave-One-Out Cross-Validation) is computed via Pareto-smoothed
-    importance sampling (PSIS-LOO), which provides an efficient approximation
-    to exact LOO without refitting (Vehtari et al., 2017).
+    LOO-CV (Leave-One-Out Cross-Validation) is computed via
+    Pareto-smoothed importance sampling (PSIS-LOO), which provides an
+    efficient approximation to exact LOO without refitting (Vehtari
+    et al., 2017). `az.compare` then reports the ELPD difference
+    between each model and the best-ranked model, with a standard
+    error for the difference.
+
+    This nesting corresponds to what the manuscript reports: it
+    directly tests whether adding each coupling direction to the
+    baseline improves predictive accuracy, with Delta/SE > 2 as the
+    threshold for "substantial improvement."
 
     Parameters
     ----------
     data_dir : str
-        Path to the ``data/`` directory.
+        Path to the directory containing the processed CSV.
     synthetic : bool, default False
         Whether to use synthetic data.
 
@@ -532,61 +578,151 @@ def compute_loo_comparison(data_dir, synthetic=False):
     comparison : DataFrame
         ArviZ LOO comparison table with ELPD differences and standard
         errors, sorted by best model first.
+    loo_dict : dict
+        {model_name: arviz.ElPDData} for each fitted model. Contains
+        the pointwise log likelihood and Pareto k-hat diagnostics.
+    pairwise : dict
+        {(model_a, model_b): {"delta_elpd": ..., "se": ..., "ratio": ...}}
+        giving the specific pairwise comparisons reported in the
+        manuscript (full vs no_PS, no_SP vs null, etc.). Ratios >2 in
+        magnitude are considered substantive improvements.
     """
-    # Load data once, then fit each model variant
+    # Load data once, then fit each of the four coupling-structure
+    # variants. All fits use the same Cholesky-parameterised correlated
+    # innovations, same weakly informative priors, same 4x2000 NUTS
+    # settings, and the same random seed — the only thing that changes
+    # is whether the SP and/or PS paths are included in the likelihood.
+    #
+    # idata_kwargs={"log_likelihood": True} is crucial: it tells PyMC
+    # to store the observation-level log-likelihood evaluated on each
+    # MCMC draw, which is the input to az.loo(). Without it,
+    # `az.loo(idata)` raises because there is no log_likelihood group
+    # in the InferenceData object.
+
     df_full, model_df, unique_ids, id_map = load_data(
         data_dir, synthetic=synthetic
     )
 
-    results = {}
+    idata_kwargs = {"log_likelihood": True}
 
-    # --- M1: Base VARX(1) (no contrast terms, no age/sex) ---
-    print("\n  Fitting M1: Base VARX(1) (AR + cross-lag only)...")
-    # For M1, we zero out contrast columns to effectively remove them
-    m1_df = model_df.copy()
-    m1_df["contrast_within_lag1"] = 0.0
-    m1_df["sleep_x_contrast_lag1"] = 0.0
-    m1_df["pain_x_contrast_lag1"] = 0.0
-    idata_m1, _, _ = fit_bayesian_varx1(
-        m1_df, unique_ids, id_map, include_agesex=False, progressbar=True
-    )
-    results["M1_base"] = idata_m1
+    # To keep memory usage bounded we fit each model one at a time,
+    # compute its LOO (which only needs the pointwise log-likelihood),
+    # store the pointwise ELPD contributions, and then release the
+    # InferenceData. Keeping all 4 idata objects with full
+    # log_likelihood groups in memory simultaneously is enough to OOM
+    # the analysis on a 16 GB node because each log-likelihood array is
+    # 4 chains x 2000 draws x ~1800 obs x 2 observed variables.
+    #
+    # The model has two observed variables (y_pain, y_sleep) so by
+    # default the inference data contains two separate log-likelihood
+    # arrays. For LOO we want the *joint* per-observation log-
+    # likelihood, which is log p(y_pain_i, y_sleep_i | theta). Because
+    # the Cholesky trick factors this as
+    #   p(y_pain_i) * p(y_sleep_i | y_pain_i)
+    # and the second factor is what the conditional `y_sleep` likelihood
+    # computes, the joint log-likelihood is simply the sum of the two
+    # per-draw, per-observation log-likelihood arrays. We add a new
+    # variable ``y_joint`` to the log_likelihood group and point
+    # ``az.loo`` at it.
+    import gc
 
-    # --- M2: + contrast (direct + interaction, no age/sex) ---
-    print("\n  Fitting M2: + pain localization contrast...")
-    idata_m2, _, _ = fit_bayesian_varx1(
-        model_df, unique_ids, id_map, include_agesex=False, progressbar=True
-    )
-    results["M2_contrast"] = idata_m2
+    model_configs = [
+        ("full",  True,  True,  "full model (both SP and PS paths)"),
+        ("no_PS", True,  False, "no_PS model (SP only, Pain->Sleep removed)"),
+        ("no_SP", False, True,  "no_SP model (PS only, Sleep->Pain removed)"),
+        ("null",  False, False, "null model (no cross-lagged coupling)"),
+    ]
 
-    # --- M3: + age/sex moderation (no contrast interaction) ---
-    print("\n  Fitting M3: + age and sex moderation...")
-    m3_df = model_df.copy()
-    m3_df["sleep_x_contrast_lag1"] = 0.0
-    m3_df["pain_x_contrast_lag1"] = 0.0
-    idata_m3, _, _ = fit_bayesian_varx1(
-        m3_df, unique_ids, id_map, include_agesex=True, progressbar=True
-    )
-    results["M3_agesex"] = idata_m3
-
-    # --- M4: Full model (contrast + age/sex + interaction) ---
-    print("\n  Fitting M4: Full model...")
-    idata_m4, _, _ = fit_bayesian_varx1(
-        model_df, unique_ids, id_map, include_agesex=True, progressbar=True
-    )
-    results["M4_full"] = idata_m4
-
-    # Compute LOO for each model and compare
     loo_dict = {}
-    for name, idata in results.items():
+    for name, inc_sp, inc_ps, desc in model_configs:
+        print(f"\n  Fitting {desc}...")
+        # cores=1 runs chains sequentially to avoid multiprocess fork
+        # memory overhead (each worker would need its own copy of the
+        # compiled model + log-likelihood buffers, which overflows the
+        # 16 GB cgroup limit on standard HiPerGator jobs).
+        idata, _, _ = fit_bayesian_varx1(
+            model_df, unique_ids, id_map,
+            include_agesex=True,
+            include_sp=inc_sp, include_ps=inc_ps,
+            idata_kwargs=idata_kwargs,
+            cores=1,
+            progressbar=True,
+        )
         print(f"  Computing LOO for {name}...")
-        loo_dict[name] = az.loo(idata, pointwise=True)
+        ll = idata.log_likelihood
+        # Sum y_pain and y_sleep log-likelihoods into a single "y_joint"
+        # variable in-place without holding three copies at once. We
+        # compute the joint array, drop the originals to free memory,
+        # then add back a single y_joint variable.
+        if "y_joint" not in ll.data_vars:
+            joint_vals = ll["y_pain"].values + ll["y_sleep"].values
+            dims = ll["y_pain"].dims
+            coords = {d: ll[d] for d in dims if d in ll.coords}
+            idata.log_likelihood = idata.log_likelihood.drop_vars(
+                ["y_pain", "y_sleep"]
+            )
+            import xarray as xr
+            idata.log_likelihood["y_joint"] = xr.DataArray(
+                joint_vals, dims=dims, coords=coords
+            )
+            del joint_vals
+            gc.collect()
+        loo_dict[name] = az.loo(idata, pointwise=True, var_name="y_joint")
+        # Drop the idata now — we have the pointwise LOO we need.
+        del idata, ll
+        gc.collect()
 
     comparison = az.compare(loo_dict)
-    print("\n  LOO-CV Comparison:")
+    print("\n  LOO-CV Comparison (sorted by best):")
     print(comparison)
 
-    return comparison
+    # Pairwise comparisons the manuscript reports:
+    #   full vs no_PS   — does adding PS to the SP-only model help?
+    #   no_SP vs null   — does adding PS to the null model help?
+    #   full vs no_SP   — does adding SP to the PS-only model help?
+    #   no_PS vs null   — does adding SP to the null model help?
+    #
+    # For each pair, the pointwise ELPD difference is d_i = elpd_a_i
+    # - elpd_b_i; the SE of the summed difference is
+    # sqrt(N * var(d_i)), and Delta/SE > 2 is the conventional
+    # "substantial improvement" threshold.
+    pairs = [
+        ("full", "no_PS"),
+        ("no_SP", "null"),
+        ("full", "no_SP"),
+        ("no_PS", "null"),
+    ]
+    pairwise = {}
+    for a, b in pairs:
+        loo_a_pw = loo_dict[a].loo_i.values
+        loo_b_pw = loo_dict[b].loo_i.values
+        d = loo_a_pw - loo_b_pw
+        n = len(d)
+        delta = float(d.sum())
+        se = float(np.sqrt(n * d.var(ddof=1)))
+        ratio = delta / se if se > 0 else float("nan")
+        pairwise[(a, b)] = {
+            "delta_elpd": delta,
+            "se": se,
+            "ratio": ratio,
+        }
+        print(
+            f"  {a:>6} vs {b:<6}: ΔELPD = {delta:+.2f}, SE = {se:.2f}, "
+            f"Δ/SE = {ratio:+.2f}"
+        )
+
+    # Pareto k-hat diagnostics (max and fraction >0.7) for the full model
+    khat = loo_dict["full"].pareto_k.values
+    k_max = float(np.nanmax(khat))
+    k_bad = int((khat > 0.7).sum())
+    n_obs = len(khat)
+    print(
+        f"  Pareto k̂ (full model): max = {k_max:.2f}, "
+        f"{k_bad} / {n_obs} observations > 0.7 "
+        f"({100 * k_bad / n_obs:.1f}%)"
+    )
+
+    return comparison, loo_dict, pairwise
 
 
 # ===================================================================

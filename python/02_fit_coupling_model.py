@@ -381,28 +381,94 @@ def save_coupling_results(idata, model_df, unique_ids, results_dir, synthetic):
     print(f"    R-hat max: {results['rhat_max']:.3f}")
 
 
-def save_loo_comparison(comparison, results_dir):
-    """Save the LOO-CV model comparison table.
+def save_loo_comparison(comparison, loo_dict, pairwise, results_dir):
+    """Save the LOO-CV model comparison table and pairwise contrasts.
+
+    Writes three files:
+      1. loo_comparison.csv   — ArviZ table as CSV
+      2. loo_pairwise.csv     — pairwise ΔELPD / SE / Δ-SE ratio table
+      3. loo_comparison.txt   — human-readable summary matching
+         the format reported in the manuscript Results section
 
     Parameters
     ----------
     comparison : DataFrame
         ArviZ LOO comparison table (from az.compare).
+    loo_dict : dict
+        {model_name: arviz.ElPDData} with pointwise log likelihoods
+        and Pareto k-hat values.
+    pairwise : dict
+        {(a, b): {"delta_elpd": ..., "se": ..., "ratio": ...}} as
+        returned by compute_loo_comparison.
     results_dir : str
-        Directory to save results into.
+        Directory to save the results into.
     """
+    import numpy as np
+
+    # 1. ArviZ comparison table as CSV
+    csv_path = os.path.join(results_dir, "loo_comparison.csv")
+    comparison.to_csv(csv_path)
+    print(f"  Saved: {csv_path}")
+
+    # 2. Pairwise contrasts as CSV
+    pw_rows = []
+    for (a, b), stats in pairwise.items():
+        pw_rows.append({
+            "model_a": a,
+            "model_b": b,
+            "delta_elpd": stats["delta_elpd"],
+            "se": stats["se"],
+            "delta_over_se": stats["ratio"],
+        })
+    pw_df = pd.DataFrame(pw_rows)
+    pw_csv = os.path.join(results_dir, "loo_pairwise.csv")
+    pw_df.to_csv(pw_csv, index=False)
+    print(f"  Saved: {pw_csv}")
+
+    # 3. Human-readable text summary (matches the manuscript format)
     loo_path = os.path.join(results_dir, "loo_comparison.txt")
     with open(loo_path, "w") as f:
         f.write("LOO-CV Model Comparison (PSIS-LOO, Vehtari et al. 2017)\n")
         f.write("=" * 70 + "\n\n")
-        f.write("Models (nested hierarchy):\n")
-        f.write("  M1_base:     AR + cross-lag only (no contrast, no age/sex)\n")
-        f.write("  M2_contrast: + pain localization contrast (direct + interaction)\n")
-        f.write("  M3_agesex:   + age and sex moderation of coupling slopes\n")
-        f.write("  M4_full:     Full model (contrast + age/sex + interaction)\n\n")
+        f.write("Four nested models testing whether each cross-lagged\n")
+        f.write("coupling direction improves out-of-sample prediction:\n\n")
+        f.write("  full  : both lambda_sp and lambda_ps present\n")
+        f.write("  no_PS : Pain->Sleep removed  (lambda_ps = 0, no u_ps)\n")
+        f.write("  no_SP : Sleep->Pain removed  (lambda_sp = 0, no u_sp)\n")
+        f.write("  null  : both cross-lagged paths removed\n\n")
         f.write("ELPD = expected log pointwise predictive density\n")
         f.write("Higher ELPD = better out-of-sample prediction\n\n")
-        f.write(comparison.to_string() + "\n")
+        f.write("ArviZ ranking (higher elpd_loo = better):\n")
+        f.write("-" * 70 + "\n")
+        f.write(comparison.to_string() + "\n\n")
+
+        f.write("Pairwise comparisons (ΔELPD = model_a - model_b):\n")
+        f.write("-" * 70 + "\n")
+        f.write(f"{'Comparison':<30} {'ΔELPD':>10} {'SE':>8} {'Δ/SE':>8}\n")
+        for (a, b), stats in pairwise.items():
+            f.write(
+                f"{a:>6} vs {b:<20} "
+                f"{stats['delta_elpd']:>+10.2f} "
+                f"{stats['se']:>8.2f} "
+                f"{stats['ratio']:>+8.2f}\n"
+            )
+        f.write("\n")
+        f.write("Conventional threshold: |Δ/SE| > 2 indicates substantial\n")
+        f.write("improvement (Vehtari et al., 2017).\n\n")
+
+        # Pareto k-hat diagnostics for the full model
+        khat = loo_dict["full"].pareto_k.values
+        k_max = float(np.nanmax(khat))
+        k_bad = int((khat > 0.7).sum())
+        n_obs = len(khat)
+        f.write("Pareto k-hat diagnostics (full model):\n")
+        f.write("-" * 70 + "\n")
+        f.write(f"  Max k-hat: {k_max:.2f}\n")
+        f.write(
+            f"  Observations with k-hat > 0.7: {k_bad} / {n_obs} "
+            f"({100 * k_bad / n_obs:.1f}%)\n"
+        )
+        f.write("  (k-hat < 0.7 is considered reliable)\n")
     print(f"  Saved: {loo_path}")
 
 
@@ -502,8 +568,17 @@ def main():
         print("=" * 70)
         print("  Fitting 4 nested models for LOO comparison...")
         print("  (This will take approximately 4x the single-model fitting time)")
-        comparison = compute_loo_comparison(data_dir, synthetic=args.synthetic)
-        save_loo_comparison(comparison, results_dir)
+        # Free the main-fit idata before fitting the LOO models. The LOO
+        # run fits 4 more posteriors with log_likelihood tracking
+        # enabled, and this memory is needed to stay under the job's
+        # memory cap.
+        del idata, sub_df, valid_ids
+        import gc
+        gc.collect()
+        comparison, loo_dict, pairwise = compute_loo_comparison(
+            data_dir, synthetic=args.synthetic
+        )
+        save_loo_comparison(comparison, loo_dict, pairwise, results_dir)
 
     print("\n" + "=" * 70)
     print("MODEL FITTING COMPLETE")
