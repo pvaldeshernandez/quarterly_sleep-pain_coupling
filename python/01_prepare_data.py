@@ -761,8 +761,11 @@ def load_real_data(data_dir=None):
     Parameters
     ----------
     data_dir : str, optional
-        Directory containing ``quarterly_data_long.csv`` and
-        ``participants_wideformat.xlsx``. Defaults to :data:`DATA_DIR`.
+        Directory containing ``quarterly_data_long.csv``. Defaults to
+        :data:`DATA_DIR`. Baseline demographics (Age, Sex) are read
+        from the quarterly CSV itself — this step does not read
+        ``participants_wideformat.xlsx``. That file is only needed
+        downstream by ``06_generate_figures.py`` for Figure S2.
 
     Returns
     -------
@@ -774,7 +777,6 @@ def load_real_data(data_dir=None):
     print("  Loading real quarterly data...")
 
     quarterly = pd.read_csv(os.path.join(data_dir, "quarterly_data_long.csv"))
-    wide = pd.read_excel(os.path.join(data_dir, "participants_wideformat.xlsx"))
 
     # Gateway imputation: q1=0 (no knee pain) -> set q2/q3/q4 NaN to 0
     knee_gate = quarterly["q1_knee_pain"] == 0
@@ -894,8 +896,8 @@ def main():
     parser.add_argument(
         "--data-dir", default=None,
         help="Override input data directory (default: data/). The raw "
-             "quarterly items and participants_wideformat.xlsx are read "
-             "from here for real data, and synthetic/*.csv for --synthetic."
+             "quarterly_data_long.csv is read from here for real data, "
+             "and synthetic/*.csv for --synthetic."
     )
     parser.add_argument(
         "--output-dir", default=None,
@@ -914,8 +916,9 @@ def main():
     else:
         print("  Mode: REAL DATA (full factor analysis pipeline)")
 
-    # Resolve input data directory. For steps 1–5, this is where the
-    # raw quarterly items and participants_wideformat files live.
+    # Resolve input data directory. For steps 1-5 this is where the
+    # raw quarterly items and (for step 6's Figure S2 only) the
+    # participants_wideformat file live.
     data_dir = args.data_dir if args.data_dir else DATA_DIR
 
     # ------------------------------------------------------------------

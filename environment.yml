@@ -14,3 +14,4 @@ dependencies:
   - pillow=11.3.0
   - scikit-learn=1.7.1
   - pytensor
+  - nibabel>=5.2
