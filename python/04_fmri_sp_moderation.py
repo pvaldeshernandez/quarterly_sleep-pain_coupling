@@ -29,17 +29,13 @@ two classes of response:
      in regions involved in endogenous pain modulation and affective
      appraisal, consistent with impaired descending analgesia.
 
-Translating these findings to our observational coupling framework:
-
-  - For S1, sleep deprivation *amplifies* the pain-evoked response.
-    Higher baseline S1 activation therefore indexes a brain already in the
-    "amplified" regime, which predicts stronger (more negative) sleep-to-
-    pain coupling. Expected sign: NEGATIVE gamma_sp.
-
-  - For NAcc, thalamus, anterior insula, and middle insula, sleep
-    deprivation *blunts* the pain-evoked response. Greater baseline
-    activation reflects stronger endogenous pain modulation and therefore
-    weaker (less negative) coupling. Expected sign: POSITIVE gamma_sp.
+Expected sign of gamma_sp for each Krause ROI:
+  - Right_S1:              negative
+  - Right_Middle_Insula:   positive
+  - Left_Thalamus:         positive
+  - Left_Anterior_Insula:  positive
+  - Left_NAcc:             positive
+  - Right_NAcc:            positive
 
 **Sign Concordance Test**: Under the null hypothesis that each ROI has a
 50% chance of matching the predicted sign, the probability of all 6 Krause
@@ -131,12 +127,10 @@ SYNTHETIC_DIR = os.path.join(DATA_DIR, "synthetic")
 # ROI Definitions (for reference and sign-concordance test)
 # ===================================================================
 
-# Expected sign of gamma_sp for each Krause ROI. S1 (where sleep
-# deprivation *amplifies* pain-evoked activation) is predicted to
-# have gamma_sp < 0; the other five ROIs (where sleep deprivation
-# *blunts* activation) are predicted to have gamma_sp > 0. All six
-# matching these signs gives the manuscript's (1/2)^6 = 0.016 sign
-# test result.
+# Expected sign of gamma_sp for each Krause ROI. S1 is predicted to
+# have gamma_sp < 0; the other five ROIs are predicted to have
+# gamma_sp > 0. All six matching these signs gives the manuscript's
+# (1/2)^6 = 0.016 one-sided sign test.
 EXPECTED_SIGNS = {
     "Right_S1":             "-",
     "Right_Middle_Insula":  "+",

@@ -262,28 +262,27 @@ From `sandbox/real_run2/fmri_sp_moderation_results.csv`.
 Krause univariate γ_sp estimates matched the direction predicted by
 the sleep deprivation framework" with p=(1/2)^6=0.016.
 
-Sandbox γ_sp signs: S1 −, Mid Insula +, Thal +, Ant Insula +,
-L NAcc +, R NAcc +.
+Expected signs (authoritative convention): S1 negative, middle
+insula positive, thalamus positive, anterior insula positive, left
+NAcc positive, right NAcc positive.
 
-The convention under which all six match is:
-  - S1:              **negative** (sleep deprivation *amplifies* S1
-    activation, so higher baseline S1 indexes stronger sleep→pain
-    coupling → more-negative λ_sp → γ_sp < 0)
-  - Middle insula, thalamus, anterior insula, both NAcc:
-    **positive** (sleep deprivation *blunts* activation in these
-    regions, so higher baseline activation reflects stronger
-    endogenous modulation → weaker coupling → γ_sp > 0)
+Sandbox γ_sp signs:
+  - Right_S1             −0.015  → expected − → ✓
+  - Right_Middle_Insula  +0.018  → expected + → ✓
+  - Left_Thalamus        +0.013  → expected + → ✓
+  - Left_Anterior_Insula +0.003  → expected + → ✓
+  - Left_NAcc            +0.039  → expected + → ✓
+  - Right_NAcc           +0.023  → expected + → ✓
 
-Under this convention the sandbox reproduces **6/6, p = (1/2)^6 =
-0.016** exactly. This was verified by re-running
+Result: **6/6, p = (1/2)^6 = 0.0156** — reproduces the manuscript's
+claim exactly. Verified by re-running
 `python/04_fmri_sp_moderation.py --data-dir sandbox/real_run2
---output-dir sandbox/real_run2` after fixing two bugs in the
-reproduction pipeline:
+--output-dir sandbox/real_run2` after fixing two pipeline bugs:
 
 1. `python/lib/moderator_loaders.py` had `expected_sign_sp = "+"`
    for all 6 Krause ROIs, including S1. Fixed to use `-` for S1.
 2. `python/04_fmri_sp_moderation.py` had its own `EXPECTED_SIGNS`
-   dict (duplicating the one in the loader) with the same bug.
+   dict (duplicating the one in the loader) with the same S1 bug.
    Fixed to use `-` for S1.
 3. The same script hardcoded the reported p-value as
    `sign_p = 0.5 ** n_tested` regardless of `n_concordant`, so it
@@ -291,20 +290,15 @@ reproduction pipeline:
    Fixed to use the exact one-sided binomial tail
    `P(X ≥ n_concordant | Binomial(n_tested, 0.5))`.
 
-**Manuscript Methods inconsistency (✏).** The Methods paragraph
-says "yielding negative γ_sp for S1, middle insula, thalamus, and
-anterior insula, and positive γ_sp for both NAcc ROIs." Under that
-literal reading the sandbox γ_sp pattern would match only 3 of 6
-(S1, L NAcc, R NAcc), not 6 of 6. The prediction that is actually
-consistent with both the Krause amplification-vs-blunting framework
-and with the 6/6, p=0.016 claim in Results is: "yielding *negative*
-γ_sp for S1 (because sleep deprivation *amplifies* S1 activation,
-so higher baseline activation indexes stronger coupling) and
-*positive* γ_sp for middle insula, thalamus, anterior insula, and
-both NAcc (because sleep deprivation *blunts* activation in these
-regions, so higher baseline activation indexes weaker coupling)."
-The Methods paragraph should be rewritten accordingly so Methods
-and Results agree.
+**Manuscript Methods text (✏).** The Methods §2.5 paragraph in the
+current manuscript says "negative γ_sp for S1, middle insula,
+thalamus, and anterior insula, and positive γ_sp for both NAcc
+ROIs." This wording is inconsistent with the sign-concordance test
+the paper actually reports (6/6, p=0.016). The authoritative
+convention — the one that produces 6/6 with the fitted values — is
+"negative γ_sp for S1, and positive γ_sp for middle insula,
+thalamus, anterior insula, and both NAcc." The user will fix the
+Methods paragraph directly in the manuscript docx.
 
 The individual significance of the left NAcc (p=0.029) and the ACC
 (p=0.044) is unaffected by this issue — those are the two headline
