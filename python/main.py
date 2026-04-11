@@ -45,27 +45,27 @@ STEPS = [
     },
     {
         "number": 2,
-        "label": "Fit coupling model",
-        "script": os.path.join(SCRIPT_DIR, "02_fit_coupling.py"),
+        "label": "Fit coupling model (base VARX(1))",
+        "script": os.path.join(SCRIPT_DIR, "02_fit_coupling_model.py"),
     },
     {
         "number": 3,
-        "label": "Contrast moderation",
+        "label": "Contrast moderation (pain localization x coupling)",
         "script": os.path.join(SCRIPT_DIR, "03_contrast_moderation.py"),
     },
     {
         "number": 4,
-        "label": "NAcc moderation",
-        "script": os.path.join(SCRIPT_DIR, "04_nacc_moderation.py"),
+        "label": "fMRI Sleep->Pain moderation (Krause ROIs + ACC)",
+        "script": os.path.join(SCRIPT_DIR, "04_fmri_sp_moderation.py"),
     },
     {
         "number": 5,
-        "label": "ACC moderation",
-        "script": os.path.join(SCRIPT_DIR, "05_acc_moderation.py"),
+        "label": "Arousal Pain->Sleep moderation (Lynch ROIs)",
+        "script": os.path.join(SCRIPT_DIR, "05_arousal_ps_moderation.py"),
     },
     {
         "number": 6,
-        "label": "Generate figures",
+        "label": "Generate figures and tables",
         "script": os.path.join(SCRIPT_DIR, "06_generate_figures.py"),
     },
 ]
