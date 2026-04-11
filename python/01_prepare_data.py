@@ -351,6 +351,19 @@ def calibrate_pain_factors(df, use_polychoric=False):
     for i, item in enumerate(available):
         print(f"  {item:<20s} {loadings[i, 0]:>12.4f} {loadings[i, 1]:>14.4f}")
 
+    # ------------------------------------------------------------------
+    # Unreduced eigenvalues of the raw correlation matrix
+    # ------------------------------------------------------------------
+    # The iterative PAF loop above returns the eigenvalues of the
+    # *reduced* correlation matrix (diagonal replaced by communalities),
+    # which describe the common-variance structure after PAF extraction.
+    # Horn's parallel analysis and the convention followed in the
+    # manuscript Results (Table 1 + Figure S1) report the eigenvalues
+    # of the *unreduced* correlation matrix (diagonal = 1). These
+    # differ, so we compute the unreduced eigenvalues here as well and
+    # return them separately for the parallel analysis step.
+    eig_unreduced = np.linalg.eigvalsh(R.values)[::-1]
+
     return {
         "items": available,
         "loadings": loadings,
@@ -359,7 +372,95 @@ def calibrate_pain_factors(df, use_polychoric=False):
         "item_means": item_means,
         "item_sds": item_sds,
         "eigenvalues": eigenvalues,
+        "eigenvalues_unreduced": eig_unreduced,
+        "correlation_matrix": R.values,
+        "n_obs_used": int(data.dropna().shape[0]),
     }
+
+
+def parallel_analysis(n_obs, n_vars, n_replications=1000, seed=42):
+    """Horn's (1965) parallel analysis for factor-retention decisions.
+
+    Simulates ``n_replications`` uncorrelated random datasets of the
+    same dimensions as the observed data (n_obs rows, n_vars columns),
+    computes the Pearson correlation matrix and its unreduced
+    eigenvalues for each, and returns the 95th-percentile and mean
+    reference eigenvalue distributions. A factor is retained if its
+    observed eigenvalue exceeds the 95th-percentile reference value
+    for the corresponding component index.
+
+    Parameters
+    ----------
+    n_obs : int
+        Number of observations in the random datasets (should match
+        the usable sample size the observed correlations were computed
+        on).
+    n_vars : int
+        Number of variables (items). For this study, 8 pain items.
+    n_replications : int, default 1000
+        Number of random datasets to simulate. The manuscript reports
+        1000 replications.
+    seed : int, default 42
+        RNG seed for reproducibility.
+
+    Returns
+    -------
+    dict with keys:
+        random_95th : ndarray shape (n_vars,)
+            95th percentile of simulated eigenvalues per component.
+        random_mean : ndarray shape (n_vars,)
+            Mean of simulated eigenvalues per component.
+        all_random : ndarray shape (n_replications, n_vars)
+            Raw simulated eigenvalues (kept in memory for plotting).
+        n_replications : int
+        n_obs : int
+        n_vars : int
+
+    References
+    ----------
+    Horn, J. L. (1965). A rationale and test for the number of
+    factors in factor analysis. Psychometrika, 30, 179-185.
+    """
+    rng = np.random.default_rng(seed)
+    random_eigs = np.zeros((n_replications, n_vars))
+    for rep in range(n_replications):
+        random_data = rng.standard_normal(size=(n_obs, n_vars))
+        R_random = np.corrcoef(random_data.T)
+        random_eigs[rep] = np.linalg.eigvalsh(R_random)[::-1]
+
+    return {
+        "random_95th": np.percentile(random_eigs, 95, axis=0),
+        "random_mean": np.mean(random_eigs, axis=0),
+        "all_random": random_eigs,
+        "n_replications": n_replications,
+        "n_obs": n_obs,
+        "n_vars": n_vars,
+    }
+
+
+def report_parallel_analysis(actual_eigs, pa_results):
+    """Print the parallel-analysis comparison table.
+
+    Mirrors the formatting used in the manuscript Methods §2.3
+    description of factor retention.
+    """
+    n_vars = pa_results["n_vars"]
+    n_obs = pa_results["n_obs"]
+    n_rep = pa_results["n_replications"]
+    r95 = pa_results["random_95th"]
+    rmn = pa_results["random_mean"]
+
+    print("\n" + "=" * 70)
+    print(f"HORN'S PARALLEL ANALYSIS "
+          f"(N={n_obs}, p={n_vars}, {n_rep} replications)")
+    print("=" * 70)
+    print(f"  {'Component':<12} {'Actual':>8} {'Random 95th':>12} "
+          f"{'Random Mean':>12} {'Retain?':>8}")
+    print("  " + "-" * 55)
+    for i in range(n_vars):
+        retain = "YES" if actual_eigs[i] > r95[i] else "no"
+        print(f"  {i + 1:<10} {actual_eigs[i]:>8.4f} "
+              f"{r95[i]:>12.4f} {rmn[i]:>12.4f} {retain:>8}")
 
 
 def compute_bartlett_scores_2f(df, model):
@@ -769,21 +870,41 @@ def load_real_data(data_dir=None):
 
     Returns
     -------
-    df : DataFrame
-        Quarterly data with gateway imputation applied, restricted to Q1-Q11.
+    df_raw : DataFrame
+        Raw quarterly data (pre-gateway, no imputation). Used by the
+        factor analysis so the correlation matrix is computed only on
+        person-quarters where all 8 items were independently answered.
+    df_gated : DataFrame
+        Gateway-imputed quarterly data, restricted to Q1-Q11 and
+        joined with Age/Sex. Used by all downstream stages (Bartlett
+        scoring, within-person decomposition, VARX fitting).
     """
     if data_dir is None:
         data_dir = DATA_DIR
     print("  Loading real quarterly data...")
 
-    quarterly = pd.read_csv(os.path.join(data_dir, "quarterly_data_long.csv"))
+    quarterly_raw = pd.read_csv(os.path.join(data_dir, "quarterly_data_long.csv"))
 
-    # Gateway imputation: q1=0 (no knee pain) -> set q2/q3/q4 NaN to 0
+    # --------------------------------------------------------------
+    # Keep an untouched copy for the factor analysis. The factor
+    # analysis uses only rows where all 8 items were independently
+    # answered -- gateway-imputed 0s would artificially inflate the
+    # within-region (knee-knee, body-body) correlations and bias the
+    # second (contrast) eigenvalue upward.
+    # --------------------------------------------------------------
+    df_raw = quarterly_raw.copy()
+
+    # --------------------------------------------------------------
+    # Gateway imputation for downstream stages (Bartlett scoring,
+    # decomposition, VARX). q1=0 (no knee pain) -> missing q2/q3/q4
+    # are structurally 0; q6=0 (no body pain) -> missing q7/q8/q9
+    # are structurally 0.
+    # --------------------------------------------------------------
+    quarterly = quarterly_raw.copy()
     knee_gate = quarterly["q1_knee_pain"] == 0
     for item in ["q2_knee_pain", "q3_knee_pain", "q4_knee_pain"]:
         quarterly.loc[knee_gate & quarterly[item].isna(), item] = 0.0
 
-    # Gateway imputation: q6=0 (no body pain) -> set q7/q8/q9 NaN to 0
     body_gate = quarterly["q6_body_pain"] == 0
     for item in ["q7_body_pain", "q8_body_pain", "q9_body_pain"]:
         quarterly.loc[body_gate & quarterly[item].isna(), item] = 0.0
@@ -811,8 +932,12 @@ def load_real_data(data_dir=None):
     # Restrict to Q1-Q11 (Q0 is the baseline visit with no quarterly items)
     quarterly = quarterly[quarterly["quarter"] >= 1].copy()
 
-    print(f"    {quarterly['ID'].nunique()} subjects, {len(quarterly)} observations")
-    return quarterly
+    print(
+        f"    {quarterly['ID'].nunique()} subjects, "
+        f"{len(quarterly)} observations "
+        f"(raw: {len(df_raw)})"
+    )
+    return df_raw, quarterly
 
 
 def load_synthetic_data(data_dir=None):
@@ -928,11 +1053,36 @@ def main():
         # Synthetic data already has factor scores — skip factor analysis
         df = load_synthetic_data(data_dir)
     else:
-        # Real data: load raw items and run full factor analysis
-        df = load_real_data(data_dir)
+        # Real data: load raw items and run full factor analysis.
+        # load_real_data returns two frames: the raw (pre-gateway)
+        # quarterly items for the factor analysis + parallel analysis,
+        # and the gateway-imputed frame for all downstream stages.
+        df_raw, df = load_real_data(data_dir)
 
-        # Calibrate the 2-factor PAF model on the 8 pain items
-        pain_model = calibrate_pain_factors(df, use_polychoric=args.polychoric)
+        # Calibrate the 2-factor PAF model on the 8 pain items using
+        # the RAW (pre-gateway) items. Gateway imputation replaces
+        # missing q2/q3/q4 with 0 when q1=0 and similarly for body
+        # items, which artificially correlates the within-region
+        # items and biases the contrast eigenvalue upward. See
+        # Methods §2.3.
+        pain_model = calibrate_pain_factors(df_raw, use_polychoric=args.polychoric)
+
+        # Horn's parallel analysis for factor retention (Methods §2.3).
+        # Uses the unreduced eigenvalues of the same correlation matrix
+        # fit by calibrate_pain_factors (polychoric if --polychoric was
+        # passed, Pearson otherwise) and compares them to the 95th
+        # percentile of eigenvalues from 1000 random datasets of the
+        # same dimensions. The retention decision is reported in Table
+        # 1 and Figure S1 of the manuscript.
+        pa_results = parallel_analysis(
+            n_obs=pain_model["n_obs_used"],
+            n_vars=len(pain_model["items"]),
+            n_replications=1000,
+            seed=42,
+        )
+        report_parallel_analysis(
+            pain_model["eigenvalues_unreduced"], pa_results
+        )
 
         # Compute Bartlett scores and z-scored sleep
         df, sleep_params = score_constructs(df, pain_model)
@@ -1015,6 +1165,14 @@ def main():
 
     # Save factor model parameters (real data only)
     if not args.synthetic:
+        # Unreduced eigenvalues of the 8-item correlation matrix --
+        # these are the values reported in the manuscript Results
+        # (Factor 1 ~ 5.56, Factor 2 ~ 0.89) and compared to the
+        # parallel analysis reference distribution. The reduced PAF
+        # eigenvalues (from iterative communality updates) are also
+        # stored for completeness as ``pain_eigenvalue_reduced_*``.
+        eig_unreduced = pain_model["eigenvalues_unreduced"]
+        k = len(pain_model["items"])
         params = {
             "correlation_type": "polychoric" if args.polychoric else "pearson",
             "pain_items": pain_model["items"],
@@ -1024,8 +1182,28 @@ def main():
             "pain_communalities": pain_model["communalities"].tolist(),
             "pain_item_means": pain_model["item_means"],
             "pain_item_sds": pain_model["item_sds"],
-            "pain_eigenvalue_f1": float(pain_model["eigenvalues"][0]),
-            "pain_eigenvalue_f2": float(pain_model["eigenvalues"][1]),
+            # Unreduced eigenvalues (what the manuscript reports)
+            "pain_eigenvalues_unreduced": eig_unreduced.tolist(),
+            "pain_eigenvalue_f1": float(eig_unreduced[0]),
+            "pain_eigenvalue_f2": float(eig_unreduced[1]),
+            "pain_variance_explained_f1_pct":
+                float(eig_unreduced[0]) / k * 100.0,
+            "pain_variance_explained_f2_pct":
+                float(eig_unreduced[1]) / k * 100.0,
+            # Reduced (iterative PAF) eigenvalues, for completeness
+            "pain_eigenvalue_reduced_f1": float(pain_model["eigenvalues"][0]),
+            "pain_eigenvalue_reduced_f2": float(pain_model["eigenvalues"][1]),
+            # Horn's parallel analysis reference distribution
+            "parallel_analysis": {
+                "n_obs": pa_results["n_obs"],
+                "n_vars": pa_results["n_vars"],
+                "n_replications": pa_results["n_replications"],
+                "random_95th_percentile": pa_results["random_95th"].tolist(),
+                "random_mean": pa_results["random_mean"].tolist(),
+                "retain_factors": int(
+                    (eig_unreduced > pa_results["random_95th"]).sum()
+                ),
+            },
             "sleep_mean": sleep_params["sleep_mean"],
             "sleep_sd": sleep_params["sleep_sd"],
         }
