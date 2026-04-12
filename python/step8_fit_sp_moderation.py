@@ -3,14 +3,14 @@ Step 6 — Fit Sleep-to-Pain moderation models (7 ROIs).
 ======================================================================
 
 Input:  derivatives/step2_processed_long.csv
-        derivatives/step5_sp_roi_values.csv
+        derivatives/step7_sp_roi_values.csv
 Output:
   derivatives/
-    step6_sp_posterior_draws.npz     — per-ROI posterior draws
+    step8_sp_posterior_draws.npz     — per-ROI posterior draws
   results/
-    step6_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
-    step6_sign_concordance.csv       — sign test results
-    step6_text_numbers.csv           — gamma estimates, p-values, etc.
+    step8_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
+    step8_sign_concordance.csv       — sign test results
+    step8_text_numbers.csv           — gamma estimates, p-values, etc.
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each of the 7 SP ROIs (6 Krause + 1 ACC). Extracts gamma_sp and
@@ -41,12 +41,12 @@ LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
 IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step2_processed_long.csv")
-IN_ROI_CSV = os.path.join(DERIV_DIR, "step5_sp_roi_values.csv")
+IN_ROI_CSV = os.path.join(DERIV_DIR, "step7_sp_roi_values.csv")
 
-OUT_DRAWS_NPZ = os.path.join(DERIV_DIR, "step6_sp_posterior_draws.npz")
-OUT_TABLE5_CSV = os.path.join(RESULTS_DIR, "step6_table5_sp_moderation.csv")
-OUT_SIGN_CSV = os.path.join(RESULTS_DIR, "step6_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step6_text_numbers.csv")
+OUT_DRAWS_NPZ = os.path.join(DERIV_DIR, "step8_sp_posterior_draws.npz")
+OUT_TABLE5_CSV = os.path.join(RESULTS_DIR, "step8_table5_sp_moderation.csv")
+OUT_SIGN_CSV = os.path.join(RESULTS_DIR, "step8_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step8_text_numbers.csv")
 
 # ROIs included in the Krause sign-concordance test (ACC excluded)
 KRAUSE_ROIS = [

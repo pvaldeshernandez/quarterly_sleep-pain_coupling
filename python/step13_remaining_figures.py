@@ -11,10 +11,10 @@ Input:
   data/original/participants_wideformat.xlsx  — Figure S2
 
 Output (results/):
-  step11_figure2_ps_coupling.png   — Figure 2
-  step11_figure3_sp_coupling.png   — Figure 3
-  step11_figure_s1_endorsement.png — Figure S1
-  step11_figure_s2_convergent.png  — Figure S2
+  step13_figure2_ps_coupling.png   — Figure 2
+  step13_figure3_sp_coupling.png   — Figure 3
+  step13_figure_s1_endorsement.png — Figure S1
+  step13_figure_s2_convergent.png  — Figure S2
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
 """
@@ -35,10 +35,10 @@ DATA_DIR = os.path.join(ROOT, "data")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
 RESULTS_DIR = os.path.join(ROOT, "results")
 
-OUT_FIG2 = os.path.join(RESULTS_DIR, "step11_figure2_ps_coupling.png")
-OUT_FIG3 = os.path.join(RESULTS_DIR, "step11_figure3_sp_coupling.png")
-OUT_FIG_S1 = os.path.join(RESULTS_DIR, "step11_figure_s1_endorsement.png")
-OUT_FIG_S2 = os.path.join(RESULTS_DIR, "step11_figure_s2_convergent.png")
+OUT_FIG2 = os.path.join(RESULTS_DIR, "step13_figure2_ps_coupling.png")
+OUT_FIG3 = os.path.join(RESULTS_DIR, "step13_figure3_sp_coupling.png")
+OUT_FIG_S1 = os.path.join(RESULTS_DIR, "step13_figure_s1_endorsement.png")
+OUT_FIG_S2 = os.path.join(RESULTS_DIR, "step13_figure_s2_convergent.png")
 
 
 # =====================================================================

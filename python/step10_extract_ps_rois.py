@@ -5,8 +5,8 @@ Step 8 — Extract Pain-to-Sleep arousal relay ROI values.
 Input:  data/original neuroimaging (spm_nomask/, fmri_contrasts/, vbm/, atlases/)
 Output:
   derivatives/
-    step8_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
-    step8_ps_vbm_roi_values.csv    — per-subject VBM GM volume z-scored ROI values
+    step10_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
+    step10_ps_vbm_roi_values.csv    — per-subject VBM GM volume z-scored ROI values
 
 Extracts probability-weighted mean fMRI BOLD and VBM GM volume
 from 5 atlas-defined arousal relay ROIs (Lynch et al. 2025):
@@ -38,8 +38,8 @@ DERIV_DIR = os.path.join(ROOT, "derivatives")
 
 DEFAULT_NII_DIR = os.path.join(ROOT, "data")
 
-OUT_FMRI_CSV = os.path.join(DERIV_DIR, "step8_ps_fmri_roi_values.csv")
-OUT_VBM_CSV = os.path.join(DERIV_DIR, "step8_ps_vbm_roi_values.csv")
+OUT_FMRI_CSV = os.path.join(DERIV_DIR, "step10_ps_fmri_roi_values.csv")
+OUT_VBM_CSV = os.path.join(DERIV_DIR, "step10_ps_vbm_roi_values.csv")
 
 AROUSAL_ROIS = {
     "PBN": {
