@@ -3,10 +3,10 @@ Step 5 — Re-estimate first-level fMRI contrasts (masked and unmasked).
 ======================================================================
 
 Inputs:
-  data/original/fmri_glm/<subj>/SPM.mat
+  data/original/spm_mats/<subj>/SPM.mat
       Design matrix, high-pass filter, whitening, contrast vector,
       and per-subject GM mask filename.
-  data/original/fmri_glm/<subj>/sUPLOAD2_T1w__gm-2mm-binarized(0.25).nii
+  data/original/spm_mats/<subj>/sUPLOAD2_T1w__gm-2mm-binarized(0.25).nii
       Individual binary GM mask (used for the masked variant).
   data/original/fmri_4d/sub-<subj>/ses-01/func/
       ssub-<subj>_ses-01_task-stim_space-MNI152Dartel_desc-preproc_bold.nii
@@ -51,7 +51,7 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 
-GLM_DIR   = os.path.join(ROOT, "data", "original", "fmri_glm")
+GLM_DIR   = os.path.join(ROOT, "data", "original", "spm_mats")
 FMRI4D_DIR = os.path.join(ROOT, "data", "original", "fmri_4d")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step5")
