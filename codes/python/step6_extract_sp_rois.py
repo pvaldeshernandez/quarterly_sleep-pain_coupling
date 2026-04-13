@@ -97,6 +97,13 @@ SP_ROIS = {
         "expected_sign_sp": "+",
         "mask": "unmasked",
     },
+    "Left_dACC_MCC": {
+        "label": "Left dACC/MCC",
+        "framework": "Sardi",
+        "mni": (-6, 12, 38), "radius_mm": 6,
+        "expected_sign_sp": "+",
+        "mask": "unmasked",
+    },
 }
 
 

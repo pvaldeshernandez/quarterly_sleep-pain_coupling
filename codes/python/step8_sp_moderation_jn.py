@@ -9,7 +9,7 @@ Output:
     step8_jn_sp_results.csv           — full JN grids per ROI
   results/
     step8_figure5_jn_nacc.png         — Figure 5: Left NAcc JN
-    step8_figure6_jn_acc.png          — Figure 6: ACC JN
+    step8_figure6_jn_acc.png          — Figure 6: ACC JN (Right + Left, 2 panels)
     step8_figure_s5_krause_jn.png     — Figure S5: 4 non-sig Krause JN
     step8_text_numbers.csv            — JN boundaries, % sample, slopes
 
@@ -48,11 +48,10 @@ OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step8_figure6_jn_acc.png")
 OUT_FIG_S5 = os.path.join(STEP_RESULTS_DIR, "step8_figure_s5_krause_jn.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step8_text_numbers.csv")
 
-# ROIs that get individual JN figures
-MAIN_FIGURE_ROIS = {
-    "Left_NAcc": ("Figure 5", OUT_FIG5),
-    "Right_dACC_MCC": ("Figure 6", OUT_FIG6),
-}
+# ROI for Figure 5 (single panel)
+FIG5_ROI = "Left_NAcc"
+# ROIs for Figure 6 (two panels stacked: Right ACC on top, Left ACC below)
+FIG6_ROIS = ["Right_dACC_MCC", "Left_dACC_MCC"]
 # Non-significant Krause ROIs for the S5 2x2 merge
 S5_ROIS = ["Right_S1", "Right_Middle_Insula", "Left_Thalamus", "Left_Anterior_Insula"]
 
@@ -204,11 +203,7 @@ def run_step8(verbose=True):
     if verbose:
         print(f"\n  Saved JN grid: {OUT_JN_CSV}")
 
-    # --- Main figures (5, 6): individual JN panels ---
-    for roi_name, (fig_label, out_path) in MAIN_FIGURE_ROIS.items():
-        if roi_name not in jn_results:
-            continue
-        jn = jn_results[roi_name]
+    def _make_slopes(roi_name):
         a2_draws = d[f"{roi_name}_a2_draws"]
         gamma_draws = d[f"{roi_name}_gamma_sp_draws"]
         slopes = []
@@ -220,14 +215,38 @@ def run_step8(verbose=True):
                 "ci_lo": float(np.percentile(cond, 2.5)),
                 "ci_hi": float(np.percentile(cond, 97.5)),
             })
+        return slopes
+
+    # --- Figure 5: Left NAcc (single panel) ---
+    if FIG5_ROI in jn_results:
+        jn = jn_results[FIG5_ROI]
+        slopes = _make_slopes(FIG5_ROI)
         fig, ax = plt.subplots(figsize=(10, 7))
-        row = table5[table5["ROI"] == roi_name].iloc[0]
-        draw_jn_panel(ax, jn, f"{row['Label']} ({fig_label})", slopes)
+        row = table5[table5["ROI"] == FIG5_ROI].iloc[0]
+        draw_jn_panel(ax, jn, f"{row['Label']} (Figure 5)", slopes)
         fig.tight_layout()
-        fig.savefig(out_path, dpi=300, bbox_inches="tight")
+        fig.savefig(OUT_FIG5, dpi=300, bbox_inches="tight")
         plt.close(fig)
         if verbose:
-            print(f"  Saved {fig_label}: {out_path}")
+            print(f"  Saved Figure 5: {OUT_FIG5}")
+
+    # --- Figure 6: Right + Left dACC/MCC (2 panels stacked vertically) ---
+    available_f6 = [r for r in FIG6_ROIS if r in jn_results]
+    if available_f6:
+        fig, axes = plt.subplots(len(available_f6), 1,
+                                 figsize=(10, 7 * len(available_f6)))
+        if len(available_f6) == 1:
+            axes = [axes]
+        for ax, roi_name in zip(axes, available_f6):
+            jn = jn_results[roi_name]
+            slopes = _make_slopes(roi_name)
+            row = table5[table5["ROI"] == roi_name].iloc[0]
+            draw_jn_panel(ax, jn, row["Label"], slopes)
+        fig.tight_layout()
+        fig.savefig(OUT_FIG6, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+        if verbose:
+            print(f"  Saved Figure 6: {OUT_FIG6}")
 
     # --- Figure S5: 2x2 merge of non-significant Krause ROIs ---
     available_s5 = [r for r in S5_ROIS if r in jn_results]
