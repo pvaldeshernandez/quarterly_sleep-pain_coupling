@@ -154,7 +154,7 @@ def draw_jn_panel(ax, jn, panel_label, direction_label, slopes_dict,
     for k, level in enumerate(levels):
         d = slopes_dict[level]
         x_pos = level_x_vals[k]
-        beta = d["beta"]
+        beta = d.get("beta", d.get("mean"))
         cl = d["ci_lo"]
         ch = d["ci_hi"]
         p_neg = d.get("prob_neg", d.get("p_neg", 0.5))
