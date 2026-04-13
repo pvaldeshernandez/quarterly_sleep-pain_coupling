@@ -41,8 +41,8 @@ IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step7_table5_sp_moderation.csv")
 OUT_JN_CSV = os.path.join(DERIV_DIR, "step8_jn_sp_results.csv")
 OUT_FIG5 = os.path.join(RESULTS_DIR, "step8_figure5_jn_nacc.png")
 OUT_FIG6 = os.path.join(RESULTS_DIR, "step8_figure6_jn_acc.png")
-OUT_FIG_S5 = os.path.join(RESULTS_DIR, "step8_figure_s5_krause_jn.png")
 OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step8_text_numbers.csv")
+# Figure S5 is drawn by Step 12 (supplementary) from the JN grid + draws.
 
 # ROIs that get individual JN figures
 MAIN_FIGURE_ROIS = {
@@ -223,38 +223,8 @@ def run_step7(verbose=True):
         if verbose:
             print(f"  Saved {fig_label}: {out_path}")
 
-    # --- Figure S5: 2x2 merge of non-significant Krause ROIs ---
-    available_s5 = [r for r in S5_ROIS if r in jn_results]
-    if len(available_s5) >= 2:
-        n_panels = len(available_s5)
-        ncols = 2
-        nrows = (n_panels + 1) // 2
-        fig, axes = plt.subplots(nrows, ncols, figsize=(14, 6 * nrows))
-        axes = axes.ravel() if n_panels > 1 else [axes]
-        for i, roi_name in enumerate(available_s5):
-            jn = jn_results[roi_name]
-            a2_draws = d[f"{roi_name}_a2_draws"]
-            gamma_draws = d[f"{roi_name}_gamma_sp_draws"]
-            slopes = []
-            for z_label, z_val in [("z=-2", -2.0), ("z=0", 0.0), ("z=+2", 2.0)]:
-                cond = a2_draws + gamma_draws * z_val
-                slopes.append({
-                    "label": z_label, "x_val": z_val,
-                    "mean": float(np.mean(cond)),
-                    "ci_lo": float(np.percentile(cond, 2.5)),
-                    "ci_hi": float(np.percentile(cond, 97.5)),
-                })
-            row = table5[table5["ROI"] == roi_name].iloc[0]
-            draw_jn_panel(axes[i], jn, row["Label"], slopes)
-        for j in range(len(available_s5), len(axes)):
-            axes[j].set_visible(False)
-        fig.suptitle("Non-significant Krause ROIs (SP moderation)",
-                     fontsize=14, fontweight="bold")
-        fig.tight_layout(rect=[0, 0, 1, 0.96])
-        fig.savefig(OUT_FIG_S5, dpi=300, bbox_inches="tight")
-        plt.close(fig)
-        if verbose:
-            print(f"  Saved Figure S5: {OUT_FIG_S5}")
+    # Figure S5 (non-sig Krause ROIs 2x2) drawn by Step 12 from
+    # the JN grid + posterior draws saved above.
 
     # Save text numbers
     text_df = pd.DataFrame(text_rows)

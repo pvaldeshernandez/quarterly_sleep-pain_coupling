@@ -48,10 +48,12 @@ IN_VBM_CSV = os.path.join(DERIV_DIR, "step9_ps_vbm_roi_values.csv")
 
 OUT_FMRI_DRAWS = os.path.join(DERIV_DIR, "step10_ps_fmri_posterior_draws.npz")
 OUT_VBM_DRAWS = os.path.join(DERIV_DIR, "step10_ps_vbm_posterior_draws.npz")
-OUT_FMRI_TABLE = os.path.join(RESULTS_DIR, "step10_table_s1_fmri_arousal.csv")
-OUT_VBM_TABLE = os.path.join(RESULTS_DIR, "step10_table_s1_vbm_arousal.csv")
-OUT_VBM_SIGN = os.path.join(RESULTS_DIR, "step10_vbm_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step10_text_numbers.csv")
+# Table S1 and VBM sign concordance go to derivatives here;
+# Step 12 (supplementary) formats them as results.
+OUT_FMRI_TABLE = os.path.join(DERIV_DIR, "step10_fmri_arousal_moderation.csv")
+OUT_VBM_TABLE = os.path.join(DERIV_DIR, "step10_vbm_arousal_moderation.csv")
+OUT_VBM_SIGN = os.path.join(DERIV_DIR, "step10_vbm_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(DERIV_DIR, "step10_text_numbers.csv")
 
 
 def load_step2_data(csv_path):

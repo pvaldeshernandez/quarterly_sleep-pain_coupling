@@ -54,9 +54,8 @@ IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step3_posterior_draws.npz")
 # Derivatives
 OUT_JN_CSV = os.path.join(DERIV_DIR, "step4_jn_localization_results.csv")
 
-# Results
+# Results (main manuscript only; Figure S3 is produced by Step 12)
 OUT_FIG4 = os.path.join(RESULTS_DIR, "step4_figure4_jn_localization_ps.png")
-OUT_FIG_S3 = os.path.join(RESULTS_DIR, "step4_figure_s3_jn_localization_sp.png")
 OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step4_text_numbers.csv")
 
 
@@ -273,22 +272,8 @@ def run_step4(verbose: bool = True):
             print(f"    {ss['label']}: coupling = {ss['mean']:.4f} "
                   f"[{ss['ci_lo']:.4f}, {ss['ci_hi']:.4f}]{sig}")
 
-    a2_mean = float(np.mean(a2_draws))
-    obs_sp = a2_mean + u_sp_mean[obs_pid_idx] + float(np.mean(a4_draws)) * obs_contrast
-
-    jn_sp_fig = {
-        "x_grid": jn_sp["x_grid"],
-        "mean": jn_sp["post_mean"],
-        "ci_lo": jn_sp["ci_lo"],
-        "ci_hi": jn_sp["ci_hi"],
-        "boundary": sp_boundary,
-    }
-    draw_jn_figure(
-        jn_sp_fig, "Sleep → Pain", slopes_sp, c_sd,
-        obs_sp, obs_contrast, OUT_FIG_S3,
-    )
-    if verbose:
-        print(f"  Saved Figure S3: {OUT_FIG_S3}")
+    # Figure S3 (SP JN) is drawn by Step 12 (supplementary) from the
+    # JN grid saved below.
 
     # ==================================================================
     # Save JN grid results (derivative)

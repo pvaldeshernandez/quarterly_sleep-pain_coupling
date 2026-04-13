@@ -39,14 +39,13 @@ sys.path.insert(0, LIB_DIR)
 
 IN_FMRI_DRAWS = os.path.join(DERIV_DIR, "step10_ps_fmri_posterior_draws.npz")
 IN_VBM_DRAWS = os.path.join(DERIV_DIR, "step10_ps_vbm_posterior_draws.npz")
-IN_FMRI_TABLE = os.path.join(RESULTS_DIR, "step10_table_s1_fmri_arousal.csv")
-IN_VBM_TABLE = os.path.join(RESULTS_DIR, "step10_table_s1_vbm_arousal.csv")
+IN_FMRI_TABLE = os.path.join(DERIV_DIR, "step10_fmri_arousal_moderation.csv")
+IN_VBM_TABLE = os.path.join(DERIV_DIR, "step10_vbm_arousal_moderation.csv")
 
 OUT_FMRI_JN = os.path.join(DERIV_DIR, "step11_jn_ps_fmri_results.csv")
 OUT_VBM_JN = os.path.join(DERIV_DIR, "step11_jn_ps_vbm_results.csv")
-OUT_FIG_S7 = os.path.join(RESULTS_DIR, "step11_figure_s7_fmri_arousal_jn.png")
-OUT_FIG_S8 = os.path.join(RESULTS_DIR, "step11_figure_s8_vbm_arousal_jn.png")
-OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step11_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(DERIV_DIR, "step11_text_numbers.csv")
+# Figures S7, S8 are drawn by Step 12 (supplementary).
 
 
 def draw_jn_panel(ax, jn, title):
@@ -166,26 +165,7 @@ def run_step10(verbose=True):
     pd.DataFrame(fmri_jn_rows).to_csv(OUT_FMRI_JN, index=False)
     all_text.extend(fmri_text)
 
-    # Figure S7: fMRI arousal JN panels
-    rois_fmri = list(fmri_jn_results.keys())
-    if rois_fmri:
-        ncols = 2
-        nrows = (len(rois_fmri) + 1) // 2
-        fig, axes = plt.subplots(nrows, ncols, figsize=(14, 5 * nrows))
-        axes = axes.ravel() if len(rois_fmri) > 1 else [axes]
-        for i, roi_name in enumerate(rois_fmri):
-            row = fmri_table[fmri_table["ROI"] == roi_name].iloc[0]
-            draw_jn_panel(axes[i], fmri_jn_results[roi_name],
-                          f"{row['Label']} (fMRI BOLD)")
-        for j in range(len(rois_fmri), len(axes)):
-            axes[j].set_visible(False)
-        fig.suptitle("Pain-to-Sleep arousal moderation (fMRI BOLD)",
-                     fontsize=13, fontweight="bold")
-        fig.tight_layout(rect=[0, 0, 1, 0.96])
-        fig.savefig(OUT_FIG_S7, dpi=300, bbox_inches="tight")
-        plt.close(fig)
-        if verbose:
-            print(f"  Saved Figure S7: {OUT_FIG_S7}")
+    # Figures S7/S8 drawn by Step 12 (supplementary) from JN grids.
 
     # ---- VBM GM volume ----
     if verbose:
@@ -195,27 +175,6 @@ def run_step10(verbose=True):
     )
     pd.DataFrame(vbm_jn_rows).to_csv(OUT_VBM_JN, index=False)
     all_text.extend(vbm_text)
-
-    # Figure S8: VBM arousal JN panels
-    rois_vbm = list(vbm_jn_results.keys())
-    if rois_vbm:
-        ncols = 2
-        nrows = (len(rois_vbm) + 1) // 2
-        fig, axes = plt.subplots(nrows, ncols, figsize=(14, 5 * nrows))
-        axes = axes.ravel() if len(rois_vbm) > 1 else [axes]
-        for i, roi_name in enumerate(rois_vbm):
-            row = vbm_table[vbm_table["ROI"] == roi_name].iloc[0]
-            draw_jn_panel(axes[i], vbm_jn_results[roi_name],
-                          f"{row['Label']} (VBM GM volume)")
-        for j in range(len(rois_vbm), len(axes)):
-            axes[j].set_visible(False)
-        fig.suptitle("Pain-to-Sleep arousal moderation (VBM GM volume)",
-                     fontsize=13, fontweight="bold")
-        fig.tight_layout(rect=[0, 0, 1, 0.96])
-        fig.savefig(OUT_FIG_S8, dpi=300, bbox_inches="tight")
-        plt.close(fig)
-        if verbose:
-            print(f"  Saved Figure S8: {OUT_FIG_S8}")
 
     # Save text numbers
     pd.DataFrame(all_text).to_csv(OUT_TEXT_CSV, index=False)

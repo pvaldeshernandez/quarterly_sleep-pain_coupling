@@ -57,6 +57,8 @@ OUT_PERSON_CSV = os.path.join(DERIV_DIR, "step3_person_coupling.csv")
 # Results
 OUT_TABLE4_CSV = os.path.join(RESULTS_DIR, "step3_table4_coupling.csv")
 OUT_LOO_CSV = os.path.join(RESULTS_DIR, "step3_loo_comparison.csv")
+OUT_FIG2 = os.path.join(RESULTS_DIR, "step3_figure2_ps_coupling.png")
+OUT_FIG3 = os.path.join(RESULTS_DIR, "step3_figure3_sp_coupling.png")
 OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step3_text_numbers.csv")
 
 
@@ -98,6 +100,58 @@ def load_data(csv_path: str):
 # =====================================================================
 # Main pipeline
 # =====================================================================
+
+def _generate_coupling_figure(person_df, results, col_mean, col_ci_lo,
+                              col_ci_hi, col_prob, pop_key,
+                              direction_label, out_path, fig_label,
+                              verbose=True):
+    """Draw a 2-panel coupling figure (boxstrip + forest)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    pop_mean = results[f"{pop_key}_mean"]
+    df = person_df.sort_values(col_mean).reset_index(drop=True)
+    n = len(df)
+    means = df[col_mean].values
+    lo = df[col_ci_lo].values
+    hi = df[col_ci_hi].values
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 8),
+                                    gridspec_kw={"width_ratios": [1, 2]})
+    colors = ["#1565C0" if m < 0 else "#D32F2F" for m in means]
+
+    ax1.scatter(np.random.normal(0, 0.08, n), means, c=colors,
+                s=20, alpha=0.5, zorder=2)
+    ax1.axhline(0, color="black", linewidth=0.8, alpha=0.5)
+    ax1.scatter([0], [pop_mean], marker="D", color="#757575", s=100,
+                zorder=5, label="Population mean")
+    ax1.set_xlim(-0.5, 0.5)
+    ax1.set_xticks([])
+    ax1.set_ylabel(f"Person-specific {direction_label} coupling", fontsize=12)
+    ax1.set_title("(A)", fontsize=14, fontweight="bold", loc="left")
+    ax1.legend(fontsize=10, loc="upper right")
+
+    for i in range(n):
+        color = "#1565C0" if means[i] < 0 else "#D32F2F"
+        ax2.plot([lo[i], hi[i]], [i, i], color=color, linewidth=0.8, alpha=0.6)
+    ax2.scatter(means, range(n), c=colors, s=8, zorder=3, alpha=0.7)
+    ax2.axvline(0, color="black", linewidth=0.8, alpha=0.5)
+    ax2.axvline(pop_mean, color="#757575", linewidth=1.5, linestyle="--",
+                alpha=0.7, label=f"Population mean = {pop_mean:.3f}")
+    ax2.set_yticks([])
+    ax2.set_xlabel(f"{direction_label} coupling slope", fontsize=12)
+    ax2.set_ylabel(f"Participant (N = {n})", fontsize=12)
+    ax2.set_title("(B)", fontsize=14, fontweight="bold", loc="left")
+    ax2.legend(fontsize=10, loc="lower right")
+
+    fig.tight_layout()
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    fig.savefig(out_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    if verbose:
+        print(f"  Saved {fig_label}: {out_path}")
+
 
 def run_step3(verbose: bool = True):
     """Fit the coupling model and LOO-CV, produce all Step 3 outputs."""
@@ -228,7 +282,25 @@ def run_step3(verbose: bool = True):
         print(f"  Saved posterior draws: {OUT_DRAWS_NPZ}")
 
     # ==================================================================
-    # 5. LOO-CV model comparison
+    # 5. Figures 2 & 3 — person-level coupling
+    # ==================================================================
+    _generate_coupling_figure(
+        person_df, results,
+        col_mean="beta_ps_mean", col_ci_lo="beta_ps_ci_lo",
+        col_ci_hi="beta_ps_ci_hi", col_prob="beta_ps_prob_neg",
+        pop_key="b1", direction_label="Pain \u2192 Sleep",
+        out_path=OUT_FIG2, fig_label="Figure 2", verbose=verbose,
+    )
+    _generate_coupling_figure(
+        person_df, results,
+        col_mean="beta_sp_mean", col_ci_lo="beta_sp_ci_lo",
+        col_ci_hi="beta_sp_ci_hi", col_prob="beta_sp_prob_neg",
+        pop_key="a2", direction_label="Sleep \u2192 Pain",
+        out_path=OUT_FIG3, fig_label="Figure 3", verbose=verbose,
+    )
+
+    # ==================================================================
+    # 6. LOO-CV model comparison
     # ==================================================================
     if verbose:
         print("\n" + "=" * 70)
