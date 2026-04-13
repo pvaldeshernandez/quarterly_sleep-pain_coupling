@@ -138,11 +138,13 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
         b1_draws = idata.posterior["b1"].values.flatten()
         gamma_ps_draws = idata.posterior["gamma_ps"].values.flatten()
         X_vals = np.array([X_person[sid] for sid in valid_ids if sid in X_person])
+        u_ps_mean = idata.posterior["u_ps"].values.reshape(-1, len(valid_ids)).mean(axis=0)
         draws_dict[f"{roi_name}_b1_draws"] = b1_draws
         draws_dict[f"{roi_name}_gamma_ps_draws"] = gamma_ps_draws
         draws_dict[f"{roi_name}_X_vals"] = X_vals
         draws_dict[f"{roi_name}_raw_mean"] = np.array([raw_mean])
         draws_dict[f"{roi_name}_raw_sd"] = np.array([raw_sd])
+        draws_dict[f"{roi_name}_u_ps_mean"] = u_ps_mean
 
         del idata
 

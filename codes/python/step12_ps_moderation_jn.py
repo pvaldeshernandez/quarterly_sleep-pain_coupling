@@ -367,8 +367,11 @@ def _person_dots_ps(d, roi_name):
     b1_mean = float(np.mean(b1_draws))
     gamma_mean = float(np.mean(gamma_draws))
     person_x_raw = X_vals * raw_sd + raw_mean
-    # No u_ps random effects in these draws — use population mean
-    person_y = b1_mean + gamma_mean * X_vals
+    u_ps_key = f"{roi_name}_u_ps_mean"
+    if u_ps_key in d:
+        person_y = b1_mean + gamma_mean * X_vals + d[u_ps_key]
+    else:
+        person_y = b1_mean + gamma_mean * X_vals
     return {"x_raw": person_x_raw, "y": person_y}
 
 
