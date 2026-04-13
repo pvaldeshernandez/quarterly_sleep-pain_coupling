@@ -70,104 +70,192 @@ OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step5_text_numbers.csv")
 # =====================================================================
 
 def compute_simple_slopes(intercept_draws, slope_draws, x_positions):
-    """Compute posterior simple slopes at specified moderator values.
-
-    For each (label, x_val) in ``x_positions``, computes the
-    conditional coupling ``intercept + slope * x_val`` draw-by-draw
-    and returns the posterior mean and 95% CrI.
-    """
+    """Compute posterior simple slopes at specified moderator values."""
     rows = []
     for label, x_val in x_positions:
         conditional = intercept_draws + slope_draws * x_val
         mean = float(np.mean(conditional))
         lo = float(np.percentile(conditional, 2.5))
         hi = float(np.percentile(conditional, 97.5))
+        p_neg = float((conditional < 0).mean())
         credible = "yes" if (lo > 0 or hi < 0) else "no"
         rows.append({
             "label": label, "x_val": x_val,
             "mean": mean, "ci_lo": lo, "ci_hi": hi,
-            "credible": credible,
+            "prob_neg": p_neg, "credible": credible,
         })
     return rows
 
 
 # =====================================================================
-# JN figure drawing
+# JN figure drawing  — canonical implementation matching original scripts
 # =====================================================================
 
-def draw_jn_figure(jn, direction_label, simple_slopes, contrast_sd,
-                   obs_coupling, obs_contrast, out_path):
-    """Draw a Johnson-Neyman figure for one coupling direction."""
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+def draw_jn_panel(ax, jn, panel_label, direction_label, slopes_dict,
+                  level_labels, level_x_vals,
+                  xlabel=None, body_knee_labels=False,
+                  legend_loc="best", info_loc="upper left",
+                  person_dots=None):
+    """Draw a JN panel with full annotations (person dots, rug, labels, info box).
 
-    fig, ax = plt.subplots(figsize=(12.8, 8.05))
+    Matches the original plot_manuscript_contrast_moderation.py implementation.
+    """
+    import matplotlib.patheffects
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
 
     x_grid = jn["x_grid"]
-    mean_curve = jn["mean"]
-    lo_curve = jn["ci_lo"]
-    hi_curve = jn["ci_hi"]
+    post_mean = jn["post_mean"]
+    ci_lo = jn["ci_lo"]
+    ci_hi = jn["ci_hi"]
+    sig = jn["sig"]
+    obs_vals = jn["obs_vals"]
 
-    # Credible region shading
-    credible_mask = (lo_curve > 0) | (hi_curve < 0)
+    # Person dots (behind everything else)
+    if person_dots is not None:
+        ax.scatter(person_dots["x"], person_dots["y"],
+                   s=30, color="#42A5F5", alpha=0.7, edgecolors="#0D47A1",
+                   linewidths=0.8, zorder=2,
+                   path_effects=[matplotlib.patheffects.withSimplePatchShadow(
+                       offset=(0.5, -0.5), shadow_rgbFace="#1565C0", alpha=0.3)])
+
+    # Shaded CrI band (green = credible, grey = non-credible)
     for i in range(len(x_grid) - 1):
-        if credible_mask[i]:
-            ax.axvspan(x_grid[i], x_grid[i + 1],
-                       color="#C8E6C9", alpha=0.4, linewidth=0)
+        color = "#81C784" if sig[i] else "#BDBDBD"
+        alpha = 0.35 if sig[i] else 0.25
+        ax.fill_between(x_grid[i:i + 2], ci_lo[i:i + 2], ci_hi[i:i + 2],
+                        color=color, alpha=alpha, linewidth=0)
 
-    # Coupling curve + CrI
-    ax.plot(x_grid, mean_curve, color="#1565C0", linewidth=2.5,
-            label="Posterior mean")
-    ax.plot(x_grid, lo_curve, color="#1565C0", linewidth=1,
-            linestyle="--", alpha=0.7)
-    ax.plot(x_grid, hi_curve, color="#1565C0", linewidth=1,
-            linestyle="--", alpha=0.7, label="95% CrI")
-    ax.fill_between(x_grid, lo_curve, hi_curve,
-                     color="#BBDEFB", alpha=0.3)
-
-    # Zero line
+    ax.plot(x_grid, post_mean, color="#1565C0", linewidth=2.5)
+    ax.plot(x_grid, ci_lo, color="#1565C0", linewidth=1, linestyle="--", alpha=0.7)
+    ax.plot(x_grid, ci_hi, color="#1565C0", linewidth=1, linestyle="--", alpha=0.7)
     ax.axhline(0, color="black", linewidth=0.8, linestyle="-", alpha=0.5)
 
-    # JN boundary
-    if jn["boundary"] is not None:
-        ax.axvline(jn["boundary"], color="#D32F2F", linewidth=1.5,
-                   linestyle=":", alpha=0.8, label="JN boundary")
+    # Rug plot
+    ax.scatter(obs_vals, np.full_like(obs_vals, ax.get_ylim()[0]),
+               marker="|", color="#424242", alpha=0.12, s=25, zorder=1)
 
-    # Person dots
-    if obs_coupling is not None and obs_contrast is not None:
-        ax.scatter(obs_contrast, obs_coupling, s=8, alpha=0.15,
-                   color="#1565C0", zorder=1)
+    # Simple slope error bars with annotated labels
+    levels = list(slopes_dict.keys())
+    y_lo, y_hi = ax.get_ylim()
+    y_range = y_hi - y_lo
+    x_lo, x_hi = x_grid[0], x_grid[-1]
+    x_range = x_hi - x_lo
 
-    # Simple-slope markers
-    level_colors = ["#E53935", "#FB8C00", "#43A047"]
-    for i, ss in enumerate(simple_slopes):
-        color = level_colors[i % len(level_colors)]
-        ax.errorbar(ss["x_val"], ss["mean"],
-                    yerr=[[ss["mean"] - ss["ci_lo"]],
-                          [ss["ci_hi"] - ss["mean"]]],
-                    fmt="D", markersize=10, color=color,
-                    elinewidth=2.5, capsize=6, capthick=2,
-                    zorder=5, label=ss["label"])
+    label_specs = []
+    for k in range(len(levels)):
+        if k == 0:
+            label_specs.append((x_lo + x_range * 0.02, y_hi - y_range * 0.03, "left", "top"))
+        elif k == 1:
+            label_specs.append((level_x_vals[k] + x_range * 0.06, y_hi - y_range * 0.03, "left", "top"))
+        else:
+            label_specs.append((x_hi - x_range * 0.02, y_hi - y_range * 0.03, "right", "top"))
 
-    ax.set_xlabel("Within-person pain localization ($K^w$)", fontsize=14)
-    ax.set_ylabel(f"Conditional {direction_label} coupling", fontsize=14)
-    ax.legend(fontsize=11, loc="best", framealpha=0.9)
-    ax.tick_params(labelsize=11)
+    for k, level in enumerate(levels):
+        d = slopes_dict[level]
+        x_pos = level_x_vals[k]
+        beta = d["beta"]
+        cl = d["ci_lo"]
+        ch = d["ci_hi"]
+        p_neg = d.get("prob_neg", d.get("p_neg", 0.5))
+        sig_mark = "*" if p_neg > 0.975 or p_neg < 0.025 else ""
+        label_text = f"{level_labels[k]}\n{beta:.3f} [{cl:.3f}, {ch:.3f}]{sig_mark}"
 
-    # Body-dominant / knee-dominant labels
-    xlim = ax.get_xlim()
-    ax.text(xlim[0] + 0.02 * (xlim[1] - xlim[0]), ax.get_ylim()[0],
-            "Body-dominant", fontsize=10, color="#666666",
-            ha="left", va="bottom")
-    ax.text(xlim[1] - 0.02 * (xlim[1] - xlim[0]), ax.get_ylim()[0],
-            "Knee-dominant", fontsize=10, color="#666666",
-            ha="right", va="bottom")
+        ax.errorbar(x_pos, beta,
+                    yerr=[[beta - cl], [ch - beta]],
+                    fmt="o", color="black", markersize=10,
+                    capsize=7, capthick=2.5, elinewidth=2.5,
+                    markeredgecolor="white", markeredgewidth=1.5,
+                    zorder=6)
 
-    plt.tight_layout()
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    fig.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close(fig)
+        spec = label_specs[k]
+        txt_x, txt_y, ha, va = spec
+        ax.annotate(label_text,
+                    xy=(x_pos, ch if va == "bottom" else beta),
+                    xytext=(txt_x, txt_y),
+                    fontsize=10, fontfamily="monospace", color="black",
+                    fontweight="bold", ha=ha, va=va,
+                    bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                              edgecolor="black", alpha=0.90),
+                    arrowprops=dict(arrowstyle="->", color="black",
+                                   lw=1.5, connectionstyle="arc3,rad=0.2"),
+                    zorder=7)
+
+    ax.set_ylabel(f"Coupling \u03bb ({direction_label})", fontsize=18)
+    ax.tick_params(axis="y", labelsize=16)
+
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=18)
+    ax.tick_params(axis="x", labelsize=16)
+
+    if body_knee_labels:
+        ax.text(0.01, -0.10, "\u2190 Body-dominant", transform=ax.transAxes,
+                fontsize=16, ha="left", va="top", color="black", fontstyle="italic")
+        ax.text(0.99, -0.10, "Knee-dominant \u2192", transform=ax.transAxes,
+                fontsize=16, ha="right", va="top", color="black", fontstyle="italic")
+
+    # Title with equation
+    prefix = f"{panel_label}.  " if panel_label else ""
+    ax.set_title(
+        f"{prefix}{direction_label} coupling: "
+        f"\u03bb(K) = {jn['intercept_mean']:.3f} + ({jn['slope_mean']:.3f})\u00b7K",
+        fontsize=20, fontweight="bold", loc="left", pad=10)
+
+    # JN boundaries
+    for x0 in jn["jn_boundaries"]:
+        ax.axvline(x0, color="black", linewidth=2, linestyle=":", alpha=0.8, zorder=4)
+        y_top = ax.get_ylim()[1]
+        y_bot = ax.get_ylim()[0]
+        ax.text(x0, y_top - (y_top - y_bot) * 0.04, f"{x0:.2f}",
+                fontsize=14, color="black", fontweight="bold",
+                va="top", ha="center")
+
+    # Info box: % in credible region
+    jn_text_parts = []
+    if np.any(jn["sig_negative"]):
+        sig_lo = x_grid[jn["sig_negative"]][0]
+        sig_hi = x_grid[jn["sig_negative"]][-1]
+        pct_sig = float(((obs_vals >= sig_lo) & (obs_vals <= sig_hi)).mean() * 100)
+        jn_text_parts.append(f"{pct_sig:.1f}% of observations in credible region")
+    elif np.any(jn["sig_positive"]):
+        sig_lo = x_grid[jn["sig_positive"]][0]
+        sig_hi = x_grid[jn["sig_positive"]][-1]
+        pct_sig = float(((obs_vals >= sig_lo) & (obs_vals <= sig_hi)).mean() * 100)
+        jn_text_parts.append(f"{pct_sig:.1f}% of observations in credible region")
+    if not jn["jn_boundaries"]:
+        if np.all(sig):
+            jn_text_parts.append("Coupling credible across entire range")
+        elif not np.any(sig):
+            jn_text_parts.append("No JN boundary: coupling non-credible across range")
+
+    if jn_text_parts:
+        locs = {"upper left": (0.02, 0.97, "left", "top"),
+                "upper right": (0.98, 0.97, "right", "top"),
+                "lower right": (0.98, 0.10, "right", "bottom")}
+        ix, iy, iha, iva = locs.get(info_loc, (0.02, 0.97, "left", "top"))
+        ax.text(ix, iy, "\n".join(jn_text_parts), transform=ax.transAxes,
+                fontsize=14, va=iva, ha=iha, fontfamily="monospace")
+
+    # Legend
+    legend_elements = [
+        Line2D([0], [0], color="#1565C0", linewidth=2.5, label="Posterior mean"),
+        Line2D([0], [0], color="#1565C0", linewidth=1, linestyle="--", label="95% CrI"),
+        Patch(facecolor="#81C784", alpha=0.35, label="Credible (CrI excludes 0)"),
+        Patch(facecolor="#BDBDBD", alpha=0.25, label="Non-credible"),
+        Line2D([0], [0], color="black", linewidth=2, linestyle=":", label="JN boundary"),
+        Line2D([0], [0], marker="o", color="black", markersize=8,
+               markeredgecolor="white", markeredgewidth=1, linestyle="",
+               label="Simple slope \u00b1 95% CrI"),
+    ]
+    if person_dots is not None:
+        legend_elements.insert(0,
+            Line2D([0], [0], marker="o", color="#42A5F5", markersize=7,
+                   markeredgecolor="#0D47A1", markeredgewidth=0.8, linestyle="",
+                   label="Fitted coupling"))
+    ax.legend(handles=legend_elements, loc=legend_loc, fontsize=13,
+              framealpha=0.9, edgecolor="#CCCCCC",
+              bbox_to_anchor=(1.0, 0.08) if "right" in legend_loc else (0.0, 0.08),
+              borderaxespad=0.3)
 
 
 # =====================================================================
@@ -243,18 +331,25 @@ def run_step5(verbose: bool = True):
     b1_mean = float(np.mean(b1_draws))
     obs_ps = b1_mean + u_ps_mean[obs_pid_idx] + float(np.mean(b4_draws)) * obs_contrast
 
-    # Adapt jn_ps keys for draw_jn_figure
-    jn_ps_fig = {
-        "x_grid": jn_ps["x_grid"],
-        "mean": jn_ps["post_mean"],
-        "ci_lo": jn_ps["ci_lo"],
-        "ci_hi": jn_ps["ci_hi"],
-        "boundary": ps_boundary,
-    }
-    draw_jn_figure(
-        jn_ps_fig, "Pain → Sleep", slopes_ps, c_sd,
-        obs_ps, obs_contrast, OUT_FIG4,
-    )
+    # Convert slopes_ps list to dict keyed by label for draw_jn_panel
+    slopes_ps_dict = {ss["label"]: ss for ss in slopes_ps}
+    level_labels_ps = [ss["label"] for ss in slopes_ps]
+    level_x_vals_ps = [ss["x_val"] for ss in slopes_ps]
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(12.8, 8.05))
+    draw_jn_panel(ax, jn_ps, "", "Pain \u2192 Sleep",
+                  slopes_ps_dict, level_labels_ps, level_x_vals_ps,
+                  xlabel="K\u1d42",
+                  body_knee_labels=True,
+                  legend_loc="lower left", info_loc="lower right",
+                  person_dots={"x": obs_contrast, "y": obs_ps})
+    os.makedirs(os.path.dirname(OUT_FIG4), exist_ok=True)
+    fig.savefig(OUT_FIG4, dpi=300, bbox_inches="tight")
+    plt.close(fig)
     if verbose:
         print(f"  Saved Figure 4: {OUT_FIG4}")
 
@@ -271,24 +366,28 @@ def run_step5(verbose: bool = True):
         else:
             print(f"    No boundary within observed range (null)")
         for ss in slopes_sp:
-            sig = "*" if ss["credible"] == "yes" else ""
+            sig_str = "*" if ss["credible"] == "yes" else ""
             print(f"    {ss['label']}: coupling = {ss['mean']:.4f} "
-                  f"[{ss['ci_lo']:.4f}, {ss['ci_hi']:.4f}]{sig}")
+                  f"[{ss['ci_lo']:.4f}, {ss['ci_hi']:.4f}]{sig_str}")
 
     a2_mean = float(np.mean(a2_draws))
     obs_sp = a2_mean + u_sp_mean[obs_pid_idx] + float(np.mean(a4_draws)) * obs_contrast
 
-    jn_sp_fig = {
-        "x_grid": jn_sp["x_grid"],
-        "mean": jn_sp["post_mean"],
-        "ci_lo": jn_sp["ci_lo"],
-        "ci_hi": jn_sp["ci_hi"],
-        "boundary": sp_boundary,
-    }
-    draw_jn_figure(
-        jn_sp_fig, "Sleep → Pain", slopes_sp, c_sd,
-        obs_sp, obs_contrast, OUT_FIG_S3,
-    )
+    slopes_sp_dict = {ss["label"]: ss for ss in slopes_sp}
+    level_labels_sp = [ss["label"] for ss in slopes_sp]
+    level_x_vals_sp = [ss["x_val"] for ss in slopes_sp]
+
+    fig, ax = plt.subplots(figsize=(12.8, 8.05))
+    draw_jn_panel(ax, jn_sp, "", "Sleep \u2192 Pain",
+                  slopes_sp_dict, level_labels_sp, level_x_vals_sp,
+                  xlabel="K\u1d42",
+                  body_knee_labels=True,
+                  legend_loc="lower right", info_loc="upper left",
+                  person_dots={"x": obs_contrast, "y": obs_sp})
+    ax.set_xlim(jn_sp["x_grid"][0], jn_sp["x_grid"][-1])
+    os.makedirs(os.path.dirname(OUT_FIG_S3), exist_ok=True)
+    fig.savefig(OUT_FIG_S3, dpi=300, bbox_inches="tight")
+    plt.close(fig)
     if verbose:
         print(f"  Saved Figure S3: {OUT_FIG_S3}")
 
