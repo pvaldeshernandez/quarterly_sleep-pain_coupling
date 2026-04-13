@@ -1,17 +1,17 @@
 """
-Step 8 — Johnson-Neyman analysis for SP moderation ROIs.
+Step 9 — Johnson-Neyman analysis for SP moderation ROIs.
 ======================================================================
 
-Input:  derivatives/step6_sp_posterior_draws.npz
-        results/step6_table5_sp_moderation.csv
+Input:  derivatives/step8/step8_sp_posterior_draws.npz
+        results/step8/step8_table5_sp_moderation.csv
 Output:
   derivatives/
-    step8_jn_sp_results.csv           — full JN grids per ROI
+    step9_jn_sp_results.csv              — full JN grids per ROI
   results/
-    step8_figure5_jn_nacc.png         — Figure 5: Left NAcc JN
-    step8_figure6_jn_acc.png          — Figure 6: ACC JN (Right + Left, 2 panels)
-    step8_figure_s5_krause_jn.png     — Figure S5: 4 non-sig Krause JN
-    step8_text_numbers.csv            — JN boundaries, % sample, slopes
+    step9_figure5_jn_acc.png             — Figure 5: ACC JN (Right + Left, 2 panels)
+    step9_figure_s5b_jn_nacc.png         — Figure S5b: Left NAcc JN (supplementary)
+    step9_figure_s5_krause_jn.png        — Figure S5: 4 non-sig Krause JN
+    step9_text_numbers.csv               — JN boundaries, % sample, slopes
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
 """
@@ -43,15 +43,15 @@ IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step8", "step8_sp_posterior_draws.npz")
 IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step8", "step8_table5_sp_moderation.csv")
 
 OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step9_jn_sp_results.csv")
-OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step9_figure5_jn_nacc.png")
-OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step9_figure6_jn_acc.png")
+OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step9_figure5_jn_acc.png")
+OUT_FIG_S5B = os.path.join(STEP_RESULTS_DIR, "step9_figure_s5b_jn_nacc.png")
 OUT_FIG_S5 = os.path.join(STEP_RESULTS_DIR, "step9_figure_s5_krause_jn.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step9_text_numbers.csv")
 
-# ROI for Figure 5 (single panel)
-FIG5_ROI = "Left_NAcc"
-# ROIs for Figure 6 (two panels stacked: Right ACC on top, Left ACC below)
-FIG6_ROIS = ["Right_dACC_MCC", "Left_dACC_MCC"]
+# ROI for Figure S5b (single panel, supplementary)
+FIG_S5B_ROI = "Left_NAcc"
+# ROIs for Figure 5 (two panels stacked: Right ACC on top, Left ACC below)
+FIG5_ROIS = ["Right_dACC_MCC", "Left_dACC_MCC"]
 # Non-significant Krause ROIs for the S5 2x2 merge
 S5_ROIS = ["Right_S1", "Right_Middle_Insula", "Left_Thalamus", "Left_Anterior_Insula"]
 
@@ -101,7 +101,7 @@ def run_step9(verbose=True):
 
     if verbose:
         print("=" * 70)
-        print("STEP 7 — SP moderation Johnson-Neyman analysis")
+        print("STEP 9 — SP moderation Johnson-Neyman analysis")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -217,36 +217,36 @@ def run_step9(verbose=True):
             })
         return slopes
 
-    # --- Figure 5: Left NAcc (single panel) ---
-    if FIG5_ROI in jn_results:
-        jn = jn_results[FIG5_ROI]
-        slopes = _make_slopes(FIG5_ROI)
-        fig, ax = plt.subplots(figsize=(10, 7))
-        row = table5[table5["ROI"] == FIG5_ROI].iloc[0]
-        draw_jn_panel(ax, jn, f"{row['Label']} (Figure 5)", slopes)
+    # --- Figure 5: Right + Left dACC/MCC (2 panels stacked vertically) ---
+    available_f5 = [r for r in FIG5_ROIS if r in jn_results]
+    if available_f5:
+        fig, axes = plt.subplots(len(available_f5), 1,
+                                 figsize=(10, 7 * len(available_f5)))
+        if len(available_f5) == 1:
+            axes = [axes]
+        for ax, roi_name in zip(axes, available_f5):
+            jn = jn_results[roi_name]
+            slopes = _make_slopes(roi_name)
+            row = table5[table5["ROI"] == roi_name].iloc[0]
+            draw_jn_panel(ax, jn, row["Label"], slopes)
         fig.tight_layout()
         fig.savefig(OUT_FIG5, dpi=300, bbox_inches="tight")
         plt.close(fig)
         if verbose:
             print(f"  Saved Figure 5: {OUT_FIG5}")
 
-    # --- Figure 6: Right + Left dACC/MCC (2 panels stacked vertically) ---
-    available_f6 = [r for r in FIG6_ROIS if r in jn_results]
-    if available_f6:
-        fig, axes = plt.subplots(len(available_f6), 1,
-                                 figsize=(10, 7 * len(available_f6)))
-        if len(available_f6) == 1:
-            axes = [axes]
-        for ax, roi_name in zip(axes, available_f6):
-            jn = jn_results[roi_name]
-            slopes = _make_slopes(roi_name)
-            row = table5[table5["ROI"] == roi_name].iloc[0]
-            draw_jn_panel(ax, jn, row["Label"], slopes)
+    # --- Figure S5b: Left NAcc (single panel, supplementary) ---
+    if FIG_S5B_ROI in jn_results:
+        jn = jn_results[FIG_S5B_ROI]
+        slopes = _make_slopes(FIG_S5B_ROI)
+        fig, ax = plt.subplots(figsize=(10, 7))
+        row = table5[table5["ROI"] == FIG_S5B_ROI].iloc[0]
+        draw_jn_panel(ax, jn, row["Label"], slopes)
         fig.tight_layout()
-        fig.savefig(OUT_FIG6, dpi=300, bbox_inches="tight")
+        fig.savefig(OUT_FIG_S5B, dpi=300, bbox_inches="tight")
         plt.close(fig)
         if verbose:
-            print(f"  Saved Figure 6: {OUT_FIG6}")
+            print(f"  Saved Figure S5b: {OUT_FIG_S5B}")
 
     # --- Figure S5: 2x2 merge of non-significant Krause ROIs ---
     available_s5 = [r for r in S5_ROIS if r in jn_results]
@@ -287,13 +287,13 @@ def run_step9(verbose=True):
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
         print("\n" + "=" * 70)
-        print("STEP 7 COMPLETE")
+        print("STEP 9 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 8 — SP moderation JN analysis."
+        description="Step 9 — SP moderation JN analysis."
     )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
