@@ -54,11 +54,13 @@ LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
 IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step4", "step4_posterior_draws.npz")
+IN_TABLE4_CSV = os.path.join(RESULTS_DIR, "step4", "step4_table4_coupling.csv")
 
 # Derivatives
 OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step5_jn_localization_results.csv")
 
 # Results
+OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step5_table5_contrast_mod.csv")
 OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step5_figure4_jn_localization_ps.png")
 OUT_FIG_S3 = os.path.join(STEP_RESULTS_DIR, "step5_figure_s3_jn_localization_sp.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step5_text_numbers.csv")
@@ -204,10 +206,15 @@ def run_step5(verbose: bool = True):
     if verbose:
         print(f"  Contrast SD (within-person): {c_sd:.4f}")
 
-    # Note: the contrast moderation parameters (delta_p, omega_sp,
-    # delta_s, omega_ps) are already in Table 4 from Step 3. No
-    # separate Table 5 is needed — the manuscript's Table 5 was
-    # redundant with Table 4 and has been merged into it.
+    # ==================================================================
+    # Table 5 — contrast moderation parameters (subset of Table 4)
+    # ==================================================================
+    table4 = pd.read_csv(IN_TABLE4_CSV)
+    table5_params = ["a3", "a4", "b3", "b4"]
+    table5 = table4[table4["Parameter"].isin(table5_params)].copy()
+    table5.to_csv(OUT_TABLE5_CSV, index=False)
+    if verbose:
+        print(f"  Saved Table 5: {OUT_TABLE5_CSV}")
 
     # ==================================================================
     # JN analysis — both directions
