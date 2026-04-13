@@ -168,12 +168,14 @@ def run_step8(verbose=True):
         # Save posterior draws for JN step
         a2_draws = idata.posterior["a2"].values.flatten()
         gamma_sp_draws = idata.posterior["gamma_sp"].values.flatten()
+        u_sp_mean = idata.posterior["u_sp"].values.reshape(-1, len(valid_ids)).mean(axis=0)
         X_vals = np.array([X_person[sid] for sid in valid_ids if sid in X_person])
         draws_dict[f"{roi_name}_a2_draws"] = a2_draws
         draws_dict[f"{roi_name}_gamma_sp_draws"] = gamma_sp_draws
         draws_dict[f"{roi_name}_X_vals"] = X_vals
         draws_dict[f"{roi_name}_raw_mean"] = np.array([raw_mean])
         draws_dict[f"{roi_name}_raw_sd"] = np.array([raw_sd])
+        draws_dict[f"{roi_name}_u_sp_mean"] = u_sp_mean
 
         del idata
 
