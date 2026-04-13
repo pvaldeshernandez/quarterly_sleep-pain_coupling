@@ -1,16 +1,16 @@
 """
-Step 6 — Fit Sleep-to-Pain moderation models (7 ROIs).
+Step 7 — Fit Sleep-to-Pain moderation models (7 ROIs).
 ======================================================================
 
 Input:  derivatives/step2_processed_long.csv
-        derivatives/step6_sp_roi_values.csv
+        derivatives/step5_sp_roi_values.csv
 Output:
   derivatives/
-    step7_sp_posterior_draws.npz     — per-ROI posterior draws
+    step6_sp_posterior_draws.npz     — per-ROI posterior draws
   results/
-    step7_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
-    step7_sign_concordance.csv       — sign test results
-    step7_text_numbers.csv           — gamma estimates, p-values, etc.
+    step6_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
+    step6_sign_concordance.csv       — sign test results
+    step6_text_numbers.csv           — gamma estimates, p-values, etc.
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each of the 7 SP ROIs (6 Krause + 1 ACC). Extracts gamma_sp and
@@ -33,20 +33,24 @@ import pandas as pd
 warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step7")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step7")
+os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step2_processed_long.csv")
-IN_ROI_CSV = os.path.join(DERIV_DIR, "step6_sp_roi_values.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step2", "step2_processed_long.csv")
+IN_ROI_CSV = os.path.join(DERIV_DIR, "step6", "step6_sp_roi_values.csv")
 
-OUT_DRAWS_NPZ = os.path.join(DERIV_DIR, "step7_sp_posterior_draws.npz")
-OUT_TABLE5_CSV = os.path.join(RESULTS_DIR, "step7_table5_sp_moderation.csv")
-OUT_SIGN_CSV = os.path.join(RESULTS_DIR, "step7_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step7_text_numbers.csv")
+OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step7_sp_posterior_draws.npz")
+OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step7_table5_sp_moderation.csv")
+OUT_SIGN_CSV = os.path.join(STEP_RESULTS_DIR, "step7_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step7_text_numbers.csv")
 
 # ROIs included in the Krause sign-concordance test (ACC excluded)
 KRAUSE_ROIS = [
@@ -78,7 +82,7 @@ def load_step2_data(csv_path):
     return df, model_df, unique_ids, id_map
 
 
-def run_step6(verbose=True):
+def run_step7(verbose=True):
     from coupling_model import fit_bayesian_varx1, extract_results
 
     if verbose:
@@ -87,7 +91,9 @@ def run_step6(verbose=True):
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
     df_full, model_df, unique_ids, id_map = load_step2_data(IN_PROCESSED_CSV)
     roi_df = pd.read_csv(IN_ROI_CSV)
@@ -251,11 +257,11 @@ def run_step6(verbose=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 6 — fit SP moderation models (7 ROIs)."
+        description="Step 7 — fit SP moderation models (7 ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    run_step6(verbose=not args.quiet)
+    run_step7(verbose=not args.quiet)
 
 
 if __name__ == "__main__":

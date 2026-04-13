@@ -1,8 +1,9 @@
 """
-Step 5 — Extract Sleep-to-Pain fMRI ROI values.
+Step 6 — Extract Sleep-to-Pain fMRI ROI values.
 ======================================================================
 
-Input:  data/original neuroimaging (fmri_contrasts/, spm_nomask/)
+Input:  derivatives/step5_fmri_contrasts_masked/   (NAcc ROIs)
+        derivatives/step5_fmri_contrasts_unmasked/ (all other ROIs)
 Output:
   derivatives/
     step6_sp_roi_values.csv    — per-subject z-scored ROI values
@@ -31,19 +32,19 @@ import pandas as pd
 warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step6")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-OUT_ROI_CSV = os.path.join(DERIV_DIR, "step6_sp_roi_values.csv")
+OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step6_sp_roi_values.csv")
 
-# fMRI contrast directories:
-#   Unmasked contrasts from Step 5 (for S1, Mid Insula, Thal, Ant Ins, ACC)
-#   GM-masked contrasts from original GLM (for NAcc, where GM mask is used)
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step5_fmri_contrasts")
-FMRI_MASKED_DIR = os.path.join(ROOT, "data", "original", "fmri_glm")
+# Contrast image directories from Step 5
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step5_fmri_contrasts_masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step5_fmri_contrasts_unmasked")
 
 # ROI definitions
 SP_ROIS = {
@@ -118,16 +119,17 @@ def run_step6(verbose: bool = True):
         print("=" * 70)
         print("STEP 6 — Extract Sleep-to-Pain fMRI ROI values")
         print("=" * 70)
+        print(f"  Masked contrasts:   {FMRI_MASKED_DIR}")
         print(f"  Unmasked contrasts: {FMRI_UNMASKED_DIR}")
-        print(f"  GM-masked contrasts: {FMRI_MASKED_DIR}")
 
     os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
-    fmri_masked_dir = FMRI_MASKED_DIR
+    fmri_masked_dir   = FMRI_MASKED_DIR
     fmri_unmasked_dir = FMRI_UNMASKED_DIR
 
     # Reference image for affine + shape
-    ref_dir = fmri_unmasked_dir
+    ref_dir = fmri_unmasked_dir if os.path.isdir(fmri_unmasked_dir) else fmri_masked_dir
     ref_ids = sorted(os.listdir(ref_dir))
     ref_path = os.path.join(ref_dir, ref_ids[0], "con_0001.nii")
     ref_img = nib.load(ref_path)

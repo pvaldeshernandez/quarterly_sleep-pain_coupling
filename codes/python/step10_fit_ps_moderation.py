@@ -1,5 +1,5 @@
 """
-Step 9 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
+Step 10 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
 ======================================================================
 
 Input:  derivatives/step2_processed_long.csv
@@ -10,10 +10,10 @@ Output:
     step10_ps_fmri_posterior_draws.npz
     step10_ps_vbm_posterior_draws.npz
   results/
-    step10_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
-    step10_table_s1_vbm_arousal.csv     — Table S1 VBM panel
-    step10_vbm_sign_concordance.csv     — VBM 5/5 sign test
-    step10_text_numbers.csv
+    step9_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
+    step9_table_s1_vbm_arousal.csv     — Table S1 VBM panel
+    step9_vbm_sign_concordance.csv     — VBM 5/5 sign test
+    step9_text_numbers.csv
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each arousal ROI, separately for fMRI BOLD and VBM GM volume.
@@ -35,25 +35,27 @@ import pandas as pd
 warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step10")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step10")
+os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step2_processed_long.csv")
-IN_FMRI_CSV = os.path.join(DERIV_DIR, "step9_ps_fmri_roi_values.csv")
-IN_VBM_CSV = os.path.join(DERIV_DIR, "step9_ps_vbm_roi_values.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step2", "step2_processed_long.csv")
+IN_FMRI_CSV = os.path.join(DERIV_DIR, "step9", "step9_ps_fmri_roi_values.csv")
+IN_VBM_CSV = os.path.join(DERIV_DIR, "step9", "step9_ps_vbm_roi_values.csv")
 
-OUT_FMRI_DRAWS = os.path.join(DERIV_DIR, "step10_ps_fmri_posterior_draws.npz")
-OUT_VBM_DRAWS = os.path.join(DERIV_DIR, "step10_ps_vbm_posterior_draws.npz")
-# Table S1 and VBM sign concordance go to derivatives here;
-# Step 12 (supplementary) formats them as results.
-OUT_FMRI_TABLE = os.path.join(DERIV_DIR, "step10_fmri_arousal_moderation.csv")
-OUT_VBM_TABLE = os.path.join(DERIV_DIR, "step10_vbm_arousal_moderation.csv")
-OUT_VBM_SIGN = os.path.join(DERIV_DIR, "step10_vbm_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(DERIV_DIR, "step10_text_numbers.csv")
+OUT_FMRI_DRAWS = os.path.join(STEP_DERIV_DIR, "step10_ps_fmri_posterior_draws.npz")
+OUT_VBM_DRAWS = os.path.join(STEP_DERIV_DIR, "step10_ps_vbm_posterior_draws.npz")
+OUT_FMRI_TABLE = os.path.join(STEP_RESULTS_DIR, "step10_table_s1_fmri_arousal.csv")
+OUT_VBM_TABLE = os.path.join(STEP_RESULTS_DIR, "step10_table_s1_vbm_arousal.csv")
+OUT_VBM_SIGN = os.path.join(STEP_RESULTS_DIR, "step10_vbm_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step10_text_numbers.csv")
 
 
 def load_step2_data(csv_path):
@@ -147,14 +149,16 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
     return pd.DataFrame(table_rows), draws_dict
 
 
-def run_step9(verbose=True):
+def run_step10(verbose=True):
     if verbose:
         print("=" * 70)
         print("STEP 9 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
     _, model_df, unique_ids, id_map = load_step2_data(IN_PROCESSED_CSV)
 
@@ -229,11 +233,11 @@ def run_step9(verbose=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 9 — fit PS moderation (arousal relay ROIs)."
+        description="Step 10 — fit PS moderation (arousal relay ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    run_step9(verbose=not args.quiet)
+    run_step10(verbose=not args.quiet)
 
 
 if __name__ == "__main__":

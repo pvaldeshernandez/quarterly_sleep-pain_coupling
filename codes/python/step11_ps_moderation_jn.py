@@ -1,11 +1,11 @@
 """
-Step 10 — Johnson-Neyman analysis for PS arousal moderation ROIs.
+Step 11 — Johnson-Neyman analysis for PS arousal moderation ROIs.
 ======================================================================
 
 Input:  derivatives/step10_ps_fmri_posterior_draws.npz
         derivatives/step10_ps_vbm_posterior_draws.npz
-        results/step10_table_s1_fmri_arousal.csv
-        results/step10_table_s1_vbm_arousal.csv
+        results/step9_table_s1_fmri_arousal.csv
+        results/step9_table_s1_vbm_arousal.csv
 Output:
   derivatives/
     step11_jn_ps_fmri_results.csv
@@ -30,22 +30,27 @@ import pandas as pd
 warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step11")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step11")
+os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_FMRI_DRAWS = os.path.join(DERIV_DIR, "step10_ps_fmri_posterior_draws.npz")
-IN_VBM_DRAWS = os.path.join(DERIV_DIR, "step10_ps_vbm_posterior_draws.npz")
-IN_FMRI_TABLE = os.path.join(DERIV_DIR, "step10_fmri_arousal_moderation.csv")
-IN_VBM_TABLE = os.path.join(DERIV_DIR, "step10_vbm_arousal_moderation.csv")
+IN_FMRI_DRAWS = os.path.join(DERIV_DIR, "step10", "step10_ps_fmri_posterior_draws.npz")
+IN_VBM_DRAWS = os.path.join(DERIV_DIR, "step10", "step10_ps_vbm_posterior_draws.npz")
+IN_FMRI_TABLE = os.path.join(RESULTS_DIR, "step10", "step10_table_s1_fmri_arousal.csv")
+IN_VBM_TABLE = os.path.join(RESULTS_DIR, "step10", "step10_table_s1_vbm_arousal.csv")
 
-OUT_FMRI_JN = os.path.join(DERIV_DIR, "step11_jn_ps_fmri_results.csv")
-OUT_VBM_JN = os.path.join(DERIV_DIR, "step11_jn_ps_vbm_results.csv")
-OUT_TEXT_CSV = os.path.join(DERIV_DIR, "step11_text_numbers.csv")
-# Figures S7, S8 are drawn by Step 12 (supplementary).
+OUT_FMRI_JN = os.path.join(STEP_DERIV_DIR, "step11_jn_ps_fmri_results.csv")
+OUT_VBM_JN = os.path.join(STEP_DERIV_DIR, "step11_jn_ps_vbm_results.csv")
+OUT_FIG_S7 = os.path.join(STEP_RESULTS_DIR, "step11_figure_s7_fmri_arousal_jn.png")
+OUT_FIG_S8 = os.path.join(STEP_RESULTS_DIR, "step11_figure_s8_vbm_arousal_jn.png")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step11_text_numbers.csv")
 
 
 def draw_jn_panel(ax, jn, title):
@@ -141,14 +146,16 @@ def run_jn_for_modality(modality_name, draws_path, table_path, verbose=True):
     return jn_rows, text_rows, jn_results, table
 
 
-def run_step10(verbose=True):
+def run_step11(verbose=True):
     if verbose:
         print("=" * 70)
         print("STEP 10 — PS arousal moderation Johnson-Neyman analysis")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
     import matplotlib
     matplotlib.use("Agg")
@@ -165,7 +172,26 @@ def run_step10(verbose=True):
     pd.DataFrame(fmri_jn_rows).to_csv(OUT_FMRI_JN, index=False)
     all_text.extend(fmri_text)
 
-    # Figures S7/S8 drawn by Step 12 (supplementary) from JN grids.
+    # Figure S7: fMRI arousal JN panels
+    rois_fmri = list(fmri_jn_results.keys())
+    if rois_fmri:
+        ncols = 2
+        nrows = (len(rois_fmri) + 1) // 2
+        fig, axes = plt.subplots(nrows, ncols, figsize=(14, 5 * nrows))
+        axes = axes.ravel() if len(rois_fmri) > 1 else [axes]
+        for i, roi_name in enumerate(rois_fmri):
+            row = fmri_table[fmri_table["ROI"] == roi_name].iloc[0]
+            draw_jn_panel(axes[i], fmri_jn_results[roi_name],
+                          f"{row['Label']} (fMRI BOLD)")
+        for j in range(len(rois_fmri), len(axes)):
+            axes[j].set_visible(False)
+        fig.suptitle("Pain-to-Sleep arousal moderation (fMRI BOLD)",
+                     fontsize=13, fontweight="bold")
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+        fig.savefig(OUT_FIG_S7, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+        if verbose:
+            print(f"  Saved Figure S7: {OUT_FIG_S7}")
 
     # ---- VBM GM volume ----
     if verbose:
@@ -175,6 +201,27 @@ def run_step10(verbose=True):
     )
     pd.DataFrame(vbm_jn_rows).to_csv(OUT_VBM_JN, index=False)
     all_text.extend(vbm_text)
+
+    # Figure S8: VBM arousal JN panels
+    rois_vbm = list(vbm_jn_results.keys())
+    if rois_vbm:
+        ncols = 2
+        nrows = (len(rois_vbm) + 1) // 2
+        fig, axes = plt.subplots(nrows, ncols, figsize=(14, 5 * nrows))
+        axes = axes.ravel() if len(rois_vbm) > 1 else [axes]
+        for i, roi_name in enumerate(rois_vbm):
+            row = vbm_table[vbm_table["ROI"] == roi_name].iloc[0]
+            draw_jn_panel(axes[i], vbm_jn_results[roi_name],
+                          f"{row['Label']} (VBM GM volume)")
+        for j in range(len(rois_vbm), len(axes)):
+            axes[j].set_visible(False)
+        fig.suptitle("Pain-to-Sleep arousal moderation (VBM GM volume)",
+                     fontsize=13, fontweight="bold")
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+        fig.savefig(OUT_FIG_S8, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+        if verbose:
+            print(f"  Saved Figure S8: {OUT_FIG_S8}")
 
     # Save text numbers
     pd.DataFrame(all_text).to_csv(OUT_TEXT_CSV, index=False)
@@ -187,11 +234,11 @@ def run_step10(verbose=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 10 — PS arousal moderation JN analysis."
+        description="Step 11 — PS arousal moderation JN analysis."
     )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    run_step10(verbose=not args.quiet)
+    run_step11(verbose=not args.quiet)
 
 
 if __name__ == "__main__":

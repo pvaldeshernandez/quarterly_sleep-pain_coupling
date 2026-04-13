@@ -52,18 +52,22 @@ warnings.filterwarnings("ignore")
 # =====================================================================
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)  # repo root
+ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step2")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step2")
+os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-IN_SCORED_CSV = os.path.join(DERIV_DIR, "step1_scored_long.csv")
+IN_SCORED_CSV = os.path.join(DERIV_DIR, "step1", "step1_scored_long.csv")
 
-OUT_PROCESSED_CSV = os.path.join(DERIV_DIR, "step2_processed_long.csv")
-OUT_FIGURE1 = os.path.join(RESULTS_DIR, "step2_figure1.png")
-OUT_TABLE3_CSV = os.path.join(RESULTS_DIR, "step2_table3_demographics.csv")
-OUT_SUMMARY_CSV = os.path.join(DERIV_DIR, "step2_timepoint_summary.csv")
+OUT_PROCESSED_CSV = os.path.join(STEP_DERIV_DIR, "step2_processed_long.csv")
+OUT_FIGURE1 = os.path.join(STEP_RESULTS_DIR, "step2_figure1.png")
+OUT_TABLE3_CSV = os.path.join(STEP_RESULTS_DIR, "step2_table3_demographics.csv")
+OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step2_timepoint_summary.csv")
 
 
 # =====================================================================
@@ -617,6 +621,7 @@ def run_step2(verbose: bool = True):
 
     # Save processed data (derivative)
     os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     df_out.to_csv(OUT_PROCESSED_CSV, index=False)
     if verbose:
         print(f"\n  Saved: {OUT_PROCESSED_CSV}")
@@ -631,6 +636,7 @@ def run_step2(verbose: bool = True):
 
     # 6. Results: Table 3 + Figure 1 + text numbers
     os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
     table3 = compute_table3(df_out, df_full)
     table3.to_csv(OUT_TABLE3_CSV, index=False)
@@ -657,7 +663,7 @@ def run_step2(verbose: bool = True):
         {"metric": "min_lags_per_person", "value": int(per_person.min())},
         {"metric": "max_lags_per_person", "value": int(per_person.max())},
     ])
-    OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step2_text_numbers.csv")
+    OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step2_text_numbers.csv")
     text_numbers.to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved: {OUT_TEXT_CSV}")

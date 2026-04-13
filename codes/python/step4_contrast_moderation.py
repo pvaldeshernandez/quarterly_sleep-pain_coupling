@@ -42,21 +42,26 @@ warnings.filterwarnings("ignore")
 # =====================================================================
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step4")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step4")
+os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step3_posterior_draws.npz")
+IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step3", "step3_posterior_draws.npz")
 
 # Derivatives
-OUT_JN_CSV = os.path.join(DERIV_DIR, "step4_jn_localization_results.csv")
+OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step4_jn_localization_results.csv")
 
-# Results (main manuscript only; Figure S3 is produced by Step 12)
-OUT_FIG4 = os.path.join(RESULTS_DIR, "step4_figure4_jn_localization_ps.png")
-OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step4_text_numbers.csv")
+# Results
+OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step4_figure4_jn_localization_ps.png")
+OUT_FIG_S3 = os.path.join(STEP_RESULTS_DIR, "step4_figure_s3_jn_localization_sp.png")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step4_text_numbers.csv")
 
 
 # =====================================================================
@@ -179,7 +184,9 @@ def run_step4(verbose: bool = True):
         print(f"  Input: {IN_DRAWS_NPZ}")
 
     os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
     # Load posterior draws from Step 3
     d = np.load(IN_DRAWS_NPZ)
@@ -272,8 +279,22 @@ def run_step4(verbose: bool = True):
             print(f"    {ss['label']}: coupling = {ss['mean']:.4f} "
                   f"[{ss['ci_lo']:.4f}, {ss['ci_hi']:.4f}]{sig}")
 
-    # Figure S3 (SP JN) is drawn by Step 12 (supplementary) from the
-    # JN grid saved below.
+    a2_mean = float(np.mean(a2_draws))
+    obs_sp = a2_mean + u_sp_mean[obs_pid_idx] + float(np.mean(a4_draws)) * obs_contrast
+
+    jn_sp_fig = {
+        "x_grid": jn_sp["x_grid"],
+        "mean": jn_sp["post_mean"],
+        "ci_lo": jn_sp["ci_lo"],
+        "ci_hi": jn_sp["ci_hi"],
+        "boundary": sp_boundary,
+    }
+    draw_jn_figure(
+        jn_sp_fig, "Sleep → Pain", slopes_sp, c_sd,
+        obs_sp, obs_contrast, OUT_FIG_S3,
+    )
+    if verbose:
+        print(f"  Saved Figure S3: {OUT_FIG_S3}")
 
     # ==================================================================
     # Save JN grid results (derivative)

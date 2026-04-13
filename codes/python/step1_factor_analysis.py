@@ -69,15 +69,19 @@ warnings.filterwarnings("ignore")
 # =====================================================================
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)  # repo root
+ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step1")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step1")
+os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 IN_LONG_CSV = os.path.join(DATA_DIR, "step0_extracted_long.csv")
-OUT_SCORED_CSV = os.path.join(DERIV_DIR, "step1_scored_long.csv")
-OUT_MODEL_JSON = os.path.join(DERIV_DIR, "step1_factor_model.json")
+OUT_SCORED_CSV = os.path.join(STEP_DERIV_DIR, "step1_scored_long.csv")
+OUT_MODEL_JSON = os.path.join(STEP_DERIV_DIR, "step1_factor_model.json")
 
 
 # =====================================================================
@@ -739,6 +743,7 @@ def run_step1(verbose: bool = True) -> Tuple[pd.DataFrame, Dict]:
         },
     }
     os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     with open(OUT_MODEL_JSON, "w") as f:
         json.dump(model_json, f, indent=2)
     if verbose:
@@ -749,7 +754,8 @@ def run_step1(verbose: bool = True) -> Tuple[pd.DataFrame, Dict]:
     # localization contrast" that is stated in the text, plus the
     # loadings table (Table 1) and PA thresholds.
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    OUT_RESULTS_CSV = os.path.join(RESULTS_DIR, "step1_factor_results.csv")
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+    OUT_RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step1_factor_results.csv")
 
     result_rows = []
 

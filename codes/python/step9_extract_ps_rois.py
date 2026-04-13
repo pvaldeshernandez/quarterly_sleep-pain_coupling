@@ -1,8 +1,10 @@
 """
-Step 8 — Extract Pain-to-Sleep arousal relay ROI values.
+Step 9 — Extract Pain-to-Sleep arousal relay ROI values.
 ======================================================================
 
-Input:  data/original neuroimaging (spm_nomask/, fmri_contrasts/, vbm/, atlases/)
+Input:  derivatives/step5_fmri_contrasts_masked/   (LH ROI)
+        derivatives/step5_fmri_contrasts_unmasked/ (all other fMRI ROIs)
+        data/original/vbm/, data/atlases/
 Output:
   derivatives/
     step9_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
@@ -33,18 +35,18 @@ import pandas as pd
 warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step9")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
-# fMRI contrasts from Step 5; VBM images from data/original/vbm/;
-# atlases from data/atlases/ (or data/original/atlases/)
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step5_fmri_contrasts")
-FMRI_MASKED_DIR = os.path.join(ROOT, "data", "original", "fmri_glm")
-VBM_DIR = os.path.join(ROOT, "data", "original", "vbm")
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step5_fmri_contrasts_masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step5_fmri_contrasts_unmasked")
+VBM_DIR   = os.path.join(ROOT, "data", "original", "vbm")
 ATLAS_DIR = os.path.join(ROOT, "data", "atlases")
 
-OUT_FMRI_CSV = os.path.join(DERIV_DIR, "step9_ps_fmri_roi_values.csv")
-OUT_VBM_CSV = os.path.join(DERIV_DIR, "step9_ps_vbm_roi_values.csv")
+OUT_FMRI_CSV = os.path.join(STEP_DERIV_DIR, "step9_ps_fmri_roi_values.csv")
+OUT_VBM_CSV = os.path.join(STEP_DERIV_DIR, "step9_ps_vbm_roi_values.csv")
 
 AROUSAL_ROIS = {
     "PBN": {
@@ -90,7 +92,9 @@ def extract_fmri_arousal(verbose=True):
     from nilearn.image import resample_to_img
 
     atlas_dir = ATLAS_DIR
-    default_fmri_dir = FMRI_UNMASKED_DIR
+    fmri_masked_dir   = FMRI_MASKED_DIR
+    fmri_unmasked_dir = FMRI_UNMASKED_DIR
+    default_fmri_dir  = fmri_unmasked_dir
 
     ref_ids = sorted(os.listdir(default_fmri_dir))
     ref_path = os.path.join(default_fmri_dir, ref_ids[0], "con_0001.nii")
@@ -171,7 +175,7 @@ def extract_vbm_arousal(verbose=True):
     from nilearn.image import resample_to_img
 
     atlas_dir = ATLAS_DIR
-    vbm_dir = VBM_DIR
+    vbm_dir   = VBM_DIR
 
     pattern = os.path.join(vbm_dir, "smwc1*_ses-01_T1w.nii")
     gm_files = sorted(glob_mod.glob(pattern))
@@ -248,16 +252,17 @@ def extract_vbm_arousal(verbose=True):
 
 
 def run_step9(verbose=True):
-
     if verbose:
         print("=" * 70)
-        print("STEP 8 — Extract Pain-to-Sleep arousal relay ROI values")
+        print("STEP 9 — Extract Pain-to-Sleep arousal relay ROI values")
         print("=" * 70)
-        print(f"  fMRI unmasked: {FMRI_UNMASKED_DIR}")
-        print(f"  VBM: {VBM_DIR}")
-        print(f"  Atlases: {ATLAS_DIR}")
+        print(f"  fMRI unmasked:  {FMRI_UNMASKED_DIR}")
+        print(f"  fMRI masked:    {FMRI_MASKED_DIR}")
+        print(f"  VBM:            {VBM_DIR}")
+        print(f"  Atlases:        {ATLAS_DIR}")
 
     os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
     # fMRI BOLD
     if verbose:
@@ -281,7 +286,7 @@ def run_step9(verbose=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 8 — extract PS arousal relay ROI values."
+        description="Step 9 — extract PS arousal relay ROI values."
     )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()

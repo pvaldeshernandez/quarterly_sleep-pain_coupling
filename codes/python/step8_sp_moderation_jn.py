@@ -1,9 +1,9 @@
 """
-Step 7 — Johnson-Neyman analysis for SP moderation ROIs.
+Step 8 — Johnson-Neyman analysis for SP moderation ROIs.
 ======================================================================
 
-Input:  derivatives/step7_sp_posterior_draws.npz
-        results/step7_table5_sp_moderation.csv
+Input:  derivatives/step6_sp_posterior_draws.npz
+        results/step6_table5_sp_moderation.csv
 Output:
   derivatives/
     step8_jn_sp_results.csv           — full JN grids per ROI
@@ -28,21 +28,25 @@ import pandas as pd
 warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step8")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step8")
+os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step7_sp_posterior_draws.npz")
-IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step7_table5_sp_moderation.csv")
+IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step7", "step7_sp_posterior_draws.npz")
+IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step7", "step7_table5_sp_moderation.csv")
 
-OUT_JN_CSV = os.path.join(DERIV_DIR, "step8_jn_sp_results.csv")
-OUT_FIG5 = os.path.join(RESULTS_DIR, "step8_figure5_jn_nacc.png")
-OUT_FIG6 = os.path.join(RESULTS_DIR, "step8_figure6_jn_acc.png")
-OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step8_text_numbers.csv")
-# Figure S5 is drawn by Step 12 (supplementary) from the JN grid + draws.
+OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step8_jn_sp_results.csv")
+OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step8_figure5_jn_nacc.png")
+OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step8_figure6_jn_acc.png")
+OUT_FIG_S5 = os.path.join(STEP_RESULTS_DIR, "step8_figure_s5_krause_jn.png")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step8_text_numbers.csv")
 
 # ROIs that get individual JN figures
 MAIN_FIGURE_ROIS = {
@@ -93,7 +97,7 @@ def draw_jn_panel(ax, jn, title, simple_slopes):
     ax.tick_params(labelsize=9)
 
 
-def run_step7(verbose=True):
+def run_step8(verbose=True):
     from coupling_model import compute_jn_curve
 
     if verbose:
@@ -102,7 +106,9 @@ def run_step7(verbose=True):
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
     d = np.load(IN_DRAWS_NPZ)
     table5 = pd.read_csv(IN_TABLE5_CSV)
@@ -223,8 +229,38 @@ def run_step7(verbose=True):
         if verbose:
             print(f"  Saved {fig_label}: {out_path}")
 
-    # Figure S5 (non-sig Krause ROIs 2x2) drawn by Step 12 from
-    # the JN grid + posterior draws saved above.
+    # --- Figure S5: 2x2 merge of non-significant Krause ROIs ---
+    available_s5 = [r for r in S5_ROIS if r in jn_results]
+    if len(available_s5) >= 2:
+        n_panels = len(available_s5)
+        ncols = 2
+        nrows = (n_panels + 1) // 2
+        fig, axes = plt.subplots(nrows, ncols, figsize=(14, 6 * nrows))
+        axes = axes.ravel() if n_panels > 1 else [axes]
+        for i, roi_name in enumerate(available_s5):
+            jn = jn_results[roi_name]
+            a2_draws = d[f"{roi_name}_a2_draws"]
+            gamma_draws = d[f"{roi_name}_gamma_sp_draws"]
+            slopes = []
+            for z_label, z_val in [("z=-2", -2.0), ("z=0", 0.0), ("z=+2", 2.0)]:
+                cond = a2_draws + gamma_draws * z_val
+                slopes.append({
+                    "label": z_label, "x_val": z_val,
+                    "mean": float(np.mean(cond)),
+                    "ci_lo": float(np.percentile(cond, 2.5)),
+                    "ci_hi": float(np.percentile(cond, 97.5)),
+                })
+            row = table5[table5["ROI"] == roi_name].iloc[0]
+            draw_jn_panel(axes[i], jn, row["Label"], slopes)
+        for j in range(len(available_s5), len(axes)):
+            axes[j].set_visible(False)
+        fig.suptitle("Non-significant Krause ROIs (SP moderation)",
+                     fontsize=14, fontweight="bold")
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+        fig.savefig(OUT_FIG_S5, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+        if verbose:
+            print(f"  Saved Figure S5: {OUT_FIG_S5}")
 
     # Save text numbers
     text_df = pd.DataFrame(text_rows)
@@ -238,11 +274,11 @@ def run_step7(verbose=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 7 — SP moderation JN analysis."
+        description="Step 8 — SP moderation JN analysis."
     )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    run_step7(verbose=not args.quiet)
+    run_step8(verbose=not args.quiet)
 
 
 if __name__ == "__main__":

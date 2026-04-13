@@ -67,7 +67,7 @@ import pandas as pd
 # =====================================================================
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)  # repo root
+ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 ORIG_DIR = os.path.join(DATA_DIR, "original")
 
