@@ -2,16 +2,17 @@
 Step 4 — Contrast moderation analysis (Johnson-Neyman).
 ======================================================================
 
-Input:  derivatives/step3_posterior_draws.npz
-        results/step3_table4_coupling.csv    (for Table 5 subset)
+Input:  derivatives/step4/step4_posterior_draws.npz
 Output:
   derivatives/
-    step4_jn_results.csv              — full JN grid for both directions
+    step5_jn_localization_results.csv — full JN grid for both directions
   results/
-    step4_table5_contrast_mod.csv     — Table 5: contrast moderation params
-    step4_figure4_jn_contrast_ps.png  — Figure 4: PS direction JN
-    step4_figure_s3_jn_contrast_sp.png — Figure S3: SP direction JN (null)
-    step4_text_numbers.csv            — JN boundary, simple slopes, etc.
+    step5_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
+    step5_figure_s3_jn_localization_sp.png — Figure S3: SP direction JN (null)
+    step5_text_numbers.csv                — JN boundary, simple slopes, etc.
+
+Note: contrast moderation parameters (delta_p, omega_sp, delta_s, omega_ps)
+are in Table 4 (results/step4/step4_table4_coupling.csv), not a separate table.
 
 This step reads the posterior draws from the VARX(1) fit (Step 3)
 and runs the Bayesian Johnson-Neyman analysis on the contrast
@@ -54,13 +55,11 @@ LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
 IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step4", "step4_posterior_draws.npz")
-IN_TABLE4_CSV = os.path.join(RESULTS_DIR, "step4", "step4_table4_coupling.csv")
 
 # Derivatives
 OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step5_jn_localization_results.csv")
 
 # Results
-OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step5_table5_contrast_mod.csv")
 OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step5_figure4_jn_localization_ps.png")
 OUT_FIG_S3 = os.path.join(STEP_RESULTS_DIR, "step5_figure_s3_jn_localization_sp.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step5_text_numbers.csv")
@@ -205,16 +204,6 @@ def run_step5(verbose: bool = True):
     c_sd = float(np.std(contrast_vals))
     if verbose:
         print(f"  Contrast SD (within-person): {c_sd:.4f}")
-
-    # ==================================================================
-    # Table 5 — contrast moderation parameters (subset of Table 4)
-    # ==================================================================
-    table4 = pd.read_csv(IN_TABLE4_CSV)
-    table5_params = ["a3", "a4", "b3", "b4"]
-    table5 = table4[table4["Parameter"].isin(table5_params)].copy()
-    table5.to_csv(OUT_TABLE5_CSV, index=False)
-    if verbose:
-        print(f"  Saved Table 5: {OUT_TABLE5_CSV}")
 
     # ==================================================================
     # JN analysis — both directions
