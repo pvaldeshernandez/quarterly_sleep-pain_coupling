@@ -43,8 +43,8 @@ sys.path.insert(0, LIB_DIR)
 OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step7_sp_roi_values.csv")
 
 # Contrast image directories from Step 5
-FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step5_fmri_contrasts_masked")
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step5_fmri_contrasts_unmasked")
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step6_fmri_contrasts_masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step6_fmri_contrasts_unmasked")
 
 # ROI definitions
 SP_ROIS = {
