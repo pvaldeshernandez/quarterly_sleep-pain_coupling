@@ -107,49 +107,137 @@ def load_data(csv_path: str):
 
 def _generate_coupling_figure(person_df, pop_mean, pop_ci_lo, pop_ci_hi,
                               col_mean, col_ci_lo, col_ci_hi, col_prob,
-                              direction_label, out_path):
+                              direction_label, out_path, prob_neg=None):
     """Draw a 2-panel coupling figure (boxstrip + forest) and save."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    import matplotlib.gridspec as gridspec
+    import matplotlib.patheffects as patheffects
+    from matplotlib.lines import Line2D
 
     df = person_df.sort_values(col_mean).reset_index(drop=True)
     n = len(df)
-    means = df[col_mean].values
+    vals = df[col_mean].values
     lo = df[col_ci_lo].values
     hi = df[col_ci_hi].values
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 8),
-                                    gridspec_kw={"width_ratios": [1, 2]})
+    fig = plt.figure(figsize=(18, 8))
+    gs = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[1, 1], wspace=0.12)
+    ax_a = fig.add_subplot(gs[0, 0])
+    ax_b = fig.add_subplot(gs[0, 1])
 
-    # Panel A: boxstrip
-    colors = ["#1565C0" if m < 0 else "#D32F2F" for m in means]
-    ax1.scatter(np.random.normal(0, 0.08, n), means, c=colors,
-                s=20, alpha=0.5, zorder=2)
-    ax1.axhline(0, color="black", linewidth=0.8, linestyle="-", alpha=0.5)
-    ax1.scatter([0], [pop_mean], marker="D", color="#757575", s=100,
-                zorder=5, label="Population mean")
-    ax1.set_xlim(-0.5, 0.5)
-    ax1.set_xticks([])
-    ax1.set_ylabel(f"Person-specific {direction_label} coupling", fontsize=12)
-    ax1.set_title("(A)", fontsize=14, fontweight="bold", loc="left")
-    ax1.legend(fontsize=10, loc="upper right")
+    # ---- Panel A: Boxstrip ----
+    ax_a.boxplot(vals, vert=False, widths=0.5,
+                 patch_artist=True,
+                 boxprops=dict(facecolor="#E3F2FD", edgecolor="#1565C0",
+                               linewidth=1.5),
+                 medianprops=dict(color="#D32F2F", linewidth=2.5),
+                 whiskerprops=dict(color="#1565C0", linewidth=1.2),
+                 capprops=dict(color="#1565C0", linewidth=1.2),
+                 flierprops=dict(marker="", markersize=0))
 
-    # Panel B: forest
-    for i in range(n):
-        color = "#1565C0" if means[i] < 0 else "#D32F2F"
-        ax2.plot([lo[i], hi[i]], [i, i], color=color, linewidth=0.8, alpha=0.6)
-    ax2.scatter(means, range(n), c=colors, s=8, zorder=3, alpha=0.7)
-    ax2.axvline(0, color="black", linewidth=0.8, linestyle="-", alpha=0.5)
-    ax2.axvline(pop_mean, color="#757575", linewidth=1.5, linestyle="--",
-                alpha=0.7, label=f"Population mean = {pop_mean:.3f}")
-    ax2.set_yticks([])
-    ax2.set_xlabel(f"{direction_label} coupling slope", fontsize=12)
-    ax2.set_ylabel(f"Participant (N = {n})", fontsize=12)
-    ax2.set_title("(B)", fontsize=14, fontweight="bold", loc="left")
-    ax2.legend(fontsize=10, loc="lower right")
+    rng = np.random.default_rng(42)
+    jitter = rng.uniform(0.7, 1.3, n)
+    dot_colors = ["#42A5F5" if x < 0 else "#EF5350" for x in vals]
+    edge_colors = ["#0D47A1" if x < 0 else "#B71C1C" for x in vals]
+    sc = ax_a.scatter(vals, jitter, c=dot_colors, alpha=0.7, s=80, zorder=3,
+                      marker="o", edgecolors=edge_colors, linewidths=0.8)
+    sc.set_path_effects([patheffects.withSimplePatchShadow(
+        offset=(0.5, -0.5), shadow_rgbFace="#555555", alpha=0.25)])
 
-    fig.tight_layout()
+    ax_a.axvline(0, color="black", linewidth=1, linestyle="-", zorder=2, alpha=0.5)
+    mean_val = float(np.mean(vals))
+    ax_a.plot(mean_val, 1.0, marker="D", color="#757575", markersize=12,
+              zorder=5, markeredgecolor="white", markeredgewidth=1.2)
+
+    # Unicode lambda: \u03bb, arrow: \u2192
+    arrow = "\u2192"
+    lam = "\u03bb"
+    dir_parts = direction_label.split("->")
+    if len(dir_parts) == 2:
+        title_str = f"A.  {dir_parts[0].strip()} {arrow} {dir_parts[1].strip()} coupling"
+    else:
+        title_str = f"A.  {direction_label}"
+    ax_a.set_title(title_str, fontsize=20, fontweight="bold", loc="left", pad=10)
+    ax_a.set_xlabel(f"{lam} (posterior mean)", fontsize=18)
+    ax_a.set_yticks([])
+    ax_a.tick_params(axis="x", labelsize=16)
+
+    # Population annotation
+    if prob_neg is not None:
+        pop_text = (f"Population {lam} = {pop_mean:.3f}\n"
+                    f"[{pop_ci_lo:.3f}, {pop_ci_hi:.3f}]\n"
+                    f"P({lam} < 0) = {prob_neg:.3f}")
+    else:
+        pop_text = (f"Population {lam} = {pop_mean:.3f}\n"
+                    f"[{pop_ci_lo:.3f}, {pop_ci_hi:.3f}]")
+    ax_a.text(0.02, 0.98, pop_text, transform=ax_a.transAxes,
+              fontsize=14, va="top", ha="left", color="black", fontweight="bold")
+
+    # Stats annotation
+    med = float(np.median(vals))
+    q25, q75 = float(np.percentile(vals, 25)), float(np.percentile(vals, 75))
+    stats_text = (f"N = {n}\n"
+                  f"mean = {mean_val:.3f}\n"
+                  f"median = {med:.3f}\n"
+                  f"IQR = [{q25:.3f}, {q75:.3f}]")
+    ax_a.text(0.98, 0.98, stats_text, transform=ax_a.transAxes,
+              fontsize=13, va="top", ha="right", color="#333333",
+              fontfamily="monospace",
+              bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                        edgecolor="#CCCCCC", alpha=0.9))
+
+    legend_handles = [
+        Line2D([0], [0], color="#D32F2F", linewidth=2.5, label="Median"),
+        Line2D([0], [0], marker="D", color="#757575", markersize=10,
+               markeredgecolor="white", markeredgewidth=0.8, linestyle="",
+               label="Mean"),
+        Line2D([0], [0], marker="o", color="#42A5F5", markersize=8,
+               markeredgecolor="#0D47A1", markeredgewidth=0.8, linestyle="",
+               label=f"Individual ({lam} < 0)"),
+        Line2D([0], [0], marker="o", color="#EF5350", markersize=8,
+               markeredgecolor="#B71C1C", markeredgewidth=0.8, linestyle="",
+               label=f"Individual ({lam} > 0)"),
+    ]
+    ax_a.legend(handles=legend_handles, loc="lower right", fontsize=13,
+                framealpha=0.9, edgecolor="#CCCCCC")
+
+    # ---- Panel B: Forest ----
+    for k in range(n):
+        color = "#1565C0" if vals[k] < 0 else "#D32F2F"
+        excludes_zero = (lo[k] > 0) or (hi[k] < 0)
+        lw = 1.8 if excludes_zero else 0.7
+        al = 0.7 if excludes_zero else 0.4
+        ax_b.plot([lo[k], hi[k]], [k, k], color=color, linewidth=lw, alpha=al,
+                  zorder=2)
+        ax_b.plot(vals[k], k, marker="|", color=color,
+                  markersize=3.5, alpha=0.8, zorder=3, markeredgewidth=0.9)
+
+    ax_b.axvline(0, color="black", linewidth=0.8, linestyle="-", alpha=0.5, zorder=1)
+    ax_b.axvline(mean_val, color="#757575", linewidth=2, linestyle="--",
+                 alpha=0.7, zorder=4)
+
+    if len(dir_parts) == 2:
+        title_str_b = f"B.  {dir_parts[0].strip()} {arrow} {dir_parts[1].strip()} coupling"
+    else:
+        title_str_b = f"B.  {direction_label}"
+    ax_b.set_title(title_str_b, fontsize=20, fontweight="bold", loc="left", pad=10)
+    ax_b.set_xlabel(f"{lam} (posterior mean \u00b1 95% CrI)", fontsize=18)
+    ax_b.set_yticks([])
+    ax_b.set_ylim(-1, n + 1)
+    ax_b.tick_params(axis="x", labelsize=16)
+
+    # Align panel heights
+    fig.canvas.draw()
+    pos_a = ax_a.get_position()
+    pos_b = ax_b.get_position()
+    top = max(pos_a.y1, pos_b.y1)
+    bottom = min(pos_a.y0, pos_b.y0)
+    ax_a.set_position([pos_a.x0, bottom, pos_a.width, top - bottom])
+    ax_b.set_position([pos_b.x0, bottom, pos_b.width, top - bottom])
+
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     fig.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -446,6 +534,7 @@ def run_step4(verbose: bool = True):
         col_ci_hi="beta_ps_ci_hi", col_prob="beta_ps_prob_neg",
         direction_label="Pain -> Sleep",
         out_path=OUT_FIG2,
+        prob_neg=results["b1_prob_neg"],
     )
     if verbose:
         print(f"  Saved Figure 2: {OUT_FIG2}")
@@ -459,6 +548,7 @@ def run_step4(verbose: bool = True):
         col_ci_hi="beta_sp_ci_hi", col_prob="beta_sp_prob_neg",
         direction_label="Sleep -> Pain",
         out_path=OUT_FIG3,
+        prob_neg=results["a2_prob_neg"],
     )
     if verbose:
         print(f"  Saved Figure 3: {OUT_FIG3}")
