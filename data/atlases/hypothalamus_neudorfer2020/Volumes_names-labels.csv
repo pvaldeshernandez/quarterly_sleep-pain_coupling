@@ -1,0 +1,51 @@
+Label,Name,Hemisphere,Abbreviation
+1,anterior commissure ,right,R_AC
+2,anterior commissure ,left,L_AC
+3,diagonal band of Broca,right,R_dB
+4,diagonal band of Broca,left,L_dB
+5,fornix,right,R_FX
+6,fornix,left,L_FX
+7,mammillothalamic tract,right,R_MT
+8,mammillothalamic tract,left,L_MT
+9,mammillary bodies,right,R_MM
+10,mammillary bodies,left,L_MM
+13,subthalamic nucleus,right,R_STN
+14,subthalamic nucleus,left,L_STN
+15,substantia nigra,right,R_SN
+16,substantia nigra,left,L_SN
+17,red nucleus ,right,R_RN
+18,red nucleus ,left,L_RN
+19,medial preoptic nucleus,right,R_MPO
+20,medial preoptic nucleus,left,L_MPO
+21,paraventricular nucleus,right,R_Pa
+22,paraventricular nucleus,left,L_Pa
+23,dorsal periventricular hypothalamic nucleus,right,R_DPEH
+24,dorsal periventricular hypothalamic nucleus,left,L_DPEH
+25,lateral hypothalamus,right,R_LH
+26,lateral hypothalamus,left,L_LH
+27,ventromedial hypothalamus,right,R_VM
+28,ventromedial hypothalamus,left,L_VM
+29,arcuate hypothalamic nucleus,right,R_AN 
+30,arcuate hypothalamic nucleus,left,L_AN 
+31,periventricular hypothalamic nucleus,right,R_Pe
+32,periventricular hypothalamic nucleus,left,L_Pe
+33,bed nucleus of the stria terminalis,right,R_BNST
+34,bed nucleus of the stria terminalis,left,L_BNST
+35,nucleus basalis of Meynert,right,R_NBM
+36,nucleus basalis of Meynert,left,L_NBM
+37,dorsomedial hypothalamic nucleus,right,R_DM
+38,dorsomedial hypothalamic nucleus,left,L_DM
+41,zona incerta,right,R_ZI
+42,zona incerta,left,L_ZI
+43,inferior thalamic peduncle,right,R_ITP
+44,inferior thalamic peduncle,left,L_ITP
+45,supraoptic hypothalamic nucleus,right,R_SO
+46,supraoptic hypothalamic nucleus,left,L_SO
+47,suprachiasmatic hypothalamic nucleus,right,R_SC
+48,suprachiasmatic hypothalamic nucleus,left,L_SC
+49,tuberomammillary hypothalamic nucleus,right,R_TM
+50,tuberomammillary hypothalamic nucleus,left,L_TM
+51,posterior hypotahalamic nucleus,right,R_PH
+52,posterior hypotahalamic nucleus,left,L_PH
+53,anterior hypothalamic area,right,R_AHA
+54,anterior hypothalamic area,left,L_AHA
