@@ -5,7 +5,7 @@ Step 5 — Extract Sleep-to-Pain fMRI ROI values.
 Input:  data/original neuroimaging (fmri_contrasts/, spm_nomask/)
 Output:
   derivatives/
-    step7_sp_roi_values.csv    — per-subject z-scored ROI values
+    step6_sp_roi_values.csv    — per-subject z-scored ROI values
 
 Extracts mean fMRI BOLD contrast (stimulation > baseline) within
 7 spherical ROIs for the Sleep-to-Pain moderation analysis:
@@ -37,7 +37,7 @@ DERIV_DIR = os.path.join(ROOT, "derivatives")
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-OUT_ROI_CSV = os.path.join(DERIV_DIR, "step7_sp_roi_values.csv")
+OUT_ROI_CSV = os.path.join(DERIV_DIR, "step6_sp_roi_values.csv")
 
 # Default path to the neuroimaging data. The user can override
 # with --nii-dir if the NIfTI files live elsewhere.

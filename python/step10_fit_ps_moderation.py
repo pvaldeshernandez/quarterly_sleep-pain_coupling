@@ -3,17 +3,17 @@ Step 9 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
 ======================================================================
 
 Input:  derivatives/step2_processed_long.csv
-        derivatives/step10_ps_fmri_roi_values.csv
-        derivatives/step10_ps_vbm_roi_values.csv
+        derivatives/step9_ps_fmri_roi_values.csv
+        derivatives/step9_ps_vbm_roi_values.csv
 Output:
   derivatives/
-    step11_ps_fmri_posterior_draws.npz
-    step11_ps_vbm_posterior_draws.npz
+    step10_ps_fmri_posterior_draws.npz
+    step10_ps_vbm_posterior_draws.npz
   results/
-    step11_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
-    step11_table_s1_vbm_arousal.csv     — Table S1 VBM panel
-    step11_vbm_sign_concordance.csv     — VBM 5/5 sign test
-    step11_text_numbers.csv
+    step10_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
+    step10_table_s1_vbm_arousal.csv     — Table S1 VBM panel
+    step10_vbm_sign_concordance.csv     — VBM 5/5 sign test
+    step10_text_numbers.csv
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each arousal ROI, separately for fMRI BOLD and VBM GM volume.
@@ -43,15 +43,15 @@ LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
 IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step2_processed_long.csv")
-IN_FMRI_CSV = os.path.join(DERIV_DIR, "step10_ps_fmri_roi_values.csv")
-IN_VBM_CSV = os.path.join(DERIV_DIR, "step10_ps_vbm_roi_values.csv")
+IN_FMRI_CSV = os.path.join(DERIV_DIR, "step9_ps_fmri_roi_values.csv")
+IN_VBM_CSV = os.path.join(DERIV_DIR, "step9_ps_vbm_roi_values.csv")
 
-OUT_FMRI_DRAWS = os.path.join(DERIV_DIR, "step11_ps_fmri_posterior_draws.npz")
-OUT_VBM_DRAWS = os.path.join(DERIV_DIR, "step11_ps_vbm_posterior_draws.npz")
-OUT_FMRI_TABLE = os.path.join(RESULTS_DIR, "step11_table_s1_fmri_arousal.csv")
-OUT_VBM_TABLE = os.path.join(RESULTS_DIR, "step11_table_s1_vbm_arousal.csv")
-OUT_VBM_SIGN = os.path.join(RESULTS_DIR, "step11_vbm_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step11_text_numbers.csv")
+OUT_FMRI_DRAWS = os.path.join(DERIV_DIR, "step10_ps_fmri_posterior_draws.npz")
+OUT_VBM_DRAWS = os.path.join(DERIV_DIR, "step10_ps_vbm_posterior_draws.npz")
+OUT_FMRI_TABLE = os.path.join(RESULTS_DIR, "step10_table_s1_fmri_arousal.csv")
+OUT_VBM_TABLE = os.path.join(RESULTS_DIR, "step10_table_s1_vbm_arousal.csv")
+OUT_VBM_SIGN = os.path.join(RESULTS_DIR, "step10_vbm_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step10_text_numbers.csv")
 
 
 def load_step2_data(csv_path):

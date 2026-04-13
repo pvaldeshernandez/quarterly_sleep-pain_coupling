@@ -2,16 +2,16 @@
 Step 7 — Johnson-Neyman analysis for SP moderation ROIs.
 ======================================================================
 
-Input:  derivatives/step8_sp_posterior_draws.npz
-        results/step8_table5_sp_moderation.csv
+Input:  derivatives/step7_sp_posterior_draws.npz
+        results/step7_table5_sp_moderation.csv
 Output:
   derivatives/
-    step9_jn_sp_results.csv           — full JN grids per ROI
+    step8_jn_sp_results.csv           — full JN grids per ROI
   results/
-    step9_figure5_jn_nacc.png         — Figure 5: Left NAcc JN
-    step9_figure6_jn_acc.png          — Figure 6: ACC JN
-    step9_figure_s5_krause_jn.png     — Figure S5: 4 non-sig Krause JN
-    step9_text_numbers.csv            — JN boundaries, % sample, slopes
+    step8_figure5_jn_nacc.png         — Figure 5: Left NAcc JN
+    step8_figure6_jn_acc.png          — Figure 6: ACC JN
+    step8_figure_s5_krause_jn.png     — Figure S5: 4 non-sig Krause JN
+    step8_text_numbers.csv            — JN boundaries, % sample, slopes
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
 """
@@ -35,14 +35,14 @@ RESULTS_DIR = os.path.join(ROOT, "results")
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step8_sp_posterior_draws.npz")
-IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step8_table5_sp_moderation.csv")
+IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step7_sp_posterior_draws.npz")
+IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step7_table5_sp_moderation.csv")
 
-OUT_JN_CSV = os.path.join(DERIV_DIR, "step9_jn_sp_results.csv")
-OUT_FIG5 = os.path.join(RESULTS_DIR, "step9_figure5_jn_nacc.png")
-OUT_FIG6 = os.path.join(RESULTS_DIR, "step9_figure6_jn_acc.png")
-OUT_FIG_S5 = os.path.join(RESULTS_DIR, "step9_figure_s5_krause_jn.png")
-OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step9_text_numbers.csv")
+OUT_JN_CSV = os.path.join(DERIV_DIR, "step8_jn_sp_results.csv")
+OUT_FIG5 = os.path.join(RESULTS_DIR, "step8_figure5_jn_nacc.png")
+OUT_FIG6 = os.path.join(RESULTS_DIR, "step8_figure6_jn_acc.png")
+OUT_FIG_S5 = os.path.join(RESULTS_DIR, "step8_figure_s5_krause_jn.png")
+OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step8_text_numbers.csv")
 
 # ROIs that get individual JN figures
 MAIN_FIGURE_ROIS = {

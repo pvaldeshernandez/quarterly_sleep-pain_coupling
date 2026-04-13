@@ -2,18 +2,18 @@
 Step 10 — Johnson-Neyman analysis for PS arousal moderation ROIs.
 ======================================================================
 
-Input:  derivatives/step11_ps_fmri_posterior_draws.npz
-        derivatives/step11_ps_vbm_posterior_draws.npz
-        results/step11_table_s1_fmri_arousal.csv
-        results/step11_table_s1_vbm_arousal.csv
+Input:  derivatives/step10_ps_fmri_posterior_draws.npz
+        derivatives/step10_ps_vbm_posterior_draws.npz
+        results/step10_table_s1_fmri_arousal.csv
+        results/step10_table_s1_vbm_arousal.csv
 Output:
   derivatives/
-    step12_jn_ps_fmri_results.csv
-    step12_jn_ps_vbm_results.csv
+    step11_jn_ps_fmri_results.csv
+    step11_jn_ps_vbm_results.csv
   results/
-    step12_figure_s7_fmri_arousal_jn.png   — Figure S7
-    step12_figure_s8_vbm_arousal_jn.png    — Figure S8
-    step12_text_numbers.csv
+    step11_figure_s7_fmri_arousal_jn.png   — Figure S7
+    step11_figure_s8_vbm_arousal_jn.png    — Figure S8
+    step11_text_numbers.csv
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
 """
@@ -37,16 +37,16 @@ RESULTS_DIR = os.path.join(ROOT, "results")
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_FMRI_DRAWS = os.path.join(DERIV_DIR, "step11_ps_fmri_posterior_draws.npz")
-IN_VBM_DRAWS = os.path.join(DERIV_DIR, "step11_ps_vbm_posterior_draws.npz")
-IN_FMRI_TABLE = os.path.join(RESULTS_DIR, "step11_table_s1_fmri_arousal.csv")
-IN_VBM_TABLE = os.path.join(RESULTS_DIR, "step11_table_s1_vbm_arousal.csv")
+IN_FMRI_DRAWS = os.path.join(DERIV_DIR, "step10_ps_fmri_posterior_draws.npz")
+IN_VBM_DRAWS = os.path.join(DERIV_DIR, "step10_ps_vbm_posterior_draws.npz")
+IN_FMRI_TABLE = os.path.join(RESULTS_DIR, "step10_table_s1_fmri_arousal.csv")
+IN_VBM_TABLE = os.path.join(RESULTS_DIR, "step10_table_s1_vbm_arousal.csv")
 
-OUT_FMRI_JN = os.path.join(DERIV_DIR, "step12_jn_ps_fmri_results.csv")
-OUT_VBM_JN = os.path.join(DERIV_DIR, "step12_jn_ps_vbm_results.csv")
-OUT_FIG_S7 = os.path.join(RESULTS_DIR, "step12_figure_s7_fmri_arousal_jn.png")
-OUT_FIG_S8 = os.path.join(RESULTS_DIR, "step12_figure_s8_vbm_arousal_jn.png")
-OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step12_text_numbers.csv")
+OUT_FMRI_JN = os.path.join(DERIV_DIR, "step11_jn_ps_fmri_results.csv")
+OUT_VBM_JN = os.path.join(DERIV_DIR, "step11_jn_ps_vbm_results.csv")
+OUT_FIG_S7 = os.path.join(RESULTS_DIR, "step11_figure_s7_fmri_arousal_jn.png")
+OUT_FIG_S8 = os.path.join(RESULTS_DIR, "step11_figure_s8_vbm_arousal_jn.png")
+OUT_TEXT_CSV = os.path.join(RESULTS_DIR, "step11_text_numbers.csv")
 
 
 def draw_jn_panel(ax, jn, title):
