@@ -5,8 +5,7 @@ Replot all manuscript figures from saved posterior draws — no model refitting.
 Each step's own plotting code is used, saving figures to results/stepN/ as
 the canonical location. Figures are then copied to figures/ for markdown rendering.
 
-Special case: Figure 6 (bilateral ACC) uses Right dACC/MCC draws from the
-archive groundtruth (the original run) plus Left dACC/MCC from the current step8.
+Figure 6 (ACC JN) uses the Right dACC/MCC from the current step8/step9 run.
 
 Usage:
     python replot_all_figures.py
@@ -192,135 +191,15 @@ def run_step5_figures(verbose=True):
 
 
 def run_step9_figures(verbose=True):
-    """Figures 5, 6, S5 — SP fMRI ROI JN.
-
-    Figure 6 is bilateral ACC: Right dACC/MCC from archive groundtruth +
-    Left dACC/MCC from current step8 draws.
-    """
+    """Figures 5, 6, S5 — SP fMRI ROI JN."""
     if verbose:
         print("\n--- Figures 5, 6, S5: SP fMRI ROI JN ---")
-
-    from coupling_model import compute_jn_curve
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import matplotlib.patheffects as patheffects
-    from matplotlib.lines import Line2D
-    from matplotlib.patches import Patch
 
     import step9_sp_moderation_jn as s9
     s9.run_step9(verbose=verbose)
 
-    # Figure 6 needs special treatment: rebuild with Right ACC from archive
-    if verbose:
-        print("  Rebuilding Figure 6 with Right dACC/MCC from archive groundtruth...")
-
-    d8 = np.load(os.path.join(DERIV, "step8", "step8_sp_posterior_draws.npz"))
-    d_gt = np.load(os.path.join(ARCHIVE_GT, "acc_posterior_draws.npz"))
-
-    draw_jn = s9.draw_jn_panel
-
-    def _roi_jn_from_d(d, roi_name, table5):
-        a2d  = d[f"{roi_name}_a2_draws"]
-        gd   = d[f"{roi_name}_gamma_sp_draws"]
-        Xv   = d[f"{roi_name}_X_vals"]
-        rm   = float(d[f"{roi_name}_raw_mean"])
-        rs   = float(d[f"{roi_name}_raw_sd"])
-        u_key = f"{roi_name}_u_sp_mean"
-        u_mean = d[u_key] if u_key in d else None
-        jn = compute_jn_curve(a2d, gd, Xv, raw_mean=rm, raw_sd=rs, clip_pct=(1, 99))
-        raw_vals = Xv * rs + rm
-        q1 = np.percentile(raw_vals, 25); q3 = np.percentile(raw_vals, 75)
-        iqr = q3 - q1; med = np.median(raw_vals)
-        low_r = q1 - 1.5*iqr; high_r = q3 + 1.5*iqr
-        slopes = {}
-        for lbl, xr in [("low", low_r), ("median", float(med)), ("high", high_r)]:
-            xz = (xr - rm) / rs
-            cond = a2d + gd * xz
-            slopes[lbl] = {
-                "beta":  float(np.mean(cond)),
-                "ci_lo": float(np.percentile(cond, 2.5)),
-                "ci_hi": float(np.percentile(cond, 97.5)),
-                "sig":   (float(np.percentile(cond, 97.5)) < 0) or
-                         (float(np.percentile(cond, 2.5)) > 0),
-                "x_val": xr,
-            }
-        fence_raws = [low_r, float(med), high_r]
-        person_y = a2d.mean() + gd.mean() * Xv + (u_mean if u_mean is not None else 0)
-        dots = {"x_raw": raw_vals, "y": person_y}
-        try:
-            import pandas as pd
-            lbl = table5[table5["ROI"] == roi_name].iloc[0]["Label"]
-        except Exception:
-            lbl = roi_name
-        return jn, slopes, fence_raws, dots, lbl
-
-    def _level_labels(fence_raws):
-        return [
-            f"Q1\u22121.5\u00b7IQR\n({fence_raws[0]:.3f})",
-            f"Median\n({fence_raws[1]:.3f})",
-            f"Q3+1.5\u00b7IQR\n({fence_raws[2]:.3f})",
-        ]
-
-    import pandas as pd
-    table5 = pd.read_csv(os.path.join(RES, "step8", "step8_table5_sp_moderation.csv"))
-
-    # Right dACC/MCC from archive groundtruth
-    a2_gt = d_gt["a2_draws"]; g_gt = d_gt["gamma_sp_draws"]
-    X_gt  = d_gt["X_vals"]
-    rm_gt = float(d_gt["acc_mean"]); rs_gt = float(d_gt["acc_sd"])
-    u_gt  = d_gt["u_sp_mean"] if "u_sp_mean" in d_gt else None
-
-    jn_right = compute_jn_curve(a2_gt, g_gt, X_gt,
-                                raw_mean=rm_gt, raw_sd=rs_gt, clip_pct=(1, 99))
-    raw_gt   = X_gt * rs_gt + rm_gt
-    q1 = np.percentile(raw_gt, 25); q3 = np.percentile(raw_gt, 75)
-    iqr = q3 - q1; med = np.median(raw_gt)
-    low_r = q1 - 1.5*iqr; high_r = q3 + 1.5*iqr
-    sl_right = {}
-    for lbl, xr in [("low", low_r), ("median", float(med)), ("high", high_r)]:
-        xz = (xr - rm_gt) / rs_gt
-        cond = a2_gt + g_gt * xz
-        sl_right[lbl] = {
-            "beta":  float(np.mean(cond)), "ci_lo": float(np.percentile(cond, 2.5)),
-            "ci_hi": float(np.percentile(cond, 97.5)),
-            "sig":   (float(np.percentile(cond, 97.5)) < 0) or
-                     (float(np.percentile(cond, 2.5)) > 0),
-            "x_val": xr,
-        }
-    fr_right = [low_r, float(med), high_r]
-    py_right  = a2_gt.mean() + g_gt.mean() * X_gt + (u_gt if u_gt is not None else 0)
-    dots_right = {"x_raw": raw_gt, "y": py_right}
-
-    # Left dACC/MCC from step8
-    jn_left, sl_left, fr_left, dots_left, lbl_left = _roi_jn_from_d(
-        d8, "Left_dACC_MCC", table5)
-
-    fig6, axes6 = plt.subplots(2, 1, figsize=(12.8, 8.05 * 2))
-
-    draw_jn(axes6[0], jn_right, "Sleep \u2192 Pain", sl_right,
-            _level_labels(fr_right), fr_right,
-            xlabel="Right dACC/MCC BOLD activation (mean contrast)",
-            legend_loc="lower right", info_loc="upper left",
-            person_dots=dots_right)
-    axes6[0].set_xlim(jn_right["x_grid"][0], jn_right["x_grid"][-1])
-
-    draw_jn(axes6[1], jn_left, "Sleep \u2192 Pain", sl_left,
-            _level_labels(fr_left), fr_left,
-            xlabel=f"{lbl_left} BOLD activation (mean contrast)",
-            legend_loc="lower right", info_loc="upper left",
-            person_dots=dots_left)
-    axes6[1].set_xlim(jn_left["x_grid"][0], jn_left["x_grid"][-1])
-
-    fig6.tight_layout()
-    out_fig6 = os.path.join(RES, "step9", "step9_figure6_jn_acc.png")
-    fig6.savefig(out_fig6, dpi=300, bbox_inches="tight")
-    plt.close(fig6)
-    if verbose:
-        print(f"  Saved: results/step9/step9_figure6_jn_acc.png (bilateral ACC)")
-
-    copy_to_figures(os.path.join(RES, "step9", "step9_figure5_jn_nacc.png"),   "figure5.png",  verbose)
-    copy_to_figures(out_fig6,                                                   "figure6.png",  verbose)
+    copy_to_figures(os.path.join(RES, "step9", "step9_figure5_jn_nacc.png"),     "figure5.png",  verbose)
+    copy_to_figures(os.path.join(RES, "step9", "step9_figure6_jn_acc.png"),       "figure6.png",  verbose)
     copy_to_figures(os.path.join(RES, "step9", "step9_figure_s5_krause_jn.png"), "figure_s5_krause_sp_jn_merged.png", verbose)
 
 
