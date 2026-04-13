@@ -2,17 +2,17 @@ Supplementary Materials: Bidirectional Quarterly Sleep-Pain Coupling in Knee Ost
 
 ## Factor analysis and pain localization contrast validation
 
-![](../figures/figure_s1_endorsement_merged.png)
+![](../results/step2_contrast_validation/step2_figure_s1_endorsement.png)
 
 **Figure S1.** Pain localization contrast factor and PHQ body map endorsements. **(A)** Point-biserial correlations between endorsement of each of the 13 PHQ body map pain areas and the person-mean pain localization contrast factor ($\bar{K}_{i}$). Blue = knee; coral = non-knee areas. Black border indicates FDR-corrected significance ($q<0.05$). Only knee endorsement survived correction; all 12 non-knee areas showed negative or near-zero associations. **(B)** Person-mean contrast ($\bar{K}_{i}$) by pain distribution group defined from PHQ body map endorsements. Knee only: endorsed knee pain but no other areas (N = 19); Knee + others: endorsed knee pain plus at least one other area (N = 143); No knee: did not endorse knee pain (N = 67). Horizontal lines indicate significant Tukey post-hoc comparisons. One-way ANOVA: $F(2,226)=16.56$, $p<0.001$.
 
-![](../figures/figure_s_convergent_validity_K.png)
+![](../results/step2_contrast_validation/step2_figure_s2_convergent.png)
 
 **Figure S2.** Convergent validity of the pain localization contrast factor. Scatter plots showing the relationship between each participant's mean contrast score across all available quarters ($\bar{K}_{i}$) and baseline clinical measures not used in the factor analysis. Pearson correlations are shown for continuous measures; Spearman $\rho$ for the ordinal Kellgren-Lawrence grade. All knee-specific measures correlate positively with the contrast factor, confirming that higher contrast scores reflect greater predominance of knee-localized relative to body-wide pain.
 
 ## Pain localization moderation of coupling
 
-![](../figures/figure_s2_jn_contrast_sp.png)
+![](../results/step5_contrast_moderation/step5_figure_s3_jn_localization_sp.png)
 
 **Figure S3.** Johnson-Neyman analysis of pain localization moderation of sleep-to-pain coupling. The blue line shows the posterior mean coupling slope as a continuous function of within-person pain localization ($K^{w}$), dashed lines show the 95% credible interval, and grey shading indicates that the CrI includes zero across the entire observed range (no JN boundary). Vertical markers show simple slopes at body-dominant (-2 SD), balanced (0), and knee-dominant (+2 SD) localization levels with 95% CrI error bars. Blue dots show fitted coupling values (observation-level).
 
@@ -22,7 +22,7 @@ Supplementary Materials: Bidirectional Quarterly Sleep-Pain Coupling in Knee Ost
 
 **Figure S4.** Spherical regions of interest for sleep-to-pain coupling moderation, shown on orthogonal slices of the MNI152 T1 template. Each panel displays one ROI with sagittal, coronal, and axial views centered on the sphere. Top five ROIs from the Krause et al. (2019) sleep deprivation framework: Contralateral Somatosensory Cortex (S1; MNI ±36, -45, 59; r = 8 mm; hemisphere contralateral to stimulated knee), Contralateral Middle Insula (±32, 4, 11; 8 mm; contralateral to stimulated knee), Left Thalamus (-10, -6, 10; 4 mm), Left Anterior Insula (-27, 25, 0; 8 mm), and Left and Right Nucleus Accumbens (±9, 2, -7; 6 mm; tested separately). Bottom ROI from the Sardi et al. (2024) framework: Right dACC/MCC (6, 12, 38; 6 mm), defined from the Xu et al. (2020) pain fMRI meta-analysis.
 
-![](../figures/figure_s5_krause_sp_jn_merged.png)
+![](../results/step9_sp_jn/step9_figure_s5_krause_jn.png)
 
 **Figure S5.** Johnson-Neyman analyses of non-significant Krause ROI moderation of sleep-to-pain coupling ($\gamma_{sp}$). **(A)** Contralateral Somatosensory Cortex (S1). **(B)** Contralateral Middle Insula. **(C)** Left Thalamus. **(D)** Left Anterior Insula. For each panel, the blue line shows the posterior mean coupling slope as a continuous function of ROI activation (z-scored), dashed lines show the 95% credible interval. Vertical markers show simple slopes at low (Q1 - $1.5 \times \mathrm{IQR}$), median, and high (Q3 + $1.5 \times \mathrm{IQR}$) levels with 95% CrI error bars. Blue dots show person-level fitted coupling values (population-level slope + random effect). N = 173 for contralateral S1 and contralateral middle insula (one participant missing stimulation site); N = 174 for thalamus and anterior insula.
 
@@ -49,11 +49,11 @@ Supplementary Materials: Bidirectional Quarterly Sleep-Pain Coupling in Knee Ost
 
 **Note.** Each ROI was tested in a separate model run. fMRI response: N = 174; unmasked contrast images were used for PBN, SI-BF/Ch4, CeA, and BNST; GM-masked contrasts for LH (see Methods). GM volume: N = 189. $p = 2 \times \min(P(\gamma_{ps} < 0),\, P(\gamma_{ps} > 0))$, computed from the posterior distribution. Johnson-Neyman analyses for each ROI are shown in Figures S7 (fMRI BOLD) and S8 (GM volume). Sleep-to-pain moderation results for all six spherical ROIs (including ACC) are reported in Table 5 of the main text.
 
-![](../figures/figure_s9_fmri_arousal_jn_merged.png)
+![](../results/step12_ps_jn/step12_figure_s7_fmri_arousal_jn.png)
 
 **Figure S7.** Johnson-Neyman analyses of fMRI BOLD moderation of pain-to-sleep coupling ($\gamma_{ps}$) for five pain-arousal relay ROIs. **(A)** Parabrachial Nucleus (PBN). **(B)** Substantia Innominata / Basal Forebrain (SI-BF/Ch4). **(C)** Central Nucleus of the Amygdala (CeA). **(D)** Bed Nucleus of the Stria Terminalis (BNST). **(E)** Lateral Hypothalamus (LH). For each panel, the blue line shows the posterior mean coupling slope as a continuous function of ROI activation (z-scored), dashed lines show the 95% credible interval. Vertical markers show simple slopes at low (Q1 - $1.5 \times \mathrm{IQR}$), median, and high (Q3 + $1.5 \times \mathrm{IQR}$) levels with 95% CrI error bars. Blue dots show person-level fitted coupling values (population-level slope + random effect). N = 174.
 
-![](../figures/figure_s10_vbm_arousal_jn_merged.png)
+![](../results/step12_ps_jn/step12_figure_s8_vbm_arousal_jn.png)
 
 **Figure S8.** Johnson-Neyman analyses of grey matter volume moderation of pain-to-sleep coupling ($\gamma_{ps}$) for five pain-arousal relay ROIs. **(A)** Parabrachial Nucleus (PBN). **(B)** Substantia Innominata / Basal Forebrain (SI-BF/Ch4). **(C)** Central Nucleus of the Amygdala (CeA). **(D)** Bed Nucleus of the Stria Terminalis (BNST). **(E)** Lateral Hypothalamus (LH). Format as in Figure S7 but using probability-weighted GM integral (mm³) from published atlases at 1.5 mm VBM resolution. N = 189.
 

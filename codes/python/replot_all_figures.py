@@ -2,10 +2,9 @@
 """
 Replot all manuscript figures from saved posterior draws — no model refitting.
 
-Each step's own plotting code is used, saving figures to results/stepN/ as
-the canonical location. Figures are then copied to figures/ for markdown rendering.
-
-Figure 6 (ACC JN) uses the Right dACC/MCC from the current step8/step9 run.
+Each step's own plotting code is used, saving figures directly to
+results/stepN_*/ as the canonical location. Markdown files reference
+those paths directly — no figures/ copy directory.
 
 Usage:
     python replot_all_figures.py
@@ -17,7 +16,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import shutil
 import sys
 import warnings
 
@@ -25,23 +23,12 @@ import numpy as np
 
 warnings.filterwarnings("ignore")
 
-HERE    = os.path.dirname(os.path.abspath(__file__))
-ROOT    = os.path.dirname(os.path.dirname(HERE))
-DERIV   = os.path.join(ROOT, "derivatives")
-RES     = os.path.join(ROOT, "results")
-FIGURES = os.path.join(ROOT, "figures")
-ARCHIVE_GT = os.path.join(ROOT, "archive", "old_paper", "results.groundtruth")
+HERE  = os.path.dirname(os.path.abspath(__file__))
+ROOT  = os.path.dirname(os.path.dirname(HERE))
+DERIV = os.path.join(ROOT, "derivatives")
+RES   = os.path.join(ROOT, "results")
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
-
-os.makedirs(FIGURES, exist_ok=True)
-
-
-def copy_to_figures(src, dest_name, verbose=True):
-    dest = os.path.join(FIGURES, dest_name)
-    shutil.copy2(src, dest)
-    if verbose:
-        print(f"    -> figures/{dest_name}")
 
 
 def run_step4_figures(verbose=True):
@@ -168,14 +155,7 @@ def run_step4_figures(verbose=True):
         fig.savefig(out, dpi=300, bbox_inches="tight")
         plt.close(fig)
         if verbose:
-            print(f"  Saved: results/step4/{fname}")
-
-    fig_map = {
-        "step4_figure2_ps_coupling.png": "figure2.png",
-        "step4_figure3_sp_coupling.png": "figure3.png",
-    }
-    for src_name, dest_name in fig_map.items():
-        copy_to_figures(os.path.join(STEP_RES, src_name), dest_name, verbose)
+            print(f"  Saved: {out}")
 
 
 def run_step5_figures(verbose=True):
@@ -186,9 +166,6 @@ def run_step5_figures(verbose=True):
     import step5_contrast_moderation as s5
     s5.run_step5(verbose=verbose)
 
-    copy_to_figures(s5.OUT_FIG4,    "figure4.png",              verbose)
-    copy_to_figures(s5.OUT_FIG_S3,  "figure_s2_jn_contrast_sp.png", verbose)
-
 
 def run_step9_figures(verbose=True):
     """Figures 5, 6, S5 — SP fMRI ROI JN."""
@@ -198,10 +175,6 @@ def run_step9_figures(verbose=True):
     import step9_sp_moderation_jn as s9
     s9.run_step9(verbose=verbose)
 
-    copy_to_figures(os.path.join(RES, "step9_sp_jn", "step9_figure5_jn_nacc.png"),     "figure5.png",  verbose)
-    copy_to_figures(os.path.join(RES, "step9_sp_jn", "step9_figure6_jn_acc.png"),       "figure6.png",  verbose)
-    copy_to_figures(os.path.join(RES, "step9_sp_jn", "step9_figure_s5_krause_jn.png"), "figure_s5_krause_sp_jn_merged.png", verbose)
-
 
 def run_step12_figures(verbose=True):
     """Figures S7 & S8 — PS arousal JN."""
@@ -209,9 +182,6 @@ def run_step12_figures(verbose=True):
         print("\n--- Figures S7 & S8: PS arousal JN ---")
     import step12_ps_moderation_jn as s12
     s12.run_step12(verbose=verbose)
-
-    copy_to_figures(s12.OUT_FIG_S7, "figure_s9_fmri_arousal_jn_merged.png", verbose)
-    copy_to_figures(s12.OUT_FIG_S8, "figure_s10_vbm_arousal_jn_merged.png", verbose)
 
 
 def main():
@@ -228,7 +198,7 @@ def main():
     run_step12_figures(verbose)
 
     if verbose:
-        print(f"\nAll figures saved to results/stepN/ and copied to figures/")
+        print(f"\nAll figures saved to results/stepN_*/.")
 
 
 if __name__ == "__main__":
