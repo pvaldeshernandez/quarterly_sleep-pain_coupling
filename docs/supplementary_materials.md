@@ -18,9 +18,9 @@ Supplementary Materials: Bidirectional Quarterly Sleep-Pain Coupling in Knee Ost
 
 ## Sleep-to-pain fMRI moderation
 
-![](../figures/figure_s4_stim_rois_2col.png)
+![](../results/step7b_sp_roi_maps/step7b_figure_s4_stim_rois.png)
 
-**Figure S4.** Spherical regions of interest for sleep-to-pain coupling moderation, shown on orthogonal slices of the MNI152 T1 template. Each panel displays one ROI with sagittal, coronal, and axial views centered on the sphere. Top five ROIs from the Krause et al. (2019) sleep deprivation framework: Contralateral Somatosensory Cortex (S1; MNI ±36, -45, 59; r = 8 mm; hemisphere contralateral to stimulated knee), Contralateral Middle Insula (±32, 4, 11; 8 mm; contralateral to stimulated knee), Left Thalamus (-10, -6, 10; 4 mm), Left Anterior Insula (-27, 25, 0; 8 mm), and Left and Right Nucleus Accumbens (±9, 2, -7; 6 mm; tested separately). Bottom ROI from the Sardi et al. (2024) framework: Right dACC/MCC (6, 12, 38; 6 mm), defined from the Xu et al. (2020) pain fMRI meta-analysis.
+**Figure S4.** Spherical regions of interest for sleep-to-pain coupling moderation, shown on orthogonal slices of the MNI152 T1 template. Each panel displays one ROI with sagittal, coronal, and axial views centered on the sphere. Six ROIs from the Krause et al. (2019) sleep deprivation framework: Contralateral Somatosensory Cortex (S1; MNI ±36, -45, 59; r = 8 mm; hemisphere contralateral to stimulated knee), Contralateral Middle Insula (±32, 4, 11; 8 mm; contralateral to stimulated knee), Left Thalamus (-10, -6, 10; 4 mm), Left Anterior Insula (-27, 25, 0; 8 mm), and Left and Right Nucleus Accumbens (±9, 2, -7; 6 mm; tested separately). Two ROIs from the Sardi et al. (2024) framework: Right dACC/MCC (6, 12, 38; 6 mm) and Left dACC/MCC (-6, 12, 38; 6 mm), both defined from the Xu et al. (2020) pain fMRI meta-analysis.
 
 ![](../results/step9_sp_jn/step9_figure_s5_krause_jn.png)
 
@@ -28,7 +28,7 @@ Supplementary Materials: Bidirectional Quarterly Sleep-Pain Coupling in Knee Ost
 
 ## Pain-to-sleep arousal relay moderation
 
-![](../figures/figure_s8_arousal_rois_2col.png)
+![](../results/step10b_ps_roi_maps/step10b_figure_s6_arousal_rois.png)
 
 **Figure S6.** Atlas-defined probabilistic regions of interest corresponding to nodes of the Lynch et al. (2025) pain-arousal relay pathway, shown on orthogonal slices of the MNI152 T1 template. Each panel displays one bilateral ROI with sagittal, coronal, and axial views centered on the atlas center of mass. Lateral Parabrachial Nucleus (PBN; Brainstem Navigator atlas (Singh et al., 2022); 3 brain voxels at 3 mm fMRI resolution), Substantia Innominata / Basal Forebrain (SI-BF/Ch4; Zaborszky et al. (2008) cytoarchitectonic atlas), Central Nucleus of the Amygdala (CeA; CIT168 atlas (Pauli et al., 2018)), Bed Nucleus of the Stria Terminalis (BNST; Theiss et al. (2017) atlas), and Lateral Hypothalamus (LH; Neudorfer et al. (2020) atlas). Atlas masks are shown as resampled to 1 mm resolution; probability-weighted extraction was performed at fMRI (3 mm) and VBM (1.5 mm) resolution (see Methods).
 
