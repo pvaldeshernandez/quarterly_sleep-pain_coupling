@@ -39,9 +39,11 @@ sys.path.insert(0, LIB_DIR)
 
 OUT_ROI_CSV = os.path.join(DERIV_DIR, "step6_sp_roi_values.csv")
 
-# Default path to the neuroimaging data. The user can override
-# with --nii-dir if the NIfTI files live elsewhere.
-DEFAULT_NII_DIR = os.path.join(ROOT, "data")
+# fMRI contrast directories:
+#   Unmasked contrasts from Step 5 (for S1, Mid Insula, Thal, Ant Ins, ACC)
+#   GM-masked contrasts from original GLM (for NAcc, where GM mask is used)
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step5_fmri_contrasts")
+FMRI_MASKED_DIR = os.path.join(ROOT, "data", "original", "fmri_glm")
 
 # ROI definitions
 SP_ROIS = {
@@ -109,25 +111,23 @@ def build_spherical_mask(mni_center, radius_mm, affine, shape):
     return mask, int(mask.sum())
 
 
-def run_step5(nii_dir: str = None, verbose: bool = True):
+def run_step6(verbose: bool = True):
     import nibabel as nib
-
-    if nii_dir is None:
-        nii_dir = DEFAULT_NII_DIR
 
     if verbose:
         print("=" * 70)
-        print("STEP 5 — Extract Sleep-to-Pain fMRI ROI values")
+        print("STEP 6 — Extract Sleep-to-Pain fMRI ROI values")
         print("=" * 70)
-        print(f"  NIfTI dir: {nii_dir}")
+        print(f"  Unmasked contrasts: {FMRI_UNMASKED_DIR}")
+        print(f"  GM-masked contrasts: {FMRI_MASKED_DIR}")
 
     os.makedirs(DERIV_DIR, exist_ok=True)
 
-    fmri_masked_dir = os.path.join(nii_dir, "fmri_contrasts")
-    fmri_unmasked_dir = os.path.join(nii_dir, "spm_nomask")
+    fmri_masked_dir = FMRI_MASKED_DIR
+    fmri_unmasked_dir = FMRI_UNMASKED_DIR
 
     # Reference image for affine + shape
-    ref_dir = fmri_masked_dir if os.path.isdir(fmri_masked_dir) else fmri_unmasked_dir
+    ref_dir = fmri_unmasked_dir
     ref_ids = sorted(os.listdir(ref_dir))
     ref_path = os.path.join(ref_dir, ref_ids[0], "con_0001.nii")
     ref_img = nib.load(ref_path)
@@ -194,13 +194,11 @@ def run_step5(nii_dir: str = None, verbose: bool = True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 5 — extract SP fMRI ROI values."
+        description="Step 6 — extract SP fMRI ROI values."
     )
-    parser.add_argument("--nii-dir", default=None,
-                        help="Directory containing fmri_contrasts/ and spm_nomask/")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    run_step5(nii_dir=args.nii_dir, verbose=not args.quiet)
+    run_step6(verbose=not args.quiet)
 
 
 if __name__ == "__main__":
