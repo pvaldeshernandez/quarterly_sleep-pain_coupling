@@ -47,7 +47,7 @@ Supplementary Materials: Bidirectional Quarterly Sleep-Pain Coupling in Knee Ost
 | LH        | fMRI response |        -0.022 | [-0.124, +0.078] |   0.666 |
 |           | GM volume     |        -0.014 | [-0.120, +0.090] |   0.798 |
 
-**Note.** Each ROI was tested in a separate model run. fMRI response: N = 174; unmasked contrast images were used for PBN, SI-BF/Ch4, CeA, and BNST; GM-masked contrasts for LH (see Methods). GM volume: N = 189. $p = 2 \times \min(P(\gamma_{ps} < 0),\, P(\gamma_{ps} > 0))$, computed from the posterior distribution. Johnson-Neyman analyses for each ROI are shown in Figures S7 (fMRI BOLD) and S8 (GM volume). Sleep-to-pain moderation results for all six spherical ROIs (including ACC) are reported in Table 5 of the main text.
+**Note.** Each ROI was tested in a separate model run. fMRI response: N = 174; unmasked contrast images were used for PBN, SI-BF/Ch4, CeA, and BNST; GM-masked contrasts for LH (see Methods). GM volume: N = 189. $p = 2 \times \min(P(\gamma_{ps} < 0),\, P(\gamma_{ps} > 0))$, computed from the posterior distribution. Johnson-Neyman analyses for each ROI are shown in Figures S7 (fMRI BOLD) and S8 (GM volume). Sleep-to-pain moderation results for all six spherical ROIs (including ACC) are reported in Table 6 of the main text.
 
 ![](../results/step12_ps_jn/step12_figure_s7_fmri_arousal_jn.png)
 
