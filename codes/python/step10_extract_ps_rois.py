@@ -37,7 +37,7 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step10")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step10_ps_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
 FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step5_fmri_contrasts_masked")

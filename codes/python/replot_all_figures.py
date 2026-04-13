@@ -57,8 +57,8 @@ def run_step4_figures(verbose=True):
     if verbose:
         print("\n--- Figures 2 & 3: coupling boxstrip + forest ---")
 
-    person_df = pd.read_csv(os.path.join(DERIV, "step4", "step4_person_coupling.csv"))
-    table4    = pd.read_csv(os.path.join(RES,   "step4", "step4_table4_coupling.csv"))
+    person_df = pd.read_csv(os.path.join(DERIV, "step4_coupling_model", "step4_person_coupling.csv"))
+    table4    = pd.read_csv(os.path.join(RES,   "step4_coupling_model", "step4_table4_coupling.csv"))
 
     def get_param(key):
         row = table4[table4["Parameter"] == key].iloc[0]
@@ -67,7 +67,7 @@ def run_step4_figures(verbose=True):
     b1_mean, b1_lo, b1_hi, b1_pneg = get_param("b1")
     a2_mean, a2_lo, a2_hi, a2_pneg = get_param("a2")
 
-    STEP_RES = os.path.join(RES, "step4")
+    STEP_RES = os.path.join(RES, "step4_coupling_model")
     os.makedirs(STEP_RES, exist_ok=True)
 
     for direction, pop_mean, pop_lo, pop_hi, prob_neg, col_mean, col_lo, col_hi, fname in [
@@ -198,9 +198,9 @@ def run_step9_figures(verbose=True):
     import step9_sp_moderation_jn as s9
     s9.run_step9(verbose=verbose)
 
-    copy_to_figures(os.path.join(RES, "step9", "step9_figure5_jn_nacc.png"),     "figure5.png",  verbose)
-    copy_to_figures(os.path.join(RES, "step9", "step9_figure6_jn_acc.png"),       "figure6.png",  verbose)
-    copy_to_figures(os.path.join(RES, "step9", "step9_figure_s5_krause_jn.png"), "figure_s5_krause_sp_jn_merged.png", verbose)
+    copy_to_figures(os.path.join(RES, "step9_sp_jn", "step9_figure5_jn_nacc.png"),     "figure5.png",  verbose)
+    copy_to_figures(os.path.join(RES, "step9_sp_jn", "step9_figure6_jn_acc.png"),       "figure6.png",  verbose)
+    copy_to_figures(os.path.join(RES, "step9_sp_jn", "step9_figure_s5_krause_jn.png"), "figure_s5_krause_sp_jn_merged.png", verbose)
 
 
 def run_step12_figures(verbose=True):

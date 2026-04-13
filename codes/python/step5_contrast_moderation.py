@@ -45,16 +45,16 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step5")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step5_contrast_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step5")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step5_contrast_moderation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step4", "step4_posterior_draws.npz")
+IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step4_coupling_model", "step4_posterior_draws.npz")
 
 # Derivatives
 OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step5_jn_localization_results.csv")

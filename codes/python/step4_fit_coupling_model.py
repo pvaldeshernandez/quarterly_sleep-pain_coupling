@@ -43,16 +43,16 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step4")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step4_coupling_model")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step4")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step4_coupling_model")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step3", "step3_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step3_varx_data", "step3_processed_long.csv")
 
 # Derivatives
 OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step4_posterior_draws.npz")

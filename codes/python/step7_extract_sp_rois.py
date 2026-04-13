@@ -34,7 +34,7 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step7")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step7_sp_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")

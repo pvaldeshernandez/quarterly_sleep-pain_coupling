@@ -73,10 +73,10 @@ ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step1")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step1_factor_analysis")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step1")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step1_factor_analysis")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 IN_LONG_CSV = os.path.join(DATA_DIR, "step0_extracted_long.csv")

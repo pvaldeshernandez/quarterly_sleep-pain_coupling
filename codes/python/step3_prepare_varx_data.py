@@ -56,13 +56,13 @@ ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step3")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step3_varx_data")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step3")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step3_varx_data")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-IN_SCORED_CSV = os.path.join(DERIV_DIR, "step1", "step1_scored_long.csv")
+IN_SCORED_CSV = os.path.join(DERIV_DIR, "step1_factor_analysis", "step1_scored_long.csv")
 
 OUT_PROCESSED_CSV = os.path.join(STEP_DERIV_DIR, "step3_processed_long.csv")
 OUT_FIGURE1 = os.path.join(STEP_RESULTS_DIR, "step3_figure1.png")
