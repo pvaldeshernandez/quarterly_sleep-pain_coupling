@@ -1,0 +1,442 @@
+"""
+Step 2 — External validation of the contrast factor.
+======================================================================
+
+Validates that the contrast factor (F2: Contrast) from the factor
+analysis captures meaningful variance in the relative predominance of
+knee-specific versus body-wide pain, distinct from overall pain severity.
+
+Input:
+  derivatives/step1/step1_scored_long.csv        — factor scores per row
+  data/step0_extracted_long.csv                  — baseline PHQ endorsements
+  data/original/participants_wideformat.xlsx     — WOMAC, PHQ, KL grade
+
+Output (results/step2/):
+  step2_figure_s1_endorsement.png  — Figure S1: point-biserial bar chart
+  step2_figure_s2_convergent.png   — Figure S2: scatter plots vs clinical
+  step2_text_numbers.csv           — ANOVA, Tukey, point-biserial (FDR),
+                                     Pearson/Spearman correlations
+
+Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import warnings
+
+import numpy as np
+import pandas as pd
+
+warnings.filterwarnings("ignore")
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+DATA_DIR = os.path.join(ROOT, "data")
+DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step2")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
+RESULTS_DIR = os.path.join(ROOT, "results")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step2")
+os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+
+IN_SCORED_CSV = os.path.join(DERIV_DIR, "step1", "step1_scored_long.csv")
+IN_EXTRACTED_CSV = os.path.join(DATA_DIR, "step0_extracted_long.csv")
+IN_WIDE_XLSX = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
+
+OUT_FIG_S1 = os.path.join(STEP_RESULTS_DIR, "step2_figure_s1_endorsement.png")
+OUT_FIG_S2 = os.path.join(STEP_RESULTS_DIR, "step2_figure_s2_convergent.png")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step2_text_numbers.csv")
+
+AREA_LABELS = [
+    "Hands", "Arms", "Shoulders", "Neck", "Head/Face/Jaw",
+    "Chest", "Stomach", "Pelvis", "Upper Back", "Lower Back",
+    "Knees", "Legs", "Feet/Ankles",
+]
+KNEE_AREA_COL = "phq_pain_areas___11__s1"  # area 11 = knees
+
+
+def _load_person_mean_contrast():
+    """Return DataFrame with columns [ID, K_i] from step1 scored output."""
+    scored = pd.read_csv(IN_SCORED_CSV)
+    ki = scored.groupby("ID")["contrast_factor"].mean().reset_index()
+    ki.columns = ["ID", "K_i"]
+    ki["ID"] = ki["ID"].astype(str)
+    return ki
+
+
+# =====================================================================
+# Figure S1 — Factor endorsement validation (point-biserial)
+# =====================================================================
+
+def generate_figure_s1(verbose=True):
+    """Figure S1: body-map endorsement point-biserial correlations.
+
+    Shows that the pain localization contrast factor correlates with
+    body-area endorsement patterns in the expected way: positive
+    correlation with knee endorsement, negative with non-knee areas.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from scipy import stats as sp_stats
+
+    if verbose:
+        print("  Figure S1: Factor endorsement validation")
+
+    ki = _load_person_mean_contrast()
+    extracted = pd.read_csv(IN_EXTRACTED_CSV)
+
+    # Baseline endorsements (quarter 0)
+    baseline = extracted[extracted["quarter"] == 0].copy()
+    baseline["ID"] = baseline["ID"].astype(str)
+    df = ki.merge(baseline, on="ID", how="inner")
+
+    area_cols = [f"phq_pain_areas___{i}__s1" for i in range(1, 14)]
+    available_areas = [c for c in area_cols if c in df.columns]
+
+    if len(available_areas) < 5:
+        if verbose:
+            print("    SKIP: insufficient body-area endorsement columns")
+        return
+
+    rpb_results = []
+    for i, col in enumerate(available_areas):
+        x = df[col].fillna(0).astype(int)
+        y = df["K_i"]
+        both = x.notna() & y.notna()
+        if both.sum() < 10:
+            continue
+        r, p = sp_stats.pointbiserialr(x[both], y[both])
+        label = AREA_LABELS[i] if i < len(AREA_LABELS) else f"Area {i+1}"
+        rpb_results.append({"area": label, "r_pb": r, "p": p})
+
+    if not rpb_results:
+        if verbose:
+            print("    SKIP: no valid point-biserial correlations")
+        return
+
+    rpb_df = pd.DataFrame(rpb_results).sort_values("r_pb", ascending=True)
+
+    fig, ax = plt.subplots(figsize=(10, 7))
+    colors = ["#1565C0" if r < 0 else "#D32F2F" for r in rpb_df["r_pb"]]
+    ax.barh(range(len(rpb_df)), rpb_df["r_pb"].values, color=colors, alpha=0.7)
+    ax.set_yticks(range(len(rpb_df)))
+    ax.set_yticklabels(rpb_df["area"].values, fontsize=11)
+    ax.set_xlabel("Point-biserial correlation with mean contrast ($\\bar{K}_i$)",
+                  fontsize=12)
+    ax.axvline(0, color="black", linewidth=0.8)
+
+    for i, (_, row) in enumerate(rpb_df.iterrows()):
+        if row["p"] < 0.05:
+            ax.text(row["r_pb"] + 0.01 * np.sign(row["r_pb"]),
+                    i, "*", fontsize=14, ha="center", va="center",
+                    fontweight="bold")
+
+    ax.set_title("Point-biserial correlations: body-area endorsement vs. "
+                 "pain localization contrast", fontsize=13, fontweight="bold")
+    fig.tight_layout()
+    fig.savefig(OUT_FIG_S1, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    if verbose:
+        print(f"    Saved: {OUT_FIG_S1}")
+
+
+# =====================================================================
+# Figure S2 — Convergent validity scatter plots
+# =====================================================================
+
+def generate_figure_s2(verbose=True):
+    """Figure S2: convergent validity of the contrast factor vs baseline
+    clinical measures (WOMAC, PHQ, KL grade).
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from scipy import stats as sp_stats
+
+    if verbose:
+        print("  Figure S2: Convergent validity scatter")
+
+    if not os.path.exists(IN_WIDE_XLSX):
+        if verbose:
+            print("    SKIP: participants_wideformat.xlsx not found")
+        return
+
+    ki = _load_person_mean_contrast()
+    wide = pd.read_excel(IN_WIDE_XLSX)
+    wide["ID"] = wide["ID"].astype(str)
+    df = ki.merge(wide, on="ID", how="inner")
+
+    panels = [
+        ("phq_knee_pain_days__s1", "PHQ knee pain days per week"),
+        ("phq_percent_pain__s1", "PHQ % waking day in knee pain"),
+        ("womac_pain__s1", "WOMAC Pain"),
+        ("total_womac__s1", "WOMAC Total"),
+        ("womac_phys_function__s1", "WOMAC Physical Function"),
+        ("womac_stiffness__s1", "WOMAC Stiffness"),
+        ("qst_knee_pain_rating__s1", "Knee pain rating"),
+    ]
+    available_panels = [(c, l) for c, l in panels if c in df.columns]
+
+    if not available_panels:
+        if verbose:
+            print("    SKIP: no clinical columns found")
+        return
+
+    n_panels = len(available_panels)
+    ncols = 4
+    nrows = max(1, (n_panels + ncols - 1) // ncols)
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(16, 4 * nrows))
+    if nrows == 1 and ncols == 1:
+        axes = np.array([axes])
+    axes = axes.ravel()
+
+    for i, (col, label) in enumerate(available_panels):
+        ax = axes[i]
+        tmp = df[["K_i", col]].dropna()
+        if len(tmp) < 5:
+            ax.set_visible(False)
+            continue
+        x, y = tmp["K_i"].values, tmp[col].values
+        r, p = sp_stats.pearsonr(x, y)
+
+        ax.scatter(x, y, alpha=0.35, s=18, color="steelblue", edgecolor="none")
+        slope, intercept = np.polyfit(x, y, 1)
+        xline = np.linspace(x.min(), x.max(), 200)
+        ax.plot(xline, intercept + slope * xline, color="firebrick", linewidth=2)
+
+        pstr = "p < 0.001" if p < 0.001 else f"p = {p:.3f}"
+        ax.text(0.05, 0.95, f"r = {r:.3f}\n{pstr}\nN = {len(tmp)}",
+                transform=ax.transAxes, va="top", ha="left", fontsize=9,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="wheat",
+                          alpha=0.85, edgecolor="gray"))
+        ax.set_xlabel("Person-mean contrast ($\\bar{K}_i$)", fontsize=10)
+        ax.set_ylabel(label, fontsize=10)
+        ax.tick_params(labelsize=9)
+
+    for j in range(len(available_panels), len(axes)):
+        axes[j].set_visible(False)
+
+    fig.suptitle("Convergent validity: person-mean contrast vs baseline "
+                 "clinical measures", fontsize=13, fontweight="bold", y=0.98)
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    fig.savefig(OUT_FIG_S2, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    if verbose:
+        print(f"    Saved: {OUT_FIG_S2}")
+
+
+# =====================================================================
+# Text numbers — ANOVA, Tukey, point-biserial, clinical correlations
+# =====================================================================
+
+def generate_text_numbers(verbose=True):
+    """Compute and save all convergent validity statistics to
+    step2_text_numbers.csv:
+      - One-way ANOVA of person-mean contrast across pain distribution
+        groups (knee-only, knee+others, no-knee) with group Ns/means/SDs
+      - Tukey HSD post-hoc pairwise p-values
+      - Point-biserial correlations for all 13 PHQ body areas (FDR-BH)
+      - Pearson correlations with continuous clinical measures
+      - Spearman correlation with KL grade (ordinal)
+    """
+    from scipy import stats as sp_stats
+    from statsmodels.stats.multicomp import pairwise_tukeyhsd
+    from statsmodels.stats.multitest import multipletests
+
+    if verbose:
+        print("  Text numbers: convergent validity statistics")
+
+    ki = _load_person_mean_contrast()
+    extracted = pd.read_csv(IN_EXTRACTED_CSV)
+
+    text_rows = []
+
+    def _t(metric, value, note=""):
+        text_rows.append({"metric": metric, "value": str(value), "note": note})
+
+    # ---- ANOVA by pain distribution group ----
+    baseline = extracted[extracted["quarter"] == 0].copy()
+    baseline["ID"] = baseline["ID"].astype(str)
+
+    area_cols_base = [f"phq_pain_areas___{i}__s1" for i in range(1, 14)]
+    available_area_cols = [c for c in area_cols_base if c in baseline.columns]
+
+    bdf = None
+    if available_area_cols and KNEE_AREA_COL in available_area_cols:
+        bdf = baseline.merge(ki, on="ID", how="inner")
+        non_knee_cols = [c for c in available_area_cols if c != KNEE_AREA_COL]
+        bdf["n_other_areas"] = bdf[non_knee_cols].fillna(0).sum(axis=1)
+        bdf["knee_endorsed"] = bdf[KNEE_AREA_COL].fillna(0).astype(int)
+
+        def classify(row):
+            if row["knee_endorsed"] == 1 and row["n_other_areas"] == 0:
+                return "knee_only"
+            elif row["knee_endorsed"] == 1 and row["n_other_areas"] > 0:
+                return "knee_plus"
+            else:
+                return "no_knee"
+
+        bdf["pain_group"] = bdf.apply(classify, axis=1)
+        bdf = bdf.dropna(subset=["K_i", "pain_group"])
+
+        group_labels = ["knee_only", "knee_plus", "no_knee"]
+        group_data = [bdf[bdf["pain_group"] == g]["K_i"].dropna().values
+                      for g in group_labels]
+        n_groups = [len(g) for g in group_data]
+
+        for g, n in zip(group_labels, n_groups):
+            _t(f"anova_n_{g}", n)
+
+        if all(n > 1 for n in n_groups):
+            f_stat, p_anova = sp_stats.f_oneway(*group_data)
+            df_between = 2
+            df_within = sum(n_groups) - 3
+            _t("anova_F", f"{f_stat:.2f}")
+            _t("anova_df", f"({df_between},{df_within})")
+            _t("anova_p", "<0.001" if p_anova < 0.001 else f"{p_anova:.3f}")
+
+            for g, data in zip(group_labels, group_data):
+                _t(f"anova_mean_{g}", f"{np.mean(data):.2f}")
+                _t(f"anova_sd_{g}", f"{np.std(data, ddof=1):.2f}")
+
+            if verbose:
+                print(f"    ANOVA: F({df_between},{df_within})={f_stat:.2f}, "
+                      f"p={'<0.001' if p_anova < 0.001 else f'{p_anova:.3f}'}")
+                for g, data in zip(group_labels, group_data):
+                    print(f"      {g}: M={np.mean(data):.2f}, SD={np.std(data,ddof=1):.2f}, N={len(data)}")
+
+            # Tukey post-hoc
+            all_vals = np.concatenate(group_data)
+            all_labels = np.concatenate([[g] * n for g, n in
+                                          zip(group_labels, n_groups)])
+            tukey = pairwise_tukeyhsd(all_vals, all_labels, alpha=0.05)
+            tukey_df = pd.DataFrame(data=tukey._results_table.data[1:],
+                                     columns=tukey._results_table.data[0])
+            for _, trow in tukey_df.iterrows():
+                pair = f"{trow['group1']}_vs_{trow['group2']}"
+                padj = float(trow["p-adj"])
+                _t(f"tukey_p_{pair}",
+                   "<0.001" if padj < 0.001 else f"{padj:.3f}")
+                _t(f"tukey_meandiff_{pair}", f"{float(trow['meandiff']):.3f}")
+                if verbose:
+                    print(f"    Tukey {pair}: p={padj:.3f}")
+
+    # ---- Point-biserial correlations ----
+    if bdf is not None and available_area_cols:
+        pb_rs, pb_ps, pb_labels = [], [], []
+        for i, col in enumerate(available_area_cols):
+            x = bdf[col].fillna(0).astype(int)
+            y = bdf["K_i"]
+            both = x.notna() & y.notna()
+            if both.sum() < 10:
+                continue
+            r, p = sp_stats.pointbiserialr(x[both], y[both])
+            label = AREA_LABELS[i] if i < len(AREA_LABELS) else f"Area {i+1}"
+            pb_rs.append(r)
+            pb_ps.append(p)
+            pb_labels.append(label)
+
+        if pb_ps:
+            _, pb_fdr, _, _ = multipletests(pb_ps, method="fdr_bh")
+            for lbl, r, p, q in zip(pb_labels, pb_rs, pb_ps, pb_fdr):
+                key = lbl.lower().replace("/", "_").replace(" ", "_")
+                _t(f"rpb_{key}_r", f"{r:.3f}")
+                _t(f"rpb_{key}_p", "<0.001" if p < 0.001 else f"{p:.3f}")
+                _t(f"rpb_{key}_fdr", "<0.001" if q < 0.001 else f"{q:.3f}")
+                if verbose:
+                    sig = "*" if p < 0.05 else ""
+                    fdr_sig = "†" if q < 0.05 else ""
+                    print(f"    {lbl}: r={r:.3f}, p={p:.3f}{sig}, "
+                          f"FDR={q:.3f}{fdr_sig}")
+
+    # ---- Clinical measure correlations ----
+    if os.path.exists(IN_WIDE_XLSX):
+        wide = pd.read_excel(IN_WIDE_XLSX)
+        wide["ID"] = wide["ID"].astype(str)
+        df_clin = ki.merge(wide, on="ID", how="inner")
+
+        pearson_panels = [
+            ("phq_knee_pain_days__s1", "phq_knee_pain_days"),
+            ("phq_percent_pain__s1", "phq_percent_pain"),
+            ("womac_pain__s1", "womac_pain"),
+            ("total_womac__s1", "womac_total"),
+            ("womac_phys_function__s1", "womac_phys_function"),
+            ("womac_stiffness__s1", "womac_stiffness"),
+            ("qst_knee_pain_rating__s1", "qst_knee_pain_rating"),
+        ]
+
+        for col, key in pearson_panels:
+            if col not in df_clin.columns:
+                continue
+            tmp = df_clin[["K_i", col]].dropna()
+            if len(tmp) < 5:
+                continue
+            r, p = sp_stats.pearsonr(tmp["K_i"], tmp[col])
+            _t(f"pearson_{key}_r", f"{r:.3f}")
+            _t(f"pearson_{key}_p", "<0.001" if p < 0.001 else f"{p:.3f}")
+            _t(f"pearson_{key}_n", str(len(tmp)))
+            if verbose:
+                print(f"    Pearson {key}: r={r:.3f}, "
+                      f"p={'<0.001' if p<0.001 else f'{p:.3f}'}, N={len(tmp)}")
+
+        # Spearman for KL grade (ordinal)
+        kl_col = next((c for c in ["kl_grade__s1", "kl_grade_s1", "klg__s1",
+                                    "KL_grade__s1", "kellgren_lawrence__s1"]
+                       if c in df_clin.columns), None)
+        if kl_col:
+            tmp = df_clin[["K_i", kl_col]].dropna()
+            if len(tmp) >= 5:
+                rho, p = sp_stats.spearmanr(tmp["K_i"], tmp[kl_col])
+                _t("spearman_kl_grade_rho", f"{rho:.3f}")
+                _t("spearman_kl_grade_p",
+                   "<0.001" if p < 0.001 else f"{p:.3f}")
+                _t("spearman_kl_grade_n", str(len(tmp)))
+                if verbose:
+                    print(f"    Spearman KL grade: rho={rho:.3f}, "
+                          f"p={'<0.001' if p<0.001 else f'{p:.3f}'}, "
+                          f"N={len(tmp)}")
+        elif verbose:
+            print("    KL grade column not found — skipping Spearman")
+
+    pd.DataFrame(text_rows).to_csv(OUT_TEXT_CSV, index=False)
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_CSV}")
+
+
+# =====================================================================
+# Main
+# =====================================================================
+
+def run_step2(verbose=True):
+    if verbose:
+        print("=" * 70)
+        print("STEP 2 — Contrast factor external validation")
+        print("=" * 70)
+
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+
+    generate_figure_s1(verbose)
+    generate_figure_s2(verbose)
+    generate_text_numbers(verbose)
+
+    if verbose:
+        print("\n" + "=" * 70)
+        print("STEP 2 COMPLETE")
+        print("=" * 70)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Step 2 — External validation of the contrast factor."
+    )
+    parser.add_argument("--quiet", action="store_true")
+    args = parser.parse_args()
+    run_step2(verbose=not args.quiet)
+
+
+if __name__ == "__main__":
+    main()
