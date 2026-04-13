@@ -17,21 +17,22 @@ quarterly_sleep-pain_coupling/
 │   ├── rois/                        # Spherical + atlas-defined ROI creation
 │   └── lib/                         # Helper functions
 │
-├── python/                          # Statistical analysis pipeline (Steps 0-11)
+├── python/                          # Statistical analysis pipeline (Steps 0-12)
 │   ├── lib/
 │   │   └── coupling_model.py        # Shared Bayesian VARX(1) model
 │   ├── step0_extract_data.py        # Extract from legacy wide-format data
 │   ├── step1_factor_analysis.py     # 2-factor PAF + parallel analysis + interpolation
 │   ├── step2_prepare_varx_data.py   # Segment filter + decomposition + lags + Figure 1
-│   ├── step3_fit_coupling_model.py  # VARX(1) fit + LOO-CV
-│   ├── step4_contrast_moderation.py # Pain localization JN analysis
-│   ├── step5_extract_sp_rois.py     # Extract Krause + ACC fMRI ROI values
-│   ├── step6_fit_sp_moderation.py   # Sleep-to-Pain moderation (7 ROIs)
-│   ├── step7_sp_moderation_jn.py    # SP moderation JN + Figures 5, 6, S5
-│   ├── step8_extract_ps_rois.py     # Extract arousal fMRI + VBM ROI values
-│   ├── step9_fit_ps_moderation.py   # Pain-to-Sleep moderation (10 models)
-│   ├── step10_ps_moderation_jn.py   # PS moderation JN + Figures S7, S8
-│   └── step11_remaining_figures.py  # Figures 2, 3, S1, S2
+│   ├── step3_fit_coupling_model.py  # VARX(1) fit + LOO-CV + Figures 2, 3
+│   ├── step4_contrast_moderation.py # Pain localization JN + Figure 4
+│   ├── step5_estimate_fmri_contrasts.py  # Re-estimate fMRI contrasts (no GM mask)
+│   ├── step6_extract_sp_rois.py     # Extract Krause + ACC fMRI ROI values
+│   ├── step7_fit_sp_moderation.py   # Sleep-to-Pain moderation (7 ROIs) + Table 5
+│   ├── step8_sp_moderation_jn.py    # SP moderation JN + Figures 5, 6
+│   ├── step9_extract_ps_rois.py     # Extract arousal fMRI + VBM ROI values
+│   ├── step10_fit_ps_moderation.py  # Pain-to-Sleep moderation (10 models)
+│   ├── step11_ps_moderation_jn.py   # PS moderation JN
+│   └── step12_supplementary.py      # All supplementary outputs (S1-S8, Table S1)
 │
 ├── data/                            # Input data (not committed; see Data section)
 │   ├── original/                    # Verbatim copies of source files
@@ -61,7 +62,7 @@ conda env create -f environment.yml
 conda activate sleep-pain-coupling
 ```
 
-Place the data files provided by Pedro into `data/original/` and the neuroimaging directories (`fmri_contrasts/`, `spm_nomask/`, `vbm/`, `atlases/`) into `data/`. Then run the pipeline step by step:
+Place the data files provided by Pedro into `data/original/` (the wide-format xlsx, data dictionary, fMRI GLM directories, VBM images) and the atlases into `data/atlases/`. Then run the pipeline step by step:
 
 ```bash
 cd python
@@ -70,16 +71,17 @@ python step1_factor_analysis.py
 python step2_prepare_varx_data.py
 python step3_fit_coupling_model.py
 python step4_contrast_moderation.py
-python step5_extract_sp_rois.py
-python step6_fit_sp_moderation.py
-python step7_sp_moderation_jn.py
-python step8_extract_ps_rois.py
-python step9_fit_ps_moderation.py
-python step10_ps_moderation_jn.py
-python step11_remaining_figures.py
+python step5_estimate_fmri_contrasts.py
+python step6_extract_sp_rois.py
+python step7_fit_sp_moderation.py
+python step8_sp_moderation_jn.py
+python step9_extract_ps_rois.py
+python step10_fit_ps_moderation.py
+python step11_ps_moderation_jn.py
+python step12_supplementary.py
 ```
 
-Total runtime: approximately 30 minutes on a 4-core machine with 16 GB RAM.
+Total runtime: approximately 40 minutes on a 4-core machine with 16 GB RAM.
 
 ---
 
@@ -88,17 +90,18 @@ Total runtime: approximately 30 minutes on a 4-core machine with 16 GB RAM.
 | Step | Script | What it does | Key outputs |
 |------|--------|-------------|-------------|
 | 0 | `step0_extract_data.py` | Extract paper-relevant variables from legacy wide-format xlsx; gateway imputation | `data/step0_extracted_long.csv` |
-| 1 | `step1_factor_analysis.py` | 2-factor PAF (polychoric), Horn's parallel analysis, Bartlett scoring, interpolation | `derivatives/step1_scored_long.csv`, `step1_factor_model.json` |
-| 2 | `step2_prepare_varx_data.py` | Segment filter, within-between decomposition, lag creation, Figure 1, Table 3 | `derivatives/step2_processed_long.csv`, Figure 1, Table 3 |
-| 3 | `step3_fit_coupling_model.py` | Bayesian VARX(1) fit + LOO-CV model comparison | Table 4, LOO comparison |
-| 4 | `step4_contrast_moderation.py` | Johnson-Neyman analysis of pain localization moderation | Figures 4, S3 |
-| 5 | `step5_extract_sp_rois.py` | Extract fMRI BOLD in 7 spherical ROIs (6 Krause + ACC) | `derivatives/step5_sp_roi_values.csv` |
-| 6 | `step6_fit_sp_moderation.py` | Fit SP moderation models, sign concordance test | Table 5, sign concordance |
-| 7 | `step7_sp_moderation_jn.py` | SP moderation JN analysis | Figures 5, 6, S5 |
-| 8 | `step8_extract_ps_rois.py` | Extract arousal ROI values (fMRI BOLD + VBM GM volume) | `derivatives/step8_ps_*.csv` |
-| 9 | `step9_fit_ps_moderation.py` | Fit PS moderation models, VBM sign concordance | Table S1 |
-| 10 | `step10_ps_moderation_jn.py` | PS moderation JN analysis | Figures S7, S8 |
-| 11 | `step11_remaining_figures.py` | Person-level coupling plots, factor validation, convergent validity | Figures 2, 3, S1, S2 |
+| 1 | `step1_factor_analysis.py` | 2-factor PAF (polychoric), Horn's parallel analysis, Bartlett scoring, interpolation | factor scores + model JSON |
+| 2 | `step2_prepare_varx_data.py` | Segment filter, within-between decomposition, lag creation | VARX-ready data + Figure 1 + Table 3 |
+| 3 | `step3_fit_coupling_model.py` | Bayesian VARX(1) fit + LOO-CV model comparison | Table 4 + LOO + Figures 2, 3 |
+| 4 | `step4_contrast_moderation.py` | Johnson-Neyman analysis of pain localization moderation | Figure 4 |
+| 5 | `step5_estimate_fmri_contrasts.py` | Re-estimate fMRI contrasts without GM mask from SPM.mat + 4D data | unmasked `con_0001.nii` per subject |
+| 6 | `step6_extract_sp_rois.py` | Extract fMRI BOLD in 7 spherical ROIs (6 Krause + ACC) | ROI values CSV |
+| 7 | `step7_fit_sp_moderation.py` | Fit SP moderation models, sign concordance test | Table 5 + sign concordance |
+| 8 | `step8_sp_moderation_jn.py` | SP moderation JN analysis | Figures 5, 6 |
+| 9 | `step9_extract_ps_rois.py` | Extract arousal ROI values (fMRI BOLD + VBM GM volume) | ROI values CSVs |
+| 10 | `step10_fit_ps_moderation.py` | Fit PS moderation models | moderation estimates |
+| 11 | `step11_ps_moderation_jn.py` | PS moderation JN analysis | JN grids |
+| 12 | `step12_supplementary.py` | All supplementary outputs | Table S1, Figures S1–S8 |
 
 ---
 
