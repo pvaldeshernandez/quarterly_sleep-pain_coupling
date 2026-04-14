@@ -55,16 +55,16 @@ From the repo root:
 
 ```bash
 cd codes/python
-python step0_extract_data.py
-python step1_factor_analysis.py
-python step2_contrast_validation.py
-python step3_prepare_varx_data.py
-python step4_fit_coupling_model.py
-python step5_contrast_moderation.py
-python step6_estimate_fmri_contrasts.py
-python step7_extract_sp_rois.py
-python step8_fit_sp_moderation.py
-python step9_sp_moderation_jn.py
+python step00_extract_data.py
+python step01_factor_analysis.py
+python step02_contrast_validation.py
+python step03_prepare_varx_data.py
+python step04_fit_coupling_model.py
+python step05_contrast_moderation.py
+python step06_estimate_fmri_contrasts.py
+python step07_extract_sp_rois.py
+python step08_fit_sp_moderation.py
+python step09_sp_moderation_jn.py
 python step10_extract_ps_rois.py
 python step11_fit_ps_moderation.py
 python step12_ps_moderation_jn.py
@@ -80,7 +80,7 @@ Total time: ~45 minutes on a 4-core machine with 16 GB RAM. Steps
 
 | Step | What it does | What it produces |
 |------|-------------|-----------------|
-| 0 | Extract paper-relevant variables from the legacy wide-format xlsx, apply gateway imputation | `data/step0_extracted_long.csv` |
+| 0 | Extract paper-relevant variables from the legacy wide-format xlsx, apply gateway imputation | `data/step00_extracted_long.csv` |
 | 1 | Factor analysis (polychoric, 2-factor PAF, parallel analysis), Bartlett scoring, interpolation | Factor scores + model JSON |
 | 2 | External validation of contrast factor: point-biserial correlations, convergent validity | Figures S1, S2 + text numbers |
 | 3 | Segment filter (>=3 consecutive quarters), within-between decomposition, lag creation | VARX-ready data + Figure 1 + Table 3 |
@@ -99,10 +99,10 @@ Total time: ~45 minutes on a 4-core machine with 16 GB RAM. Steps
 
 ## 5. Where to find outputs
 
-- **`data/`** — only the Step 0 extraction. No other step writes here.
+- **`data/`** — only the Step 00 extraction. No other step writes here.
 - **`derivatives/`** — intermediate files passed between steps (factor scores, processed data, posterior draws, ROI values). Each subfolder is named `stepN_description/`. You don't need to look at these unless debugging.
 - **`results/`** — every table (CSV), figure (PNG), and text number (CSV) that appears in the manuscript:
-  - Main-text figures and tables are in step-specific subfolders (e.g. `results/step4_coupling_model/`)
+  - Main-text figures and tables are in step-specific subfolders (e.g. `results/step04_coupling_model/`)
   - **All supplementary materials** (Figures S1-S8, Tables S1-S2) are in `results/supplementary_materials/`
 
 ---
@@ -119,7 +119,7 @@ If something looks off:
 - **Sample size wrong?** Check that `data/original/` has the right
   xlsx files and that `data/fmri_contrasts/`, `data/spm_nomask/`,
   etc. are populated.
-- **Factor scores different?** Step 1 uses polychoric correlations
+- **Factor scores different?** Step 01 uses polychoric correlations
   by default. Make sure you're running it without extra flags.
 - **VBM N too low?** The VBM filenames use `x` instead of `-` in
   subject IDs (BIDS convention). Step 10 handles this mapping.

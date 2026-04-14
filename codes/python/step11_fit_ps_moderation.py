@@ -2,18 +2,18 @@
 Step 10 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
 ======================================================================
 
-Input:  derivatives/step2_processed_long.csv
-        derivatives/step9_ps_fmri_roi_values.csv
-        derivatives/step9_ps_vbm_roi_values.csv
+Input:  derivatives/step02_processed_long.csv
+        derivatives/step09_ps_fmri_roi_values.csv
+        derivatives/step09_ps_vbm_roi_values.csv
 Output:
   derivatives/
     step10_ps_fmri_posterior_draws.npz
     step10_ps_vbm_posterior_draws.npz
   results/
-    step9_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
-    step9_table_s1_vbm_arousal.csv     — Table S1 VBM panel
-    step9_vbm_sign_concordance.csv     — VBM 5/5 sign test
-    step9_text_numbers.csv
+    step09_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
+    step09_table_s1_vbm_arousal.csv     — Table S1 VBM panel
+    step09_vbm_sign_concordance.csv     — VBM 5/5 sign test
+    step09_text_numbers.csv
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each arousal ROI, separately for fMRI BOLD and VBM GM volume.
@@ -46,7 +46,7 @@ os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step3_varx_data", "step3_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step03_varx_data", "step03_processed_long.csv")
 IN_FMRI_CSV = os.path.join(DERIV_DIR, "step10_ps_roi_values", "step10_ps_fmri_roi_values.csv")
 IN_VBM_CSV = os.path.join(DERIV_DIR, "step10_ps_roi_values", "step10_ps_vbm_roi_values.csv")
 
@@ -60,7 +60,7 @@ OUT_VBM_SIGN = os.path.join(SUPP_DIR, "vbm_sign_concordance.csv")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step11_text_numbers.csv")
 
 
-def load_step2_data(csv_path):
+def load_step02_data(csv_path):
     df = pd.read_csv(csv_path)
     df["Age_z"] = (df["Age"] - df["Age"].mean()) / df["Age"].std()
     df["Sex_coded"] = (df["Sex"] == 2).astype(float)
@@ -156,7 +156,7 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
 def run_step11(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 9 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
+        print("STEP 09 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -183,7 +183,7 @@ def run_step11(verbose=True, refit=False):
         vbm_draws = dict(np.load(OUT_VBM_DRAWS))
     else:
         # ------ FULL MCMC FIT ------
-        _, model_df, unique_ids, id_map = load_step2_data(IN_PROCESSED_CSV)
+        _, model_df, unique_ids, id_map = load_step02_data(IN_PROCESSED_CSV)
 
         # ---- fMRI BOLD ----
         fmri_table, fmri_draws = fit_modality(
@@ -254,7 +254,7 @@ def run_step11(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 9 COMPLETE")
+        print("STEP 09 COMPLETE")
         print("=" * 70)
 
 

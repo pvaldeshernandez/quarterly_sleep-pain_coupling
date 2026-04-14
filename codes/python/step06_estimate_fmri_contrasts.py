@@ -1,5 +1,5 @@
 """
-Step 5 — Re-estimate first-level fMRI contrasts (masked and unmasked).
+Step 05 — Re-estimate first-level fMRI contrasts (masked and unmasked).
 ======================================================================
 
 Inputs:
@@ -13,10 +13,10 @@ Inputs:
       Smoothed, normalised 4D functional time series.
 
 Outputs (per subject, per variant):
-  derivatives/step5_fmri_contrasts_masked/<subj>/
+  derivatives/step05_fmri_contrasts_masked/<subj>/
       con_0001.nii   — contrast image (stimulation > baseline), GM-masked
       beta_*.nii     — beta images, GM-masked
-  derivatives/step5_fmri_contrasts_unmasked/<subj>/
+  derivatives/step05_fmri_contrasts_unmasked/<subj>/
       con_0001.nii   — contrast image, whole-brain (no mask)
       beta_*.nii     — beta images, whole-brain
 
@@ -54,11 +54,11 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 GLM_DIR   = os.path.join(ROOT, "data", "original", "spm_mats")
 FMRI4D_DIR = os.path.join(ROOT, "data", "original", "fmri_4d")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step6")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step06")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
-OUT_MASKED   = os.path.join(DERIV_DIR, "step6_fmri_contrasts_masked")
-OUT_UNMASKED = os.path.join(DERIV_DIR, "step6_fmri_contrasts_unmasked")
+OUT_MASKED   = os.path.join(DERIV_DIR, "step06_fmri_contrasts_masked")
+OUT_UNMASKED = os.path.join(DERIV_DIR, "step06_fmri_contrasts_unmasked")
 
 GM_MASK_FNAME = "sUPLOAD2_T1w__gm-2mm-binarized(0.25).nii"
 
@@ -227,7 +227,7 @@ def process_subject(subj_id: str, overwrite: bool = False,
     return f"{int(in_mask.sum())} masked / {int(valid.sum())} unmasked voxels"
 
 
-def run_step6(overwrite: bool = False, verbose: bool = True, refit: bool = False):
+def run_step06(overwrite: bool = False, verbose: bool = True, refit: bool = False):
     overwrite = overwrite or refit
     os.makedirs(OUT_MASKED,   exist_ok=True)
     os.makedirs(OUT_UNMASKED, exist_ok=True)
@@ -237,7 +237,7 @@ def run_step6(overwrite: bool = False, verbose: bool = True, refit: bool = False
 
     if verbose:
         print("=" * 70)
-        print("STEP 5 — Re-estimate fMRI contrasts (masked + unmasked)")
+        print("STEP 05 — Re-estimate fMRI contrasts (masked + unmasked)")
         print("=" * 70)
         print(f"  GLM dir:      {GLM_DIR}")
         print(f"  4D fMRI dir:  {FMRI4D_DIR}")
@@ -275,7 +275,7 @@ def run_step6(overwrite: bool = False, verbose: bool = True, refit: bool = False
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 5 — Re-estimate fMRI contrasts (masked + unmasked)."
+        description="Step 05 — Re-estimate fMRI contrasts (masked + unmasked)."
     )
     parser.add_argument("--overwrite", action="store_true",
                         help="Re-estimate even if output files already exist.")
@@ -283,7 +283,7 @@ def main():
                         help="Re-run computation from scratch instead of loading saved derivatives")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    run_step6(overwrite=args.overwrite, verbose=not args.quiet, refit=args.refit)
+    run_step06(overwrite=args.overwrite, verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

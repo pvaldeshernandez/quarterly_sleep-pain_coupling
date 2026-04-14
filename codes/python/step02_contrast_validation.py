@@ -1,5 +1,5 @@
 """
-Step 2 — External validation of the contrast factor.
+Step 02 — External validation of the contrast factor.
 ======================================================================
 
 Validates that the contrast factor (F2: Contrast) from the factor
@@ -7,14 +7,14 @@ analysis captures meaningful variance in the relative predominance of
 knee-specific versus body-wide pain, distinct from overall pain severity.
 
 Input:
-  derivatives/step1/step1_scored_long.csv        — factor scores per row
-  data/step0_extracted_long.csv                  — baseline PHQ endorsements
+  derivatives/step01/step01_scored_long.csv        — factor scores per row
+  data/step00_extracted_long.csv                  — baseline PHQ endorsements
   data/original/participants_wideformat.xlsx     — WOMAC, PHQ, KL grade
 
-Output (results/step2/):
-  step2_figure_s1_endorsement.png  — Figure S1: point-biserial bar chart
-  step2_figure_s2_convergent.png   — Figure S2: scatter plots vs clinical
-  step2_text_numbers.csv           — ANOVA, Tukey, point-biserial (FDR),
+Output (results/step02/):
+  step02_figure_s1_endorsement.png  — Figure S1: point-biserial bar chart
+  step02_figure_s2_convergent.png   — Figure S2: scatter plots vs clinical
+  step02_text_numbers.csv           — ANOVA, Tukey, point-biserial (FDR),
                                      Pearson/Spearman correlations
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
@@ -34,14 +34,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DATA_DIR = os.path.join(ROOT, "data")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step2_contrast_validation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step02_contrast_validation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step2_contrast_validation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step02_contrast_validation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-IN_SCORED_CSV = os.path.join(DERIV_DIR, "step1_factor_analysis", "step1_scored_long.csv")
-IN_EXTRACTED_CSV = os.path.join(DATA_DIR, "step0_extracted_long.csv")
+IN_SCORED_CSV = os.path.join(DERIV_DIR, "step01_factor_analysis", "step01_scored_long.csv")
+IN_EXTRACTED_CSV = os.path.join(DATA_DIR, "step00_extracted_long.csv")
 IN_WIDE_XLSX = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
 
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
@@ -49,7 +49,7 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 
 OUT_FIG_S1 = os.path.join(SUPP_DIR, "figure_s1_endorsement.png")
 OUT_FIG_S2 = os.path.join(SUPP_DIR, "figure_s2_convergent.png")
-OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step2_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step02_text_numbers.csv")
 
 AREA_LABELS = [
     "Hands", "Arms", "Shoulders", "Neck", "Head/Face/Jaw",
@@ -60,7 +60,7 @@ KNEE_AREA_COL = "phq_pain_areas___11__s1"  # area 11 = knees
 
 
 def _load_person_mean_contrast():
-    """Return DataFrame with columns [ID, K_i] from step1 scored output."""
+    """Return DataFrame with columns [ID, K_i] from step01 scored output."""
     scored = pd.read_csv(IN_SCORED_CSV)
     ki = scored.groupby("ID")["contrast_factor"].mean().reset_index()
     ki.columns = ["ID", "K_i"]
@@ -241,7 +241,7 @@ def generate_figure_s2(verbose=True):
 
 def generate_text_numbers(verbose=True):
     """Compute and save all convergent validity statistics to
-    step2_text_numbers.csv:
+    step02_text_numbers.csv:
       - One-way ANOVA of person-mean contrast across pain distribution
         groups (knee-only, knee+others, no-knee) with group Ns/means/SDs
       - Tukey HSD post-hoc pairwise p-values
@@ -418,21 +418,21 @@ def generate_text_numbers(verbose=True):
 # =====================================================================
 
 def generate_text_paragraphs(verbose=True):
-    """Generate step2_text.md with the manuscript paragraphs for Results
-    section 3.1 (contrast validation), populated from step2_text_numbers.csv.
+    """Generate step02_text.md with the manuscript paragraphs for Results
+    section 3.1 (contrast validation), populated from step02_text_numbers.csv.
 
     Paragraph 2: ANOVA + Tukey + point-biserial endorsement validation.
     Paragraph 3: Clinical correlations (Pearson + Spearman).
     """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step2_text.md")
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step02_text.md")
 
     if not os.path.exists(OUT_TEXT_CSV):
         if verbose:
-            print("  SKIP: step2_text_numbers.csv not found — run step2 first")
+            print("  SKIP: step02_text_numbers.csv not found — run step02 first")
         return
 
     if verbose:
-        print("  Generating step2_text.md ...")
+        print("  Generating step02_text.md ...")
 
     df = pd.read_csv(OUT_TEXT_CSV)
     v = dict(zip(df["metric"], df["value"]))
@@ -556,10 +556,10 @@ def generate_text_paragraphs(verbose=True):
 # Main
 # =====================================================================
 
-def run_step2(verbose=True, refit=False):
+def run_step02(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 2 — Contrast factor external validation")
+        print("STEP 02 — Contrast factor external validation")
         print("=" * 70)
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -572,13 +572,13 @@ def run_step2(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 2 COMPLETE")
+        print("STEP 02 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 2 — External validation of the contrast factor."
+        description="Step 02 — External validation of the contrast factor."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument(
@@ -586,7 +586,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step2(verbose=not args.quiet, refit=args.refit)
+    run_step02(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 """
-Step 1 — Factor analysis and interpolation on the extracted long data.
+Step 01 — Factor analysis and interpolation on the extracted long data.
 ======================================================================
 
 Input:  new_organization/data/extracted_long.csv
@@ -11,15 +11,15 @@ eight pain items (q2-q5 knee, q7-q10 body) using a polychoric
 correlation matrix, scores every person-quarter via Bartlett
 factor scoring, z-scores the q13 sleep item, and then linearly
 interpolates single interior gaps in the three factor scores. It
-is the direct successor to Step 0 (data extraction) and the
-predecessor to Step 2 (segment filtering + within-between
+is the direct successor to Step 00 (data extraction) and the
+predecessor to Step 02 (segment filtering + within-between
 decomposition + lag creation + Figure 1).
 
 The code in this file is a direct port of the factor-analysis and
 interpolation stages of the legacy
 ``scripts/prepare_data_contrast.py`` pipeline that produced the
 earlier draft of the paper. The only analytical change from that
-pipeline is the gating convention: Step 0 in
+pipeline is the gating convention: Step 00 in
 ``new_organization/`` applies 4+4 gating (q2/q3/q4/q5 for knee,
 q7/q8/q9/q10 for body) instead of the legacy 3+3 gating. The
 factor model and Bartlett scoring operate on the same eight
@@ -44,9 +44,9 @@ Functions in this file (modular, one responsibility each):
 
 The script is runnable directly::
 
-    python new_organization/codes/step1_factor_analysis.py
+    python new_organization/codes/step01_factor_analysis.py
 
-It reads Step 0's output and writes the two output files.
+It reads Step 00's output and writes the two output files.
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
 """
@@ -73,15 +73,15 @@ ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step1_factor_analysis")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step01_factor_analysis")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step1_factor_analysis")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step01_factor_analysis")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-IN_LONG_CSV = os.path.join(DATA_DIR, "step0_extracted_long.csv")
-OUT_SCORED_CSV = os.path.join(STEP_DERIV_DIR, "step1_scored_long.csv")
-OUT_MODEL_JSON = os.path.join(STEP_DERIV_DIR, "step1_factor_model.json")
+IN_LONG_CSV = os.path.join(DATA_DIR, "step00_extracted_long.csv")
+OUT_SCORED_CSV = os.path.join(STEP_DERIV_DIR, "step01_scored_long.csv")
+OUT_MODEL_JSON = os.path.join(STEP_DERIV_DIR, "step01_factor_model.json")
 
 
 # =====================================================================
@@ -529,7 +529,7 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
     boundary-adjacent gaps (``limit_area="inside"``).
 
     Subjects must have at least 11 quarter-1..11 rows for
-    interpolation to work as expected. Step 0 guarantees this:
+    interpolation to work as expected. Step 00 guarantees this:
     every subject has exactly 12 rows (quarter 0..11).
 
     This function also adds an ``interpolated`` boolean column
@@ -574,8 +574,8 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
 # Top-level entry point
 # =====================================================================
 
-def run_step1(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, Dict]:
-    """Full Step 1 pipeline: load, factor-analyze, score, interpolate.
+def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, Dict]:
+    """Full Step 01 pipeline: load, factor-analyze, score, interpolate.
 
     Returns
     -------
@@ -587,7 +587,7 @@ def run_step1(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, 
     """
     if verbose:
         print("=" * 70)
-        print("STEP 1 — Factor analysis and interpolation")
+        print("STEP 01 — Factor analysis and interpolation")
         print("=" * 70)
         print(f"  Input:  {IN_LONG_CSV}")
 
@@ -755,7 +755,7 @@ def run_step1(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, 
     # loadings table (Table 1) and PA thresholds.
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
-    OUT_RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step1_factor_results.csv")
+    OUT_RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step01_factor_results.csv")
 
     result_rows = []
 
@@ -809,22 +809,22 @@ def run_step1(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, 
 
 
 def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step1_text.md with the manuscript paragraph for Results
-    section 3.1 (factor analysis), populated from step1_factor_results.csv.
+    """Generate step01_text.md with the manuscript paragraph for Results
+    section 3.1 (factor analysis), populated from step01_factor_results.csv.
 
     Reads all computed numbers from the results CSV and writes a
     fully formatted markdown paragraph into the results directory.
     """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step1_text.md")
-    RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step1_factor_results.csv")
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step01_text.md")
+    RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step01_factor_results.csv")
 
     if not os.path.exists(RESULTS_CSV):
         if verbose:
-            print("  SKIP: step1_factor_results.csv not found — run step1 first")
+            print("  SKIP: step01_factor_results.csv not found — run step01 first")
         return
 
     if verbose:
-        print("  Generating step1_text.md ...")
+        print("  Generating step01_text.md ...")
 
     df = pd.read_csv(RESULTS_CSV)
     v = dict(zip(df["metric"], df["value"]))
@@ -889,8 +889,8 @@ filled {n_interp_cells} factor-score cells across {n_interp_rows} person-quarter
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 1 — factor analysis and interpolation on the "
-                    "Step 0 long-format data."
+        description="Step 01 — factor analysis and interpolation on the "
+                    "Step 00 long-format data."
     )
     parser.add_argument(
         "--quiet", action="store_true",
@@ -901,7 +901,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step1(verbose=not args.quiet, refit=args.refit)
+    run_step01(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

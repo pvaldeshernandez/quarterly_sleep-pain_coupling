@@ -1,5 +1,5 @@
 """
-Step 0 — Extract paper-relevant variables from the legacy wide-format data.
+Step 00 — Extract paper-relevant variables from the legacy wide-format data.
 =============================================================================
 
 This is the ORIGIN script for the project. It takes the raw
@@ -74,8 +74,8 @@ ORIG_DIR = os.path.join(DATA_DIR, "original")
 WIDE_XLSX = os.path.join(ORIG_DIR, "participants_wideformat.xlsx")
 DICT_XLSX = os.path.join(ORIG_DIR, "UPLOAD2_Data_Dictionary.xlsx")
 
-OUT_LONG_CSV = os.path.join(DATA_DIR, "step0_extracted_long.csv")
-OUT_DICT_XLSX = os.path.join(DATA_DIR, "step0_extracted_dictionary.xlsx")
+OUT_LONG_CSV = os.path.join(DATA_DIR, "step00_extracted_long.csv")
+OUT_DICT_XLSX = os.path.join(DATA_DIR, "step00_extracted_dictionary.xlsx")
 
 
 # =====================================================================
@@ -455,7 +455,7 @@ def extract(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, pd
     """
     if verbose:
         print("=" * 70)
-        print("STEP 0 — Extract paper-relevant variables from wide-format data")
+        print("STEP 00 — Extract paper-relevant variables from wide-format data")
         print("=" * 70)
         print(f"  Wide input: {WIDE_XLSX}")
         print(f"  Dict input: {DICT_XLSX}")
@@ -563,7 +563,7 @@ def extract(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, pd
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 0 — extract paper-relevant variables from "
+        description="Step 00 — extract paper-relevant variables from "
                     "participants_wideformat.xlsx into a long-format CSV."
     )
     parser.add_argument(

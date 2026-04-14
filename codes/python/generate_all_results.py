@@ -9,7 +9,7 @@ tables, and text numbers. No MCMC is re-run.
 To re-run a specific step's computation from scratch, run that step
 individually with the --refit flag:
 
-    python step4_fit_coupling_model.py --refit
+    python step04_fit_coupling_model.py --refit
 
 Usage:
     python generate_all_results.py
@@ -45,41 +45,41 @@ def main():
         print("=" * 70)
         print()
 
-    # Step 2: Factor validation (Figures S1, S2 + text numbers)
+    # Step 02: Factor validation (Figures S1, S2 + text numbers)
     if verbose:
-        print("\n--- Step 2: Factor validation ---")
-    import step2_contrast_validation as s2
-    s2.run_step2(verbose=verbose)
+        print("\n--- Step 02: Factor validation ---")
+    import step02_contrast_validation as s2
+    s2.run_step02(verbose=verbose)
 
-    # Step 3: VARX data prep (Figure 1 + Table 3 + text numbers)
+    # Step 03: VARX data prep (Figure 1 + Table 3 + text numbers)
     if verbose:
-        print("\n--- Step 3: Data preparation ---")
-    import step3_prepare_varx_data as s3
-    s3.run_step3(verbose=verbose)
+        print("\n--- Step 03: Data preparation ---")
+    import step03_prepare_varx_data as s3
+    s3.run_step03(verbose=verbose)
 
-    # Step 4: Coupling model (Figures 2-3 + Table 4 + text numbers)
+    # Step 04: Coupling model (Figures 2-3 + Table 4 + text numbers)
     if verbose:
-        print("\n--- Step 4: Coupling model figures ---")
-    import step4_fit_coupling_model as s4
-    s4.run_step4(verbose=verbose, refit=False)
+        print("\n--- Step 04: Coupling model figures ---")
+    import step04_fit_coupling_model as s4
+    s4.run_step04(verbose=verbose, refit=False)
 
-    # Step 5: Contrast moderation JN (Figure 4 + Figure S3 + text numbers)
+    # Step 05: Contrast moderation JN (Figure 4 + Figure S3 + text numbers)
     if verbose:
-        print("\n--- Step 5: Contrast moderation JN ---")
-    import step5_contrast_moderation as s5
-    s5.run_step5(verbose=verbose, refit=False)
+        print("\n--- Step 05: Contrast moderation JN ---")
+    import step05_contrast_moderation as s5
+    s5.run_step05(verbose=verbose, refit=False)
 
-    # Step 7: SP ROI extraction + Figure S4
+    # Step 07: SP ROI extraction + Figure S4
     if verbose:
-        print("\n--- Step 7: SP ROI maps (Figure S4) ---")
-    import step7_extract_sp_rois as s7
+        print("\n--- Step 07: SP ROI maps (Figure S4) ---")
+    import step07_extract_sp_rois as s7
     s7.generate_figure_s4(verbose=verbose)
 
-    # Step 9: SP moderation JN (Figures 5, 6, S5 + text numbers)
+    # Step 09: SP moderation JN (Figures 5, 6, S5 + text numbers)
     if verbose:
-        print("\n--- Step 9: SP moderation JN ---")
-    import step9_sp_moderation_jn as s9
-    s9.run_step9(verbose=verbose, refit=False)
+        print("\n--- Step 09: SP moderation JN ---")
+    import step09_sp_moderation_jn as s9
+    s9.run_step09(verbose=verbose, refit=False)
 
     # Step 10: PS ROI extraction + Figure S6
     if verbose:

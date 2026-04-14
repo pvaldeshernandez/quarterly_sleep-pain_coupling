@@ -1,19 +1,19 @@
 """
-Step 3 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
+Step 03 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 ======================================================================
 
-Input:  derivatives/step2_processed_long.csv
+Input:  derivatives/step02_processed_long.csv
 Output:
   derivatives/
-    step3_posterior_draws.npz     — raw posterior arrays for downstream steps
-    step3_person_coupling.csv     — per-person lambda_sp / lambda_ps
+    step03_posterior_draws.npz     — raw posterior arrays for downstream steps
+    step03_person_coupling.csv     — per-person lambda_sp / lambda_ps
   results/
-    step3_table4_coupling.csv     — Table 4: population parameters
-    step3_loo_comparison.csv      — LOO-CV pairwise comparisons
-    step3_text_numbers.csv        — every number stated in the text
+    step03_table4_coupling.csv     — Table 4: population parameters
+    step03_loo_comparison.csv      — LOO-CV pairwise comparisons
+    step03_text_numbers.csv        — every number stated in the text
 
 This step fits the bivariate VARX(1) coupling model to the
-within-person deviations produced by Step 2. It then fits three
+within-person deviations produced by Step 02. It then fits three
 additional nested models (no_PS, no_SP, null) for the LOO-CV
 model comparison reported in Results §3.1.
 
@@ -43,27 +43,27 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step4_coupling_model")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step04_coupling_model")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step4_coupling_model")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step04_coupling_model")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step3_varx_data", "step3_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step03_varx_data", "step03_processed_long.csv")
 
 # Derivatives
-OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step4_posterior_draws.npz")
-OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step4_person_coupling.csv")
+OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step04_posterior_draws.npz")
+OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step04_person_coupling.csv")
 
 # Results
-OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step4_table4_coupling.csv")
-OUT_LOO_CSV = os.path.join(STEP_RESULTS_DIR, "step4_loo_comparison.csv")
-OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step4_text_numbers.csv")
-OUT_FIG2 = os.path.join(STEP_RESULTS_DIR, "step4_figure2_ps_coupling.png")
-OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step4_figure3_sp_coupling.png")
+OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step04_table4_coupling.csv")
+OUT_LOO_CSV = os.path.join(STEP_RESULTS_DIR, "step04_loo_comparison.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step04_text_numbers.csv")
+OUT_FIG2 = os.path.join(STEP_RESULTS_DIR, "step04_figure2_ps_coupling.png")
+OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step04_figure3_sp_coupling.png")
 
 
 # =====================================================================
@@ -71,7 +71,7 @@ OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step4_figure3_sp_coupling.png")
 # =====================================================================
 
 def load_data(csv_path: str):
-    """Load Step 2 output and prepare for fit_bayesian_varx1.
+    """Load Step 02 output and prepare for fit_bayesian_varx1.
 
     Returns (df_full, model_df, unique_ids, id_map) matching the
     interface that coupling_model.py expects.
@@ -242,8 +242,8 @@ def _generate_coupling_figure(person_df, pop_mean, pop_ci_lo, pop_ci_hi,
     plt.close(fig)
 
 
-def run_step4(verbose: bool = True, refit: bool = False):
-    """Fit the coupling model and LOO-CV, produce all Step 3 outputs."""
+def run_step04(verbose: bool = True, refit: bool = False):
+    """Fit the coupling model and LOO-CV, produce all Step 03 outputs."""
     from coupling_model import (
         fit_bayesian_varx1,
         extract_results,
@@ -252,7 +252,7 @@ def run_step4(verbose: bool = True, refit: bool = False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 3 — Fit Bayesian VARX(1) coupling model + LOO-CV")
+        print("STEP 03 — Fit Bayesian VARX(1) coupling model + LOO-CV")
         print("=" * 70)
         print(f"  Input: {IN_PROCESSED_CSV}")
 
@@ -431,7 +431,7 @@ def run_step4(verbose: bool = True, refit: bool = False):
 
         # The LOO comparison function in coupling_model.py expects a
         # data_dir with a processed CSV. We point it at our derivatives
-        # folder where step2_processed_long.csv lives, but the function
+        # folder where step02_processed_long.csv lives, but the function
         # looks for processed_data_contrast.csv or processed_data.csv.
         # Easiest: symlink or pass the data directly. Instead, we
         # inline the LOO logic here using the same primitives.
@@ -618,30 +618,30 @@ def run_step4(verbose: bool = True, refit: bool = False):
         print(f"    rho = {results['rho_innov_mean']:+.4f}")
         print(f"    R-hat max: {results['rhat_max']:.3f}")
         print("\n" + "=" * 70)
-        print("STEP 3 COMPLETE")
+        print("STEP 03 COMPLETE")
         print("=" * 70)
 
     generate_text_paragraphs(verbose)
 
 
 def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step4_text.md with the manuscript paragraphs for Results
+    """Generate step04_text.md with the manuscript paragraphs for Results
     section 3.2 (population coupling estimates), populated from saved CSVs.
 
     Reads all computed numbers from text_numbers.csv, table4 CSV, LOO CSV,
     and person_coupling CSV and writes fully formatted markdown paragraphs
     into the results directory.
     """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step4_text.md")
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step04_text.md")
 
     for required in (OUT_TEXT_CSV, OUT_TABLE4_CSV, OUT_LOO_CSV, OUT_PERSON_CSV):
         if not os.path.exists(required):
             if verbose:
-                print(f"  SKIP: {os.path.basename(required)} not found — run step4 first")
+                print(f"  SKIP: {os.path.basename(required)} not found — run step04 first")
             return
 
     if verbose:
-        print("  Generating step4_text.md ...")
+        print("  Generating step04_text.md ...")
 
     text_df = pd.read_csv(OUT_TEXT_CSV)
     v = dict(zip(text_df["metric"], text_df["value"]))
@@ -790,7 +790,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 3 — fit the Bayesian VARX(1) coupling model + LOO-CV."
+        description="Step 03 — fit the Bayesian VARX(1) coupling model + LOO-CV."
     )
     parser.add_argument(
         "--quiet", action="store_true",
@@ -801,7 +801,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step4(verbose=not args.quiet, refit=args.refit)
+    run_step04(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

@@ -2,8 +2,8 @@
 Step 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
 ======================================================================
 
-Input:  derivatives/step6_fmri_contrasts_masked/   (LH ROI)
-        derivatives/step6_fmri_contrasts_unmasked/ (all other fMRI ROIs)
+Input:  derivatives/step06_fmri_contrasts_masked/   (LH ROI)
+        derivatives/step06_fmri_contrasts_unmasked/ (all other fMRI ROIs)
         data/original/vbm/, data/atlases/
         MNI152 template (via nilearn, for Figure S6)
 Output:
@@ -45,8 +45,8 @@ RESULTS_DIR = os.path.join(ROOT, "results")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 
-FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step6_fmri_contrasts_masked")
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step6_fmri_contrasts_unmasked")
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step06_fmri_contrasts_masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step06_fmri_contrasts_unmasked")
 VBM_DIR   = os.path.join(ROOT, "data", "original", "vbm")
 ATLAS_DIR = os.path.join(ROOT, "data", "atlases")
 

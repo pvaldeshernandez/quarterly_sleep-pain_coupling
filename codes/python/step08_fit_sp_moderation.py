@@ -1,16 +1,16 @@
 """
-Step 7 — Fit Sleep-to-Pain moderation models (7 ROIs).
+Step 07 — Fit Sleep-to-Pain moderation models (7 ROIs).
 ======================================================================
 
-Input:  derivatives/step2_processed_long.csv
-        derivatives/step5_sp_roi_values.csv
+Input:  derivatives/step02_processed_long.csv
+        derivatives/step05_sp_roi_values.csv
 Output:
   derivatives/
-    step6_sp_posterior_draws.npz     — per-ROI posterior draws
+    step06_sp_posterior_draws.npz     — per-ROI posterior draws
   results/
-    step6_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
-    step6_sign_concordance.csv       — sign test results
-    step6_text_numbers.csv           — gamma estimates, p-values, etc.
+    step06_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
+    step06_sign_concordance.csv       — sign test results
+    step06_text_numbers.csv           — gamma estimates, p-values, etc.
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each of the 7 SP ROIs (6 Krause + 1 ACC). Extracts gamma_sp and
@@ -35,22 +35,22 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step8_sp_moderation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step08_sp_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step8_sp_moderation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step08_sp_moderation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step3_varx_data", "step3_processed_long.csv")
-IN_ROI_CSV = os.path.join(DERIV_DIR, "step7_sp_roi_values", "step7_sp_roi_values.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step03_varx_data", "step03_processed_long.csv")
+IN_ROI_CSV = os.path.join(DERIV_DIR, "step07_sp_roi_values", "step07_sp_roi_values.csv")
 
-OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step8_sp_posterior_draws.npz")
-OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step8_table5_sp_moderation.csv")
-OUT_SIGN_CSV = os.path.join(STEP_RESULTS_DIR, "step8_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step8_text_numbers.csv")
+OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step08_sp_posterior_draws.npz")
+OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step08_table5_sp_moderation.csv")
+OUT_SIGN_CSV = os.path.join(STEP_RESULTS_DIR, "step08_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step08_text_numbers.csv")
 
 # ROIs included in the Krause sign-concordance test (ACC excluded)
 KRAUSE_ROIS = [
@@ -69,8 +69,8 @@ EXPECTED_SIGNS = {
 }
 
 
-def load_step2_data(csv_path):
-    """Load Step 2 output and prepare for fitting."""
+def load_step02_data(csv_path):
+    """Load Step 02 output and prepare for fitting."""
     df = pd.read_csv(csv_path)
     df["Age_z"] = (df["Age"] - df["Age"].mean()) / df["Age"].std()
     df["Sex_coded"] = (df["Sex"] == 2).astype(float)
@@ -82,12 +82,12 @@ def load_step2_data(csv_path):
     return df, model_df, unique_ids, id_map
 
 
-def run_step8(verbose=True, refit=False):
+def run_step08(verbose=True, refit=False):
     from coupling_model import fit_bayesian_varx1, extract_results
 
     if verbose:
         print("=" * 70)
-        print("STEP 6 — Fit Sleep-to-Pain moderation (7 ROIs)")
+        print("STEP 06 — Fit Sleep-to-Pain moderation (7 ROIs)")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -113,7 +113,7 @@ def run_step8(verbose=True, refit=False):
         draws_dict = dict(np.load(OUT_DRAWS_NPZ))
     else:
         # ------ FULL MCMC FIT ------
-        df_full, model_df, unique_ids, id_map = load_step2_data(IN_PROCESSED_CSV)
+        df_full, model_df, unique_ids, id_map = load_step02_data(IN_PROCESSED_CSV)
 
         all_rois = roi_df["ROI"].unique()
         if verbose:
@@ -276,24 +276,24 @@ def run_step8(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 6 COMPLETE")
+        print("STEP 06 COMPLETE")
         print("=" * 70)
 
 
 def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step8_text.md with the manuscript paragraphs for Results
+    """Generate step08_text.md with the manuscript paragraphs for Results
     section 3.4 (sleep-to-pain fMRI moderation), populated from
-    step8_text_numbers.csv and step8_table5_sp_moderation.csv.
+    step08_text_numbers.csv and step08_table5_sp_moderation.csv.
     """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step8_text.md")
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step08_text.md")
 
     if not os.path.exists(OUT_TEXT_CSV):
         if verbose:
-            print("  SKIP: step8_text_numbers.csv not found — run step8 first")
+            print("  SKIP: step08_text_numbers.csv not found — run step08 first")
         return
 
     if verbose:
-        print("  Generating step8_text.md ...")
+        print("  Generating step08_text.md ...")
 
     tn = pd.read_csv(OUT_TEXT_CSV)
     v = dict(zip(tn["metric"], tn["value"]))
@@ -320,8 +320,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         f"$p={_val('gamma_sp_Right_NAcc_p')}$). "
     )
 
-    # JN info from step9 if available; otherwise from text_numbers
-    jn_text_csv = os.path.join(RESULTS_DIR, "step9_sp_jn", "step9_text_numbers.csv")
+    # JN info from step09 if available; otherwise from text_numbers
+    jn_text_csv = os.path.join(RESULTS_DIR, "step09_sp_jn", "step09_text_numbers.csv")
     if os.path.exists(jn_text_csv):
         jn_tn = pd.read_csv(jn_text_csv)
         jv = dict(zip(jn_tn["metric"], jn_tn["value"]))
@@ -427,13 +427,13 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 7 — fit SP moderation models (7 ROIs)."
+        description="Step 07 — fit SP moderation models (7 ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",
                         help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step8(verbose=not args.quiet, refit=args.refit)
+    run_step08(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

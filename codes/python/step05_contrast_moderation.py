@@ -1,20 +1,20 @@
 """
-Step 4 — Contrast moderation analysis (Johnson-Neyman).
+Step 04 — Contrast moderation analysis (Johnson-Neyman).
 ======================================================================
 
-Input:  derivatives/step4/step4_posterior_draws.npz
+Input:  derivatives/step04/step04_posterior_draws.npz
 Output:
   derivatives/
-    step5_jn_localization_results.csv — full JN grid for both directions
+    step05_jn_localization_results.csv — full JN grid for both directions
   results/
-    step5_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
-    step5_figure_s3_jn_localization_sp.png — Figure S3: SP direction JN (null)
-    step5_text_numbers.csv                — JN boundary, simple slopes, etc.
+    step05_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
+    step05_figure_s3_jn_localization_sp.png — Figure S3: SP direction JN (null)
+    step05_text_numbers.csv                — JN boundary, simple slopes, etc.
 
 Note: contrast moderation parameters (delta_p, omega_sp, delta_s, omega_ps)
-are in Table 4 (results/step4/step4_table4_coupling.csv), not a separate table.
+are in Table 4 (results/step04/step04_table4_coupling.csv), not a separate table.
 
-This step reads the posterior draws from the VARX(1) fit (Step 3)
+This step reads the posterior draws from the VARX(1) fit (Step 03)
 and runs the Bayesian Johnson-Neyman analysis on the contrast
 moderation terms (omega_sp, omega_ps). It determines the range of
 within-person pain localization values (K^w) over which the
@@ -45,26 +45,26 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step5_contrast_moderation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step05_contrast_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step5_contrast_moderation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step05_contrast_moderation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step4_coupling_model", "step4_posterior_draws.npz")
+IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step04_coupling_model", "step04_posterior_draws.npz")
 
 # Derivatives
-OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step5_jn_localization_results.csv")
+OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step05_jn_localization_results.csv")
 
 # Results
-OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step5_figure4_jn_localization_ps.png")
+OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step05_figure4_jn_localization_ps.png")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FIG_S3 = os.path.join(SUPP_DIR, "figure_s3_jn_localization_sp.png")
-OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step5_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step05_text_numbers.csv")
 
 
 # =====================================================================
@@ -264,7 +264,7 @@ def draw_jn_panel(ax, jn, panel_label, direction_label, slopes_dict,
 # Main pipeline
 # =====================================================================
 
-def run_step5(verbose: bool = True, refit: bool = False):
+def run_step05(verbose: bool = True, refit: bool = False):
     """Run contrast moderation JN analysis."""
     from coupling_model import compute_jn_curve
 
@@ -274,7 +274,7 @@ def run_step5(verbose: bool = True, refit: bool = False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 4 — Contrast moderation (Johnson-Neyman)")
+        print("STEP 04 — Contrast moderation (Johnson-Neyman)")
         print("=" * 70)
         print(f"  Input: {IN_DRAWS_NPZ}")
 
@@ -283,7 +283,7 @@ def run_step5(verbose: bool = True, refit: bool = False):
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-    # Load posterior draws from Step 3
+    # Load posterior draws from Step 03
     d = np.load(IN_DRAWS_NPZ)
     a2_draws = d["a2_draws"]      # lambda_sp
     a4_draws = d["a4_draws"]      # omega_sp
@@ -454,23 +454,23 @@ def run_step5(verbose: bool = True, refit: bool = False):
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
         print("\n" + "=" * 70)
-        print("STEP 4 COMPLETE")
+        print("STEP 04 COMPLETE")
         print("=" * 70)
 
     generate_text_paragraphs(verbose)
 
 
 def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step5_text.md with the manuscript paragraphs for Results
+    """Generate step05_text.md with the manuscript paragraphs for Results
     section 3.3 (contrast moderation / pain localization), populated from
-    step5_text_numbers.csv and step4_table4_coupling.csv.
+    step05_text_numbers.csv and step04_table4_coupling.csv.
 
     Reads all computed numbers from saved CSVs and writes fully formatted
     markdown paragraphs into the results directory.
     """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step5_text.md")
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step05_text.md")
     TABLE4_CSV = os.path.join(DERIV_DIR, "..", "results",
-                              "step4_coupling_model", "step4_table4_coupling.csv")
+                              "step04_coupling_model", "step04_table4_coupling.csv")
 
     for required in (OUT_TEXT_CSV, TABLE4_CSV):
         if not os.path.exists(required):
@@ -480,7 +480,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
             return
 
     if verbose:
-        print("  Generating step5_text.md ...")
+        print("  Generating step05_text.md ...")
 
     text_df = pd.read_csv(OUT_TEXT_CSV)
     v = dict(zip(text_df["metric"], text_df["value"]))
@@ -497,7 +497,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     omega_ps_est = float(omega_ps["Estimate"])
     omega_ps_pneg = float(omega_ps["P_neg"])
 
-    # ----- JN values from step5 text_numbers -----
+    # ----- JN values from step05 text_numbers -----
     has_ps_boundary = "jn_ps_boundary_K" in v
     if has_ps_boundary:
         jn_ps_K = float(v["jn_ps_boundary_K"])
@@ -579,7 +579,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 4 — contrast moderation Johnson-Neyman analysis."
+        description="Step 04 — contrast moderation Johnson-Neyman analysis."
     )
     parser.add_argument(
         "--quiet", action="store_true",
@@ -590,7 +590,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step5(verbose=not args.quiet, refit=args.refit)
+    run_step05(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

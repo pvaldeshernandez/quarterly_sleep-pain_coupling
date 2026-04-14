@@ -492,10 +492,10 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         rho_raw = pm.Beta("rho_raw", alpha=2, beta=2)
         rho_innov = pm.Deterministic("rho_innov", 2 * rho_raw - 1)
 
-        # Step 1: pain innovation (marginal)
+        # Step 01: pain innovation (marginal)
         pm.Normal("y_pain", mu=mu_pain, sigma=sigma_pain, observed=y_pain)
 
-        # Step 2: sleep innovation conditioned on pain residual
+        # Step 02: sleep innovation conditioned on pain residual
         eps_pain = y_pain - mu_pain
         mu_sleep_cond = (
             mu_sleep + rho_innov * (sigma_sleep / sigma_pain) * eps_pain

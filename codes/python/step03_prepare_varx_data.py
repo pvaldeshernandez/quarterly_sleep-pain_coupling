@@ -1,15 +1,15 @@
 """
-Step 2 — Segment filter, within-between decomposition, lag creation,
+Step 02 — Segment filter, within-between decomposition, lag creation,
          Figure 1, Table 3, and timepoint summary.
 ======================================================================
 
-Input:  new_organization/data/step1_scored_long.csv
-Output: new_organization/data/step2_processed_long.csv
-        new_organization/data/step2_figure1.png
-        new_organization/data/step2_table3_demographics.csv
-        new_organization/data/step2_timepoint_summary.csv
+Input:  new_organization/data/step01_scored_long.csv
+Output: new_organization/data/step02_processed_long.csv
+        new_organization/data/step02_figure1.png
+        new_organization/data/step02_table3_demographics.csv
+        new_organization/data/step02_timepoint_summary.csv
 
-This step takes the factor-scored long table from Step 1 and
+This step takes the factor-scored long table from Step 01 and
 produces the VARX(1)-ready dataset. Operations in order:
 
   1. Segment filter — identify maximal runs of consecutive quarters
@@ -56,18 +56,18 @@ ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step3_varx_data")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step03_varx_data")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step3_varx_data")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step03_varx_data")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-IN_SCORED_CSV = os.path.join(DERIV_DIR, "step1_factor_analysis", "step1_scored_long.csv")
+IN_SCORED_CSV = os.path.join(DERIV_DIR, "step01_factor_analysis", "step01_scored_long.csv")
 
-OUT_PROCESSED_CSV = os.path.join(STEP_DERIV_DIR, "step3_processed_long.csv")
-OUT_FIGURE1 = os.path.join(STEP_RESULTS_DIR, "step3_figure1.png")
-OUT_TABLE3_CSV = os.path.join(STEP_RESULTS_DIR, "step3_table3_demographics.csv")
-OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step3_timepoint_summary.csv")
+OUT_PROCESSED_CSV = os.path.join(STEP_DERIV_DIR, "step03_processed_long.csv")
+OUT_FIGURE1 = os.path.join(STEP_RESULTS_DIR, "step03_figure1.png")
+OUT_TABLE3_CSV = os.path.join(STEP_RESULTS_DIR, "step03_table3_demographics.csv")
+OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step03_timepoint_summary.csv")
 
 
 # =====================================================================
@@ -572,11 +572,11 @@ def generate_figure1(
 # Top-level entry point
 # =====================================================================
 
-def run_step3(verbose: bool = True, refit: bool = False):
-    """Full Step 2 pipeline."""
+def run_step03(verbose: bool = True, refit: bool = False):
+    """Full Step 02 pipeline."""
     if verbose:
         print("=" * 70)
-        print("STEP 2 — Prepare VARX data")
+        print("STEP 02 — Prepare VARX data")
         print("=" * 70)
         print(f"  Input: {IN_SCORED_CSV}")
 
@@ -663,7 +663,7 @@ def run_step3(verbose: bool = True, refit: bool = False):
         {"metric": "min_lags_per_person", "value": int(per_person.min())},
         {"metric": "max_lags_per_person", "value": int(per_person.max())},
     ])
-    OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step3_text_numbers.csv")
+    OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step03_text_numbers.csv")
     text_numbers.to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved: {OUT_TEXT_CSV}")
@@ -672,27 +672,27 @@ def run_step3(verbose: bool = True, refit: bool = False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 2 COMPLETE")
+        print("STEP 02 COMPLETE")
         print("=" * 70)
 
 
 def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step3_text.md with the manuscript paragraphs that cite
-    analytic-sample counts, populated from step3_text_numbers.csv.
+    """Generate step03_text.md with the manuscript paragraphs that cite
+    analytic-sample counts, populated from step03_text_numbers.csv.
 
     Covers: Results section 2.1 (analytic sample description) and
     the Figure 1 caption.
     """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step3_text.md")
-    IN_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step3_text_numbers.csv")
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step03_text.md")
+    IN_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step03_text_numbers.csv")
 
     if not os.path.exists(IN_TEXT_CSV):
         if verbose:
-            print("  SKIP: step3_text_numbers.csv not found — run step3 first")
+            print("  SKIP: step03_text_numbers.csv not found — run step03 first")
         return
 
     if verbose:
-        print("  Generating step3_text.md ...")
+        print("  Generating step03_text.md ...")
 
     df = pd.read_csv(IN_TEXT_CSV)
     v = dict(zip(df["metric"], df["value"].astype(str)))
@@ -751,7 +751,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 2 — segment filter, decomposition, lags, "
+        description="Step 02 — segment filter, decomposition, lags, "
                     "Figure 1, Table 3, timepoint summary."
     )
     parser.add_argument(
@@ -763,7 +763,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step3(verbose=not args.quiet, refit=args.refit)
+    run_step03(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

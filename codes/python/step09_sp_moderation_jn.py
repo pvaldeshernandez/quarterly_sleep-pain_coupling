@@ -1,17 +1,17 @@
 """
-Step 9 — Johnson-Neyman analysis for SP moderation ROIs.
+Step 09 — Johnson-Neyman analysis for SP moderation ROIs.
 ======================================================================
 
-Input:  derivatives/step8/step8_sp_posterior_draws.npz
-        results/step8/step8_table5_sp_moderation.csv
+Input:  derivatives/step08/step08_sp_posterior_draws.npz
+        results/step08/step08_table5_sp_moderation.csv
 Output:
   derivatives/
-    step9_jn_sp_results.csv              — full JN grids per ROI
+    step09_jn_sp_results.csv              — full JN grids per ROI
   results/
-    step9_figure5_jn_nacc.png            — Figure 5: Left NAcc JN
-    step9_figure6_jn_acc.png             — Figure 6: ACC JN (Right + Left, 2 panels)
-    step9_figure_s5_krause_jn.png        — Figure S5: 4 non-sig Krause JN
-    step9_text_numbers.csv               — JN boundaries, % sample, slopes
+    step09_figure5_jn_nacc.png            — Figure 5: Left NAcc JN
+    step09_figure6_jn_acc.png             — Figure 6: ACC JN (Right + Left, 2 panels)
+    step09_figure_s5_krause_jn.png        — Figure S5: 4 non-sig Krause JN
+    step09_text_numbers.csv               — JN boundaries, % sample, slopes
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
 """
@@ -30,25 +30,25 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step9_sp_jn")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step09_sp_jn")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step9_sp_jn")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step09_sp_jn")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step8_sp_moderation", "step8_sp_posterior_draws.npz")
-IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step8_sp_moderation", "step8_table5_sp_moderation.csv")
+IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step08_sp_moderation", "step08_sp_posterior_draws.npz")
+IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step08_sp_moderation", "step08_table5_sp_moderation.csv")
 
-OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step9_jn_sp_results.csv")
-OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step9_figure5_jn_nacc.png")
-OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step9_figure6_jn_acc.png")
+OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step09_jn_sp_results.csv")
+OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step09_figure5_jn_nacc.png")
+OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step09_figure6_jn_acc.png")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FIG_S5 = os.path.join(SUPP_DIR, "figure_s5_krause_jn.png")
-OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step9_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step09_text_numbers.csv")
 
 # ROI for Figure 5 (single panel)
 FIG5_ROI = "Left_NAcc"
@@ -244,12 +244,12 @@ def draw_jn_panel(ax, jn, direction_label, slopes_dict,
               borderaxespad=0.3)
 
 
-def run_step9(verbose=True, refit=False):
+def run_step09(verbose=True, refit=False):
     from coupling_model import compute_jn_curve
 
     if verbose:
         print("=" * 70)
-        print("STEP 9 — SP moderation Johnson-Neyman analysis")
+        print("STEP 09 — SP moderation Johnson-Neyman analysis")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -492,23 +492,23 @@ def run_step9(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 9 COMPLETE")
+        print("STEP 09 COMPLETE")
         print("=" * 70)
 
 
 def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step9_text.md with JN-specific numbers (boundaries,
+    """Generate step09_text.md with JN-specific numbers (boundaries,
     % sample in credible region, simple slopes) for NAcc and ACC ROIs.
     """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step9_text.md")
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step09_text.md")
 
     if not os.path.exists(OUT_TEXT_CSV):
         if verbose:
-            print("  SKIP: step9_text_numbers.csv not found — run step9 first")
+            print("  SKIP: step09_text_numbers.csv not found — run step09 first")
         return
 
     if verbose:
-        print("  Generating step9_text.md ...")
+        print("  Generating step09_text.md ...")
 
     tn = pd.read_csv(OUT_TEXT_CSV)
     v = dict(zip(tn["metric"], tn["value"]))
@@ -578,7 +578,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         sections.append("\n".join(acc_lines))
 
     text = f"""\
-## Step 9 — Johnson-Neyman analysis: SP moderation
+## Step 09 — Johnson-Neyman analysis: SP moderation
 
 JN boundaries and simple slopes for the significant and near-significant
 sleep-to-pain moderation ROIs. An asterisk (*) after the CrI indicates
@@ -596,13 +596,13 @@ the credible interval excludes zero.
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 9 — SP moderation JN analysis."
+        description="Step 09 — SP moderation JN analysis."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",
                         help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step9(verbose=not args.quiet, refit=args.refit)
+    run_step09(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

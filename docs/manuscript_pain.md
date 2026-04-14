@@ -254,7 +254,7 @@ In the classical frequentist framework, the JN boundary is obtained by solving a
 
 Of the 243 participants in the parent study, 229 had at least one continuous segment of three or more consecutive quarterly assessments with both pain and sleep data available, while 14 were excluded for lacking such a segment (**Figure 1**). Among retained participants, the median number of usable lag-1 transitions was 9 (range: 2–10), totaling 1,818 transitions. **Table 3** presents the demographic and baseline clinical characteristics of the analytic sample.
 
-![](../results/step3_varx_data/step3_figure1.png)
+![](../results/step03_varx_data/step03_figure1.png)
 
 **Figure 1.** Data availability grid (participants $×$ quarters). Blue dots indicate observed retained data points; red dots indicate retained points for which scores were interpolated (118 of 2,056 retained points); grey dots indicate observations discarded due to segment length < 3. Horizontal lines connect consecutive quarters within retained segments. Participants are sorted by number of retained points (bottom = fewest). Participants below the dashed line (N = 14) were excluded for lacking any segment of three or more consecutive quarters.
 
@@ -408,13 +408,13 @@ $$
 
 **Table 4** presents the population parameters from the Bayesian VARX(1) model. The pain-to-sleep pathway was the dominant coupling direction. The population mean ($\hat{λ}\_{ps}=-0.140$, $P(\hat{λ}\_{ps}<0)=0.998$, 95% CrI [-0.238, -0.042]) indicated that a one-unit within-person increase in general pain predicted a 0.140-unit decrease in next-quarter sleep quality. The random effect SD was substantial ($\hat{τ}\_{ps}=0.362$), reflecting meaningful between-person heterogeneity: person-level posterior means ranged from -0.878 to +0.810 (SD = 0.180), and 9 of 229 participants (3.9%) had $P(\hat{λ}\_{ps,i}<0)>0.95$ (**Figure 2**).
 
-![](../results/step4_coupling_model/step4_figure2_ps_coupling.png)
+![](../results/step04_coupling_model/step04_figure2_ps_coupling.png)
 
 **Figure 2.** Person-specific Pain-to-Sleep coupling estimates. (A) Posterior means of person-specific coupling slopes. Each dot represents one participant; the gray diamond indicates the population mean; the dashed line marks zero. (B) Posterior mean $\pm $ 95% CrI, sorted by magnitude. Blue segments indicate negative coupling; red segments indicate positive coupling. The dashed gray line marks the population mean.
 
 The sleep-to-pain pathway did not reach credibility at the population level ($\hat{λ}\_{sp}=-0.021$, $P(\hat{λ}\_{sp}<0)=0.877$, 95% CrI [-0.054, 0.015]). The random effect SD ($\hat{τ}\_{sp}=0.115$) was smaller but non-negligible, with person-level posteriors ranging from -0.213 to +0.154 (SD = 0.049). Four participants (1.7%) had $P(\hat{λ}\_{sp,i}<0)>0.95$ (**Figure 3**).
 
-![](../results/step4_coupling_model/step4_figure3_sp_coupling.png)
+![](../results/step04_coupling_model/step04_figure3_sp_coupling.png)
 
 **Figure 3.** Person-specific Sleep-to-Pain coupling estimates. (A) Posterior means of person-specific coupling slopes. Each dot represents one participant; the gray diamond indicates the population mean; the dashed line marks zero. (B) Posterior mean $\pm $ 95% CrI, sorted by magnitude. Blue segments indicate negative coupling; red segments indicate positive coupling. The dashed gray line marks the population mean.
 
@@ -427,7 +427,7 @@ The contrast moderation parameters ($\hat{δ}\_{p}$, $\hat{ω}\_{sp}$, $\hat{δ}
 
 Although the interaction did not reach credibility, the credible direct effect ($\hat{δ}\_{s}$) shifts the conditional pain-to-sleep coupling so that it is credibly negative at balanced and knee-dominant localization levels but not at body-dominant levels. Johnson-Neyman analysis (**Figure 4**) confirmed that the pain-to-sleep coupling was credibly negative for localization values above -0.625 (-0.86 SD), encompassing 84.6% of observations. For the sleep-to-pain pathway, no JN boundary existed within the observed range (**Figure S3**).
 
-![](../results/step5_contrast_moderation/step5_figure4_jn_localization_ps.png)
+![](../results/step05_contrast_moderation/step05_figure4_jn_localization_ps.png)
 
 **Figure 4.** Johnson-Neyman analysis of pain localization moderation of pain-to-sleep coupling. The blue line shows the posterior mean coupling slope as a continuous function of within-person pain localization ($K^{w}$), dashed lines show the 95% credible interval, and green shading indicates the region where the CrI excludes zero. The dotted vertical line marks the JN boundary. Vertical markers show simple slopes at body-dominant (-2 SD), balanced (0), and knee-dominant (+2 SD) localization levels with 95% CrI error bars. Blue dots show fitted coupling values (observation-level).
 
@@ -462,11 +462,11 @@ $$
 
 **Note.** Each ROI was tested in a separate model run. The six Krause et al. (2019) ROIs test the sleep deprivation framework: sleep deprivation decreased NAcc, insula, and thalamus responses while increasing S1 reactivity. S1 and middle insula were extracted from the hemisphere contralateral to the stimulated knee (see Methods). Krause et al. (2019) defined the NAcc bilaterally ($\pm $9, 2, -7); left and right hemispheres were tested separately. The ACC ROI tests the Sardi et al. (2024) framework: ACC and NAcc as parallel D2-gated nodes. Both NAcc ROIs used GM-masked contrast images; all other ROIs used unmasked contrasts (see Methods). $p=2×min(P(γ\_{sp}<0),P(γ\_{sp}>0))$. \*These may be considered as marginal results (i.e., p ~ 0.05) if we account for MCMC fluctuations.
 
-![](../results/step9_sp_jn/step9_figure5_jn_nacc.png)
+![](../results/step09_sp_jn/step09_figure5_jn_nacc.png)
 
 **Figure 5.** Johnson-Neyman analysis of left NAcc BOLD moderation of sleep-to-pain coupling. The blue line shows the posterior mean coupling slope as a continuous function of left NAcc activation (mean contrast value within a 6 mm sphere at MNI -9, 2, -7; GM-masked), dashed lines show the 95% credible interval, and green shading indicates the region where the CrI excludes zero. The dotted vertical line marks the JN boundary. Vertical markers show simple slopes at low (Q1 - 1.5$×$IQR), median, and high (Q3 + 1.5$×$IQR) left NAcc levels with 95% CrI error bars. Blue dots show fitted coupling values (person-level). Rug plots show the distribution of individual left NAcc values.
 
-![](../results/step9_sp_jn/step9_figure6_jn_acc.png)
+![](../results/step09_sp_jn/step09_figure6_jn_acc.png)
 
 **Figure 6.** Johnson-Neyman analyses of bilateral dACC/MCC BOLD moderation of sleep-to-pain coupling. Top panel: right dACC/MCC (MNI 6, 12, 38; 6 mm sphere; unmasked contrasts; $\hat{γ}\_{sp}=+0.038$, $p=0.047$). Bottom panel: left dACC/MCC (MNI -6, 12, 38; 6 mm sphere; unmasked contrasts; $\hat{γ}\_{sp}=+0.042$, $p=0.035$). In each panel, the blue line shows the posterior mean conditional coupling slope as a function of ACC activation (z-scored), dashed lines show the 95% credible interval, and green shading indicates the region where the CrI excludes zero. The dotted vertical line marks the JN boundary. Vertical markers show simple slopes at $z=-2$, $z=0$, and $z=+2$ with 95% CrI error bars. N = 174.
 

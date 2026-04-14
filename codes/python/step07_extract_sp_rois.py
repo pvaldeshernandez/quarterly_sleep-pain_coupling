@@ -1,13 +1,13 @@
 """
-Step 7 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
+Step 07 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
 ======================================================================
 
-Input:  derivatives/step6_fmri_contrasts_masked/   (NAcc ROIs)
-        derivatives/step6_fmri_contrasts_unmasked/ (all other ROIs)
+Input:  derivatives/step06_fmri_contrasts_masked/   (NAcc ROIs)
+        derivatives/step06_fmri_contrasts_unmasked/ (all other ROIs)
         MNI152 template (via nilearn, for Figure S4)
 Output:
-  derivatives/step7_sp_roi_values/
-    step7_sp_roi_values.csv    — per-subject z-scored ROI values
+  derivatives/step07_sp_roi_values/
+    step07_sp_roi_values.csv    — per-subject z-scored ROI values
   results/supplementary_materials/
     figure_s4_stim_rois.png    — Figure S4: ROI brain maps
 
@@ -41,7 +41,7 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step7_sp_roi_values")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step07_sp_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
@@ -50,12 +50,12 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step7_sp_roi_values.csv")
+OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step07_sp_roi_values.csv")
 OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_s4_stim_rois.png")
 
-# Contrast image directories from Step 6
-FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step6_fmri_contrasts_masked")
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step6_fmri_contrasts_unmasked")
+# Contrast image directories from Step 06
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step06_fmri_contrasts_masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step06_fmri_contrasts_unmasked")
 
 # ROI definitions for extraction
 SP_ROIS = {
@@ -366,10 +366,10 @@ def generate_figure_s4(verbose=True):
 # Main
 # =====================================================================
 
-def run_step7(verbose=True, refit=False):
+def run_step07(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 7 — Extract Sleep-to-Pain fMRI ROI values + Figure S4")
+        print("STEP 07 — Extract Sleep-to-Pain fMRI ROI values + Figure S4")
         print("=" * 70)
 
     if not refit and os.path.exists(OUT_ROI_CSV):
@@ -388,13 +388,13 @@ def run_step7(verbose=True, refit=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 7 — extract SP fMRI ROI values + Figure S4."
+        description="Step 07 — extract SP fMRI ROI values + Figure S4."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",
                         help="Re-extract ROI values from fMRI contrasts")
     args = parser.parse_args()
-    run_step7(verbose=not args.quiet, refit=args.refit)
+    run_step07(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":
