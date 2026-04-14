@@ -468,28 +468,28 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
     if all_include_zero:
         paragraph += (
-            f"None of the moderation parameters approached significance "
-            f"(all $p>{p_threshold:.2f}$, all 95% CrIs including zero)."
+            f"None of the moderation parameters were credibly different from "
+            f"zero (all 95% CrIs comfortably included zero), indicating that "
+            f"within-person coupling operates comparably regardless of "
+            f"baseline severity."
         )
     else:
         paragraph += (
-            f"The minimum two-sided Bayesian $p$-value across all parameters "
-            f"was {min_p:.3f}."
+            f"At least one moderation parameter had a 95% CrI excluding zero."
         )
 
     # ----- Table S2 markdown -----
     table_s2_lines = []
     table_s2_lines.append(
-        "| Moderator | Model | Direction | $\\hat{\\gamma}$ | 95% CrI | $p$ |"
+        "| Moderator | Model | Direction | $\\hat{\\gamma}$ | 95% CrI |"
     )
-    table_s2_lines.append("|-----------|-------|-----------|----------|---------|-----|")
+    table_s2_lines.append("|-----------|-------|-----------|----------|---------|")
 
     for _, row in table.iterrows():
         table_s2_lines.append(
             f"| {row['Moderator']} | {row['Model']} | {row['Direction']} "
             f"| {row['gamma']:.3f} "
-            f"| [{row['CrI_lo']:.3f}, {row['CrI_hi']:.3f}] "
-            f"| {row['p']:.3f} |"
+            f"| [{row['CrI_lo']:.3f}, {row['CrI_hi']:.3f}] |"
         )
 
     table_s2_md = "\n".join(table_s2_lines)

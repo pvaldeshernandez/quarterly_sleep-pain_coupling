@@ -691,6 +691,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     khat_pct = khat_above / khat_nobs * 100
 
     # ----- Paragraph 1: Pain-to-sleep coupling -----
+    tau_ps_ci = v.get("tau_ps_ci", "N/A")
     para1 = (
         f"**Table 4** presents the population parameters from the Bayesian "
         f"VARX(1) model. The pain-to-sleep pathway was the dominant coupling "
@@ -701,25 +702,21 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         f"indicated that a one-unit within-person increase in general pain "
         f"predicted a {abs(lps_mean):.3f}-unit decrease in next-quarter sleep "
         f"quality. The random effect SD was substantial "
-        f"($\\hat{{\\tau}}_{{ps}}={tau_ps:.3f}$), reflecting meaningful "
-        f"between-person heterogeneity: person-level posterior means ranged "
-        f"from {ps_range} (SD = {ps_sd:.3f}), and {n_ps_cred} of "
-        f"{n_persons} participants ({n_ps_cred/n_persons*100:.1f}%) had "
-        f"$P(\\hat{{\\lambda}}_{{ps,i}}<0)>0.95$ (**Figure 2**)."
+        f"($\\hat{{\\tau}}_{{ps}}={tau_ps:.3f}$, 95% CrI {tau_ps_ci}), "
+        f"reflecting meaningful between-person heterogeneity (**Figure 2**)."
     )
 
     # ----- Paragraph 2: Sleep-to-pain coupling -----
+    tau_sp_ci = v.get("tau_sp_ci", "N/A")
     para2 = (
         f"The sleep-to-pain pathway did not reach credibility at the "
         f"population level "
         f"($\\hat{{\\lambda}}_{{sp}}={lsp_mean:.3f}$, "
         f"$P(\\hat{{\\lambda}}_{{sp}}<0)={lsp_pneg:.3f}$, "
         f"95% CrI {lsp_ci}). "
-        f"The random effect SD ($\\hat{{\\tau}}_{{sp}}={tau_sp:.3f}$) was "
-        f"smaller but non-negligible, with person-level posteriors ranging "
-        f"from {sp_range} (SD = {sp_sd:.3f}). "
-        f"{n_sp_cred} participants ({n_sp_cred/n_persons*100:.1f}%) had "
-        f"$P(\\hat{{\\lambda}}_{{sp,i}}<0)>0.95$ (**Figure 3**)."
+        f"The random effect SD ($\\hat{{\\tau}}_{{sp}}={tau_sp:.3f}$, "
+        f"95% CrI {tau_sp_ci}) was smaller but non-negligible "
+        f"(**Figure 3**)."
     )
 
     # ----- Paragraph 3: Innovation correlation -----
@@ -872,8 +869,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
     note_s1 = (
         f"The small proportion of individually credible coupling estimates "
-        f"({n_ps_cred}/229 for pain-to-sleep, {n_sp_cred}/229 for "
-        f"sleep-to-pain) reflects the partial pooling inherent in hierarchical "
+        f"reflects the partial pooling inherent in hierarchical "
         f"Bayesian estimation rather than an absence of true individual "
         f"differences. With a median of {median_obs_str} quarterly observations "
         f"per participant, individual-level data are necessarily noisy, and the "

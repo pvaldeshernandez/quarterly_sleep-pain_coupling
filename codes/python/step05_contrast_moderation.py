@@ -496,6 +496,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     omega_ps = t4["b4"]
     omega_ps_est = float(omega_ps["Estimate"])
     omega_ps_pneg = float(omega_ps["P_neg"])
+    omega_ps_ci = f"[{float(omega_ps['CrI_lo']):.3f}, {float(omega_ps['CrI_hi']):.3f}]"
 
     # ----- JN values from step05 text_numbers -----
     has_ps_boundary = "jn_ps_boundary_K" in v
@@ -507,57 +508,52 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     has_sp_boundary = "jn_sp_boundary_K" in v
     # (SP boundary is typically "none")
 
-    # ----- Paragraph 1: Direct and interaction effects -----
-    para1 = (
-        f"The contrast moderation parameters "
-        f"($\\hat{{\\delta}}_{{p}}$, $\\hat{{\\omega}}_{{sp}}$, "
-        f"$\\hat{{\\delta}}_{{s}}$, $\\hat{{\\omega}}_{{ps}}$) are reported "
-        f"in **Table 4**. The direct effect of pain localization on "
-        f"next-quarter sleep quality was credible "
-        f"($\\hat{{\\delta}}_{{s}}={delta_s_est:.3f}$, "
-        f"$P<0={delta_s_pneg:.3f}$, "
-        f"95% CrI {delta_s_ci}): when a person's pain was more "
-        f"knee-dominant than usual, their next-quarter sleep quality worsened. "
-        f"The interaction between pain and localization trended toward "
-        f"strengthening the pain-to-sleep coupling when pain was "
-        f"knee-dominant ($\\hat{{\\omega}}_{{ps}}={omega_ps_est:.3f}$, "
-        f"$P<0={omega_ps_pneg:.3f}$) but did not reach the 0.95 "
-        f"credibility threshold. Neither localization term affected the "
-        f"sleep-to-pain pathway."
+    # ----- Paragraph 1: Direct effect, interaction, and JN analysis -----
+    p1_lead = (
+        f"The direct effect of pain localization on next-quarter sleep "
+        f"quality was credible ($\\hat{{\\delta}}_{{s}}={delta_s_est:.3f}$, "
+        f"95% CrI {delta_s_ci}; **Table 4**), indicating that quarters in "
+        f"which an individual's pain was more knee-dominant than usual "
+        f"were followed by poorer sleep quality. The pain \u00d7 localization "
+        f"interaction operated in the same direction but did not reach "
+        f"credibility ($\\hat{{\\omega}}_{{ps}}={omega_ps_est:.3f}$, "
+        f"95% CrI {omega_ps_ci}). Together, the direct and "
+        f"interaction terms shifted the conditional pain-to-sleep coupling "
+        f"such that it was credibly negative at balanced and knee-dominant "
+        f"localization levels, but not when pain was body-dominant. "
     )
 
-    # ----- Paragraph 2: JN analysis -----
     if has_ps_boundary:
-        jn_text = (
-            f"Although the interaction did not reach credibility, the credible "
-            f"direct effect ($\\hat{{\\delta}}_{{s}}$) shifts the conditional "
-            f"pain-to-sleep coupling so that it is credibly negative at "
-            f"balanced and knee-dominant localization levels but not at "
-            f"body-dominant levels. Johnson-Neyman analysis (**Figure 4**) "
-            f"confirmed that the pain-to-sleep coupling was credibly negative "
-            f"for localization values above {jn_ps_K:.3f} "
-            f"({jn_ps_sd:.2f} SD), encompassing {jn_ps_pct:.1f}% of "
-            f"observations."
+        p1_jn = (
+            f"Johnson\u2013Neyman analysis (**Figure 4**) identified this "
+            f"transition at a localization value of {jn_ps_K:.3f} "
+            f"({jn_ps_sd:.2f} SD), with {jn_ps_pct:.1f}% of observations "
+            f"falling within the region where pain-to-sleep coupling was "
+            f"credibly present. "
         )
     else:
-        jn_text = (
-            f"Johnson-Neyman analysis (**Figure 4**) found no boundary "
-            f"within the observed range for the pain-to-sleep pathway."
+        p1_jn = (
+            f"Johnson\u2013Neyman analysis (**Figure 4**) found no boundary "
+            f"within the observed range for the pain-to-sleep pathway. "
         )
 
     if has_sp_boundary:
         sp_K = float(v["jn_sp_boundary_K"])
-        jn_text += (
-            f" For the sleep-to-pain pathway, a JN boundary existed at "
+        p1_sp = (
+            f"In contrast, neither localization term moderated the "
+            f"sleep-to-pain pathway; a JN boundary existed at "
             f"K = {sp_K:.3f} (**Figure S3**)."
         )
     else:
-        jn_text += (
-            f" For the sleep-to-pain pathway, no JN boundary existed "
-            f"within the observed range (**Figure S3**)."
+        p1_sp = (
+            f"In contrast, neither localization term moderated the "
+            f"sleep-to-pain pathway, and no Johnson\u2013Neyman boundary "
+            f"was observed within the empirical range of localization "
+            f"values (**Figure S3**)."
         )
 
-    para2 = jn_text
+    para1 = p1_lead + p1_jn + p1_sp
+    para2 = ""  # deprecated; combined into para1
 
     # ----- Figure captions -----
     fig4_caption = (
@@ -587,13 +583,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
     text = f"""\
 ## Results > 3.3 Moderation of pain location
-### Paragraph 1 (direct and interaction effects)
 
 {para1}
-
-### Paragraph 2 (JN analysis)
-
-{para2}
 
 ## Figure Captions
 

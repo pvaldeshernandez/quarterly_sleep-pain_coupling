@@ -321,18 +321,15 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
             second_annotation = " "
         fmri_desc = (
             f"The {lab1} showed the strongest fMRI effect "
-            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi1}')}$, "
-            f"$p={_val(f'gamma_ps_fmri_{roi1}_p')}$), "
+            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi1}')}$), "
             f"with the {lab2}{second_annotation}showing the second strongest "
-            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi2}')}$, "
-            f"$p={_val(f'gamma_ps_fmri_{roi2}_p')}$). "
+            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi2}')}$). "
         )
     elif len(fmri_rois_sorted) == 1:
         lab1, roi1, _ = fmri_rois_sorted[0]
         fmri_desc = (
             f"The {lab1} showed the strongest fMRI effect "
-            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi1}')}$, "
-            f"$p={_val(f'gamma_ps_fmri_{roi1}_p')}$). "
+            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi1}')}$). "
         )
 
     # VBM sign concordance
@@ -349,8 +346,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
             f"arousal relay volumes predisposing stronger pain-to-sleep "
             f"coupling\u2014though no individual effect was credible "
             f"(strongest: {lab1}, "
-            f"$\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_vbm_{roi1}')}$, "
-            f"$p={_val(f'gamma_ps_vbm_{roi1}_p')}$). "
+            f"$\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_vbm_{roi1}')}$). "
         )
 
     paragraph = (
@@ -359,7 +355,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         "($\\hat{\\gamma}_{ps}$) using two complementary approaches: "
         f"pain-evoked fMRI response (N = {n_fmri}) and grey matter volume "
         f"from atlas-defined probabilistic ROIs (N = {n_vbm}). "
-        "No individual ROI reached significance in either modality "
+        "Moderation was not credible for any ROI in either modality "
         "(**Table S1**)\u2014a sensitivity analysis testing each hemisphere "
         "separately (10 models) confirmed that bilateral averaging did not "
         "mask lateralized effects. "
@@ -371,8 +367,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     # ----- Table S1 markdown -----
     # Interleave fMRI and VBM rows per ROI
     table_s1_lines = []
-    table_s1_lines.append("| ROI | Modality | $\\hat{\\gamma}_{ps}$ | 95% CrI | $p$ |")
-    table_s1_lines.append("|-----|----------|-----------|---------|-----|")
+    table_s1_lines.append("| ROI | Modality | $\\hat{\\gamma}_{ps}$ | 95% CrI |")
+    table_s1_lines.append("|-----|----------|-----------|---------|")
 
     # Determine ROI ordering from fMRI table (preserves original order)
     if fmri_table is not None:
@@ -396,15 +392,13 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
             r = fmri_dict[roi]
             table_s1_lines.append(
                 f"| {r['Label']} | fMRI BOLD | {r['gamma_ps']:.3f} "
-                f"| [{r['gamma_ps_ci_lo']:.3f}, {r['gamma_ps_ci_hi']:.3f}] "
-                f"| {r['gamma_ps_p']:.3f} |"
+                f"| [{r['gamma_ps_ci_lo']:.3f}, {r['gamma_ps_ci_hi']:.3f}] |"
             )
         if roi in vbm_dict:
             r = vbm_dict[roi]
             table_s1_lines.append(
                 f"| {r['Label']} | VBM GM vol. | {r['gamma_ps']:.3f} "
-                f"| [{r['gamma_ps_ci_lo']:.3f}, {r['gamma_ps_ci_hi']:.3f}] "
-                f"| {r['gamma_ps_p']:.3f} |"
+                f"| [{r['gamma_ps_ci_lo']:.3f}, {r['gamma_ps_ci_hi']:.3f}] |"
             )
 
     table_s1_md = "\n".join(table_s1_lines)
@@ -414,7 +408,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         f"*Note.* fMRI models: N = {n_fmri}; VBM models: N = {n_vbm}. "
         f"Each ROI was tested separately as a moderator of pain-to-sleep "
         f"coupling ($\\hat{{\\gamma}}_{{ps}}$). Moderator values were "
-        f"z-scored. No individual effect reached significance."
+        f"z-scored. No individual effect was credibly different from zero."
     )
 
     text = f"""\

@@ -54,7 +54,7 @@ OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step09_text_numbers.csv")
 FIG5_ROI = "Left_NAcc"
 # ROIs for Figure 6 (two panels stacked: Right ACC on top, Left ACC below)
 FIG6_ROIS = ["Right_dACC_MCC", "Left_dACC_MCC"]
-# Non-significant Krause ROIs for the S5 2x2 merge
+# Non-credible Krause ROIs for the S5 2x2 merge
 S5_ROIS = ["Right_S1", "Right_Middle_Insula", "Left_Thalamus", "Left_Anterior_Insula"]
 
 
@@ -450,7 +450,7 @@ def run_step09(verbose=True, refit=False):
         if verbose:
             print(f"  Saved Figure 6: {OUT_FIG6}")
 
-    # --- Figure S5: 2x2 merge of non-significant Krause ROIs ---
+    # --- Figure S5: 2x2 merge of non-credible Krause ROIs ---
     available_s5 = [r for r in S5_ROIS if r in jn_results]
     if len(available_s5) >= 2:
         n_panels = len(available_s5)
@@ -625,17 +625,17 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
     # Figure S5: non-significant Krause ROIs
     fig_s5_caption = (
-        "**Figure S5.** Johnson-Neyman analysis of sleep-to-pain coupling "
-        "moderated by four non-significant Krause et al. ROIs: "
-        "right somatosensory cortex (S1), right middle insula, left thalamus, "
-        "and left anterior insula. Same conventions as Figure 5. "
+        "**Figure S5.** Johnson-Neyman analyses of non-credible Krause ROI "
+        "moderation of sleep-to-pain coupling: right somatosensory cortex "
+        "(S1), right middle insula, left thalamus, and left anterior insula. "
+        "Same conventions as Figure 5. "
         "None of these ROIs showed a credible moderation effect."
     )
 
     text = f"""\
 ## Step 09 — Johnson-Neyman analysis: SP moderation
 
-JN boundaries and simple slopes for the significant and near-significant
+JN boundaries and simple slopes for the credible and near-credible
 sleep-to-pain moderation ROIs. An asterisk (*) after the CrI indicates
 the credible interval excludes zero.
 

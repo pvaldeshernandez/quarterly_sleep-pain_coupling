@@ -308,16 +308,14 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     # --- Paragraph 1: NAcc results ---
     p1 = (
         "Left NAcc activation during painful knee stimulation was the only "
-        "Krause et al. (2019) ROI that significantly moderated sleep-to-pain "
+        "Krause et al. (2019) ROI that credibly moderated sleep-to-pain "
         f"coupling ($\\hat{{\\gamma}}_{{sp}}={_signed('gamma_sp_Left_NAcc')}$, "
-        f"95% CrI {v.get('gamma_sp_Left_NAcc_ci', 'N/A')}, "
-        f"$p={_val('gamma_sp_Left_NAcc_p')}$; **Table 5**): "
+        f"95% CrI {v.get('gamma_sp_Left_NAcc_ci', 'N/A')}; **Table 5**): "
         "the lower the left NAcc activation during painful stimulation, the "
         "stronger the sleep-to-pain coupling. "
-        "The right NAcc showed the same direction but did not reach significance "
+        "The right NAcc showed the same direction but it was not credible "
         f"($\\hat{{\\gamma}}_{{sp}}={_signed('gamma_sp_Right_NAcc')}$, "
-        f"95% CrI {v.get('gamma_sp_Right_NAcc_ci', 'N/A')}, "
-        f"$p={_val('gamma_sp_Right_NAcc_p')}$). "
+        f"95% CrI {v.get('gamma_sp_Right_NAcc_ci', 'N/A')}). "
     )
 
     # JN info from step09 if available; otherwise from text_numbers
@@ -365,14 +363,12 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
     p2 = (
         "The ACC\u2014tested separately from the Krause et al. (2019) framework as a "
-        "Sardi et al. (2024)-motivated D2-gated node\u2014also significantly "
+        "Sardi et al. (2024)-motivated D2-gated node\u2014also credibly "
         "moderated sleep-to-pain coupling "
         f"($\\hat{{\\gamma}}_{{sp}}={l_acc_gamma}$, "
-        f"95% CrI {l_acc_ci}, "
-        f"$p={l_acc_p}$ for the left, and "
+        f"95% CrI {l_acc_ci}\u2014a marginal credibility\u2014for the left, and "
         f"$\\hat{{\\gamma}}_{{sp}}={r_acc_gamma}$, "
-        f"95% CrI {r_acc_ci}, "
-        f"$p={r_acc_p}$ for the right; **Table 5**): "
+        f"95% CrI {r_acc_ci} for the right; **Table 5**): "
         "higher pain-evoked ACC activation was associated with less negative "
         "sleep-to-pain coupling. "
         "The Johnson-Neyman analysis (**Figure 6**) revealed a pattern closely "
@@ -392,15 +388,14 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     n_match, n_total = sign_conc.split("/") if "/" in sign_conc else ("N", "N")
 
     p3 = (
-        f"Finally, although only the left NAcc and both ACC reached individual "
-        f"significance among the seven sleep-to-pain ROIs (**Table 5**), all "
+        f"Finally, although the moderation was credible only for the left NAcc "
+        f"and both ACC among the seven sleep-to-pain ROIs (**Table 5**), all "
         f"{n_total} Krause et al. (2019) univariate $\\hat{{\\gamma}}_{{sp}}$ "
         f"estimates matched the direction predicted by the sleep deprivation "
         f"framework. The probability of this occurring by chance is "
         f"$p=(1/2)^{{{n_total}}}={sign_p}$ (exact sign test), providing "
         f"convergent support for the Krause et al. (2019) framework at the "
-        f"pattern level even though only the left NAcc reached individual "
-        f"significance."
+        f"pattern level."
     )
 
     # --- Table 5 ---
@@ -408,8 +403,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     if os.path.exists(OUT_TABLE5_CSV):
         t5 = pd.read_csv(OUT_TABLE5_CSV)
         table5_lines = [
-            "| ROI | Framework | Expected $\\hat{\\gamma}_{sp}$ | $\\hat{\\gamma}_{sp}$ | 95% CrI | $p$ |",
-            "| :--- | :--- | :---: | ---: | :--- | ---: |",
+            "| ROI | Framework | Expected $\\hat{\\gamma}_{sp}$ | $\\hat{\\gamma}_{sp}$ | 95% CrI |",
+            "| :--- | :--- | :---: | ---: | :--- |",
         ]
         for _, row in t5.iterrows():
             roi = row["ROI"].replace("_", " ")
@@ -417,16 +412,15 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
             exp = row.get("expected_sign_sp", "")
             gsp = f"{row['gamma_sp']:+.3f}"
             ci = f"[{row['gamma_sp_ci_lo']:+.3f}, {row['gamma_sp_ci_hi']:+.3f}]"
-            p = f"{row['gamma_sp_p']:.3f}"
-            # Bold significant rows
-            is_sig = row["gamma_sp_p"] < 0.05
-            if is_sig:
+            # Bold credible rows (CrI excludes zero)
+            is_credible = (row["gamma_sp_ci_lo"] > 0) or (row["gamma_sp_ci_hi"] < 0)
+            if is_credible:
                 table5_lines.append(
-                    f"| **{roi}** | **{fw}** | **{exp}** | **{gsp}** | **{ci}** | **{p}** |"
+                    f"| **{roi}** | **{fw}** | **{exp}** | **{gsp}** | **{ci}** |"
                 )
             else:
                 table5_lines.append(
-                    f"| {roi} | {fw} | {exp} | {gsp} | {ci} | {p} |"
+                    f"| {roi} | {fw} | {exp} | {gsp} | {ci} |"
                 )
         table5_text = "\n".join(table5_lines)
 
@@ -443,9 +437,9 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         f"framework: ACC and NAcc as parallel D2-gated nodes. Both NAcc "
         f"ROIs used GM-masked contrast images; all other ROIs used unmasked "
         f"contrasts (see Methods). "
-        f"$p=2\\times\\min(P(\\gamma_{{sp}}<0),P(\\gamma_{{sp}}>0))$. "
-        f"\\*These may be considered as marginal results (i.e., p ~ 0.05) "
-        f"if we account for MCMC fluctuations."
+        f"\\*The lower CrI bound was slightly above zero, though this should "
+        f"be considered a marginal result given potential MCMC sampling "
+        f"fluctuations."
     )
 
     text = f"""\
