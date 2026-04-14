@@ -1,16 +1,16 @@
 """
-Step 07 — Fit Sleep-to-Pain moderation models (7 ROIs).
+Step 08 — Fit Sleep-to-Pain moderation models (7 ROIs).
 ======================================================================
 
-Input:  derivatives/step02_processed_long.csv
-        derivatives/step05_sp_roi_values.csv
+Input:  derivatives/step03_varx_data/step03_processed_long.csv
+        derivatives/step07_sp_roi_values/step07_sp_roi_values.csv
 Output:
   derivatives/
-    step06_sp_posterior_draws.npz     — per-ROI posterior draws
+    step08_sp_posterior_draws.npz     — per-ROI posterior draws
   results/
-    step06_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
-    step06_sign_concordance.csv       — sign test results
-    step06_text_numbers.csv           — gamma estimates, p-values, etc.
+    step08_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
+    step08_sign_concordance.csv       — sign test results
+    step08_text_numbers.csv           — gamma estimates, p-values, etc.
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each of the 7 SP ROIs (6 Krause + 1 ACC). Extracts gamma_sp and
@@ -70,7 +70,7 @@ EXPECTED_SIGNS = {
 
 
 def load_step02_data(csv_path):
-    """Load Step 02 output and prepare for fitting."""
+    """Load Step 03 output and prepare for fitting."""
     df = pd.read_csv(csv_path)
     df["Age_z"] = (df["Age"] - df["Age"].mean()) / df["Age"].std()
     df["Sex_coded"] = (df["Sex"] == 2).astype(float)
@@ -87,7 +87,7 @@ def run_step08(verbose=True, refit=False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 06 — Fit Sleep-to-Pain moderation (7 ROIs)")
+        print("STEP 08 — Fit Sleep-to-Pain moderation (7 ROIs)")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -276,7 +276,7 @@ def run_step08(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 06 COMPLETE")
+        print("STEP 08 COMPLETE")
         print("=" * 70)
 
 
@@ -427,7 +427,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 07 — fit SP moderation models (7 ROIs)."
+        description="Step 08 — fit SP moderation models (7 ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

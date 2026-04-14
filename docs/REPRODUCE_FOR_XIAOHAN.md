@@ -133,11 +133,22 @@ If you only need to change figure aesthetics (colors, fonts, axis
 limits) without re-running MCMC:
 
 ```bash
-python replot_all_figures.py
+python generate_all_results.py
 ```
 
 This reads saved posterior draws from `derivatives/` and regenerates
-all figures. Takes ~30 seconds.
+all figures, tables, and text paragraphs. Takes ~30 seconds.
+
+To re-run a specific step's computation from scratch (e.g., after
+changing upstream data or code):
+
+```bash
+python step04_fit_coupling_model.py --refit
+```
+
+Every step supports the `--refit` flag. Without it, the step loads
+saved derivatives and only regenerates results (figures, tables, text).
+A warning is printed when running in this default mode.
 
 ---
 

@@ -1,19 +1,19 @@
 """
-Step 10 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
+Step 11 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
 ======================================================================
 
-Input:  derivatives/step02_processed_long.csv
-        derivatives/step09_ps_fmri_roi_values.csv
-        derivatives/step09_ps_vbm_roi_values.csv
+Input:  derivatives/step03_varx_data/step03_processed_long.csv
+        derivatives/step10_ps_roi_values/step10_ps_fmri_roi_values.csv
+        derivatives/step10_ps_roi_values/step10_ps_vbm_roi_values.csv
 Output:
   derivatives/
-    step10_ps_fmri_posterior_draws.npz
-    step10_ps_vbm_posterior_draws.npz
+    step11_ps_fmri_posterior_draws.npz
+    step11_ps_vbm_posterior_draws.npz
   results/
-    step09_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
-    step09_table_s1_vbm_arousal.csv     — Table S1 VBM panel
-    step09_vbm_sign_concordance.csv     — VBM 5/5 sign test
-    step09_text_numbers.csv
+    step11_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
+    step11_table_s1_vbm_arousal.csv     — Table S1 VBM panel
+    step11_vbm_sign_concordance.csv     — VBM 5/5 sign test
+    step11_text_numbers.csv
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each arousal ROI, separately for fMRI BOLD and VBM GM volume.
@@ -156,7 +156,7 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
 def run_step11(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 09 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
+        print("STEP 11 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -254,7 +254,7 @@ def run_step11(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 09 COMPLETE")
+        print("STEP 11 COMPLETE")
         print("=" * 70)
 
 
@@ -383,7 +383,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 10 — fit PS moderation (arousal relay ROIs)."
+        description="Step 11 — fit PS moderation (arousal relay ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

@@ -2,7 +2,7 @@
 Step 03 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 ======================================================================
 
-Input:  derivatives/step02_processed_long.csv
+Input:  derivatives/step03_varx_data/step03_processed_long.csv
 Output:
   derivatives/
     step03_posterior_draws.npz     — raw posterior arrays for downstream steps
@@ -71,7 +71,7 @@ OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step04_figure3_sp_coupling.png")
 # =====================================================================
 
 def load_data(csv_path: str):
-    """Load Step 02 output and prepare for fit_bayesian_varx1.
+    """Load Step 03 output and prepare for fit_bayesian_varx1.
 
     Returns (df_full, model_df, unique_ids, id_map) matching the
     interface that coupling_model.py expects.

@@ -1,5 +1,5 @@
 """
-Step 02 — Segment filter, within-between decomposition, lag creation,
+Step 03 — Segment filter, within-between decomposition, lag creation,
          Figure 1, Table 3, and timepoint summary.
 ======================================================================
 
@@ -573,10 +573,10 @@ def generate_figure1(
 # =====================================================================
 
 def run_step03(verbose: bool = True, refit: bool = False):
-    """Full Step 02 pipeline."""
+    """Full Step 03 pipeline."""
     if verbose:
         print("=" * 70)
-        print("STEP 02 — Prepare VARX data")
+        print("STEP 03 — Prepare VARX data")
         print("=" * 70)
         print(f"  Input: {IN_SCORED_CSV}")
 
@@ -672,7 +672,7 @@ def run_step03(verbose: bool = True, refit: bool = False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 02 COMPLETE")
+        print("STEP 03 COMPLETE")
         print("=" * 70)
 
 
@@ -751,7 +751,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 02 — segment filter, decomposition, lags, "
+        description="Step 03 — segment filter, decomposition, lags, "
                     "Figure 1, Table 3, timepoint summary."
     )
     parser.add_argument(

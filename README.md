@@ -52,20 +52,24 @@ quarterly_sleep-pain_coupling/
 │   ├── step03_varx_data/
 │   ├── step04_coupling_model/
 │   ├── step05_contrast_moderation/
+│   ├── step06_fmri_contrasts_masked/
+│   ├── step06_fmri_contrasts_unmasked/
 │   ├── step07_sp_roi_values/
 │   ├── step08_sp_moderation/
 │   ├── step09_sp_jn/
 │   ├── step10_ps_roi_values/
 │   ├── step11_ps_moderation/
-│   └── step12_ps_jn/
+│   ├── step12_ps_jn/
+│   └── step13_severity_moderation/
 │
 ├── results/                         # Paper outputs
-│   ├── step02_contrast_validation/   # Text numbers for factor validation
-│   ├── step03_data_availability/     # Figure 1
-│   ├── step04_coupling_model/        # Figures 2-3, Tables 3-4
-│   ├── step05_contrast_moderation/   # Figure 4, text numbers
-│   ├── step08_sp_moderation/         # Table 5, sign concordance
-│   ├── step09_sp_jn/                 # Figures 5, 6, text numbers
+│   ├── step01_factor_analysis/      # Factor results
+│   ├── step02_contrast_validation/  # Text numbers for factor validation
+│   ├── step03_varx_data/            # Figure 1, Table 3
+│   ├── step04_coupling_model/       # Figures 2-3, Tables 3-4
+│   ├── step05_contrast_moderation/  # Figure 4, text numbers
+│   ├── step08_sp_moderation/        # Table 5, sign concordance
+│   ├── step09_sp_jn/                # Figures 5, 6, text numbers
 │   ├── step11_ps_moderation/        # Text numbers, VBM sign concordance
 │   ├── step12_ps_jn/                # Text numbers
 │   └── supplementary_materials/     # ALL supplementary figures + tables

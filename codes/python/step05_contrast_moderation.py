@@ -2,7 +2,7 @@
 Step 04 — Contrast moderation analysis (Johnson-Neyman).
 ======================================================================
 
-Input:  derivatives/step04/step04_posterior_draws.npz
+Input:  derivatives/step04_coupling_model/step04_posterior_draws.npz
 Output:
   derivatives/
     step05_jn_localization_results.csv — full JN grid for both directions
