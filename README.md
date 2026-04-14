@@ -21,16 +21,14 @@ quarterly_sleep-pain_coupling/
 │   │   ├── step4_fit_coupling_model.py  # VARX(1) fit + LOO-CV + Figures 2, 3
 │   │   ├── step5_contrast_moderation.py # Pain localization JN: Figure 4, Figure S3
 │   │   ├── step6_estimate_fmri_contrasts.py  # No-mask re-estimation of SPM contrasts
-│   │   ├── step7_extract_sp_rois.py     # Extract Krause + ACC fMRI ROI values (8 ROIs)
-│   │   ├── step7b_plot_sp_roi_maps.py   # Figure S4: SP ROI brain maps
+│   │   ├── step7_extract_sp_rois.py     # Extract Krause + ACC fMRI ROI values (8 ROIs) + Figure S4
 │   │   ├── step8_fit_sp_moderation.py   # Sleep-to-Pain moderation (8 ROIs) + sign concordance
 │   │   ├── step9_sp_moderation_jn.py    # SP JN: Figures 5, 6, S5
-│   │   ├── step10_extract_ps_rois.py    # Extract arousal fMRI + VBM ROI values
-│   │   ├── step10b_plot_ps_roi_maps.py  # Figure S6: PS arousal ROI brain maps
+│   │   ├── step10_extract_ps_rois.py    # Extract arousal fMRI + VBM ROI values + Figure S6
 │   │   ├── step11_fit_ps_moderation.py  # Pain-to-Sleep moderation (10 models) + Table S1
 │   │   ├── step12_ps_moderation_jn.py   # PS JN: Figures S7, S8
 │   │   ├── step13_severity_moderation.py # Person-mean severity moderation: Table S2
-│   │   └── replot_all_figures.py        # Regenerate all figures from saved posterior draws
+│   │   └── generate_all_results.py      # Regenerate all results from saved derivatives
 │   │
 │   └── matlab/                          # MRI preprocessing and ROI creation (MATLAB/SPM12)
 │       ├── preprocessing/               # DARTEL pipeline
@@ -117,17 +115,27 @@ python step4_fit_coupling_model.py
 python step5_contrast_moderation.py
 python step6_estimate_fmri_contrasts.py
 python step7_extract_sp_rois.py
-python step7b_plot_sp_roi_maps.py
 python step8_fit_sp_moderation.py
 python step9_sp_moderation_jn.py
 python step10_extract_ps_rois.py
-python step10b_plot_ps_roi_maps.py
 python step11_fit_ps_moderation.py
 python step12_ps_moderation_jn.py
 python step13_severity_moderation.py
 ```
 
 Total runtime: approximately 45 minutes on a 4-core machine with 16 GB RAM.
+
+To regenerate all figures, tables, and text numbers from saved posterior draws without refitting any models:
+
+```bash
+python generate_all_results.py
+```
+
+To re-run a specific step's computation from scratch (e.g., after changing upstream data):
+
+```bash
+python step4_fit_coupling_model.py --refit
+```
 
 ---
 
@@ -142,12 +150,10 @@ Total runtime: approximately 45 minutes on a 4-core machine with 16 GB RAM.
 | 4 | `step4_fit_coupling_model.py` | Bayesian VARX(1) coupling model + LOO-CV | Table 4, Figures 2-3, posterior draws |
 | 5 | `step5_contrast_moderation.py` | Johnson-Neyman analysis of pain localization moderation | Figure 4, Figure S3 |
 | 6 | `step6_estimate_fmri_contrasts.py` | Re-estimate SPM contrasts without GM mask (for subcortical ROIs) | Unmasked con images |
-| 7 | `step7_extract_sp_rois.py` | Extract mean fMRI BOLD in 8 spherical ROIs (6 Krause + bilateral ACC) | ROI values CSV |
-| 7b | `step7b_plot_sp_roi_maps.py` | Brain slice visualizations of SP ROIs | Figure S4 |
+| 7 | `step7_extract_sp_rois.py` | Extract mean fMRI BOLD in 8 spherical ROIs (6 Krause + bilateral ACC) + brain maps | ROI values CSV, Figure S4 |
 | 8 | `step8_fit_sp_moderation.py` | Fit 8 Sleep-to-Pain moderation models, Krause sign concordance test | Table 5, sign concordance |
 | 9 | `step9_sp_moderation_jn.py` | SP moderation JN analysis | Figures 5, 6, S5 |
-| 10 | `step10_extract_ps_rois.py` | Extract arousal ROI values (5 atlas ROIs x 2 modalities: fMRI + VBM) | ROI values CSVs |
-| 10b | `step10b_plot_ps_roi_maps.py` | Brain slice visualizations of PS arousal ROIs | Figure S6 |
+| 10 | `step10_extract_ps_rois.py` | Extract arousal ROI values (5 atlas ROIs x 2 modalities: fMRI + VBM) + brain maps | ROI values CSVs, Figure S6 |
 | 11 | `step11_fit_ps_moderation.py` | Fit 10 Pain-to-Sleep moderation models, VBM sign concordance | Table S1 |
 | 12 | `step12_ps_moderation_jn.py` | PS moderation JN analysis | Figures S7, S8 |
 | 13 | `step13_severity_moderation.py` | Person-mean severity moderation of coupling | Table S2 |

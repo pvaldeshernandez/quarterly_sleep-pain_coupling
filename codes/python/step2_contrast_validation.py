@@ -417,7 +417,7 @@ def generate_text_numbers(verbose=True):
 # Main
 # =====================================================================
 
-def run_step2(verbose=True):
+def run_step2(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
         print("STEP 2 — Contrast factor external validation")
@@ -441,8 +441,12 @@ def main():
         description="Step 2 — External validation of the contrast factor."
     )
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--refit", action="store_true",
+        help="Re-run computation from scratch instead of loading saved derivatives",
+    )
     args = parser.parse_args()
-    run_step2(verbose=not args.quiet)
+    run_step2(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

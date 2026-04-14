@@ -264,9 +264,13 @@ def draw_jn_panel(ax, jn, panel_label, direction_label, slopes_dict,
 # Main pipeline
 # =====================================================================
 
-def run_step5(verbose: bool = True):
+def run_step5(verbose: bool = True, refit: bool = False):
     """Run contrast moderation JN analysis."""
     from coupling_model import compute_jn_curve
+
+    if not refit and verbose:
+        print("  NOTE: Running in replot mode (loading saved posterior draws).")
+        print("        Use --refit to re-run the MCMC computation from scratch.")
 
     if verbose:
         print("=" * 70)
@@ -462,8 +466,12 @@ def main():
         "--quiet", action="store_true",
         help="Suppress progress output.",
     )
+    parser.add_argument(
+        "--refit", action="store_true",
+        help="Re-run computation from scratch instead of loading saved derivatives",
+    )
     args = parser.parse_args()
-    run_step5(verbose=not args.quiet)
+    run_step5(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

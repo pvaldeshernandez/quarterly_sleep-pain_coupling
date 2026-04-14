@@ -82,7 +82,7 @@ def load_step2_data(csv_path):
     return df, model_df, unique_ids, id_map
 
 
-def run_step8(verbose=True):
+def run_step8(verbose=True, refit=False):
     from coupling_model import fit_bayesian_varx1, extract_results
 
     if verbose:
@@ -95,100 +95,118 @@ def run_step8(verbose=True):
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-    df_full, model_df, unique_ids, id_map = load_step2_data(IN_PROCESSED_CSV)
     roi_df = pd.read_csv(IN_ROI_CSV)
 
-    all_rois = roi_df["ROI"].unique()
-    if verbose:
-        print(f"  {len(all_rois)} ROIs to fit")
+    # Check whether saved derivatives exist
+    saved_exist = os.path.exists(OUT_DRAWS_NPZ) and os.path.exists(OUT_TABLE5_CSV)
+    if not refit and not saved_exist:
+        if verbose:
+            print("  Saved derivatives not found — forcing refit.")
+        refit = True
 
-    table_rows = []
+    if not refit and saved_exist:
+        # ------ REPLOT MODE: load saved derivatives ------
+        if verbose:
+            print("  WARNING: Running in replot mode -- loading saved derivatives.")
+            print("  If you have changed upstream data or code, re-run with --refit.")
+        table5 = pd.read_csv(OUT_TABLE5_CSV)
+        draws_dict = dict(np.load(OUT_DRAWS_NPZ))
+    else:
+        # ------ FULL MCMC FIT ------
+        df_full, model_df, unique_ids, id_map = load_step2_data(IN_PROCESSED_CSV)
+
+        all_rois = roi_df["ROI"].unique()
+        if verbose:
+            print(f"  {len(all_rois)} ROIs to fit")
+
+        table_rows = []
+        draws_dict = {}
+
+        for roi_name in all_rois:
+            roi_data = roi_df[roi_df["ROI"] == roi_name]
+            label = roi_data["label"].iloc[0]
+            framework = roi_data["framework"].iloc[0]
+            mask_type = roi_data["mask_type"].iloc[0]
+            expected = roi_data["expected_sign_sp"].iloc[0]
+            raw_mean = roi_data["raw_mean"].iloc[0]
+            raw_sd = roi_data["raw_sd"].iloc[0]
+
+            # Build X_person dict {ID: z_value}
+            X_person = dict(zip(
+                roi_data["ID"].astype(str),
+                roi_data["z_value"].values,
+            ))
+
+            if verbose:
+                print(f"\n  Fitting: {label} ({framework}, {mask_type})...")
+
+            idata, sub_df, valid_ids = fit_bayesian_varx1(
+                model_df, unique_ids, id_map,
+                X_person=X_person,
+                include_agesex=True,
+                progressbar=True,
+            )
+
+            n_valid = len(valid_ids)
+            n_obs = len(sub_df)
+            results = extract_results(idata, moderator_name=roi_name)
+
+            sp_mean = results.get("gamma_sp_mean", np.nan)
+            sp_lo = results.get("gamma_sp_ci_lo", np.nan)
+            sp_hi = results.get("gamma_sp_ci_hi", np.nan)
+            sp_prob_neg = results.get("gamma_sp_prob_neg", np.nan)
+            sp_p = 2 * min(sp_prob_neg, 1 - sp_prob_neg) if np.isfinite(sp_prob_neg) else np.nan
+
+            ps_mean = results.get("gamma_ps_mean", np.nan)
+            ps_lo = results.get("gamma_ps_ci_lo", np.nan)
+            ps_hi = results.get("gamma_ps_ci_hi", np.nan)
+            ps_prob_neg = results.get("gamma_ps_prob_neg", np.nan)
+            ps_p = 2 * min(ps_prob_neg, 1 - ps_prob_neg) if np.isfinite(ps_prob_neg) else np.nan
+
+            rhat_max = results.get("rhat_max", np.nan)
+
+            if verbose:
+                print(f"    N={n_valid}, obs={n_obs}")
+                print(f"    gamma_sp = {sp_mean:+.4f} [{sp_lo:+.4f}, {sp_hi:+.4f}], p={sp_p:.4f}")
+                print(f"    gamma_ps = {ps_mean:+.4f} [{ps_lo:+.4f}, {ps_hi:+.4f}], p={ps_p:.4f}")
+                print(f"    R-hat max: {rhat_max:.3f}")
+
+            table_rows.append({
+                "ROI": roi_name, "Label": label, "Framework": framework,
+                "Source": mask_type, "N": n_valid, "N_obs": n_obs,
+                "gamma_sp": sp_mean, "gamma_sp_ci_lo": sp_lo,
+                "gamma_sp_ci_hi": sp_hi, "gamma_sp_p": sp_p,
+                "gamma_ps": ps_mean, "gamma_ps_ci_lo": ps_lo,
+                "gamma_ps_ci_hi": ps_hi, "gamma_ps_p": ps_p,
+                "rhat_max": rhat_max,
+            })
+
+            # Save posterior draws for JN step
+            a2_draws = idata.posterior["a2"].values.flatten()
+            gamma_sp_draws = idata.posterior["gamma_sp"].values.flatten()
+            u_sp_mean = idata.posterior["u_sp"].values.reshape(-1, len(valid_ids)).mean(axis=0)
+            X_vals = np.array([X_person[sid] for sid in valid_ids if sid in X_person])
+            draws_dict[f"{roi_name}_a2_draws"] = a2_draws
+            draws_dict[f"{roi_name}_gamma_sp_draws"] = gamma_sp_draws
+            draws_dict[f"{roi_name}_X_vals"] = X_vals
+            draws_dict[f"{roi_name}_raw_mean"] = np.array([raw_mean])
+            draws_dict[f"{roi_name}_raw_sd"] = np.array([raw_sd])
+            draws_dict[f"{roi_name}_u_sp_mean"] = u_sp_mean
+
+            del idata
+
+        # Save Table 5
+        table5 = pd.DataFrame(table_rows)
+        table5.to_csv(OUT_TABLE5_CSV, index=False)
+        if verbose:
+            print(f"\n  Saved Table 5: {OUT_TABLE5_CSV}")
+
+        # Save posterior draws
+        np.savez(OUT_DRAWS_NPZ, **draws_dict)
+        if verbose:
+            print(f"  Saved draws: {OUT_DRAWS_NPZ}")
+
     text_rows = []
-    draws_dict = {}
-
-    for roi_name in all_rois:
-        roi_data = roi_df[roi_df["ROI"] == roi_name]
-        label = roi_data["label"].iloc[0]
-        framework = roi_data["framework"].iloc[0]
-        mask_type = roi_data["mask_type"].iloc[0]
-        expected = roi_data["expected_sign_sp"].iloc[0]
-        raw_mean = roi_data["raw_mean"].iloc[0]
-        raw_sd = roi_data["raw_sd"].iloc[0]
-
-        # Build X_person dict {ID: z_value}
-        X_person = dict(zip(
-            roi_data["ID"].astype(str),
-            roi_data["z_value"].values,
-        ))
-
-        if verbose:
-            print(f"\n  Fitting: {label} ({framework}, {mask_type})...")
-
-        idata, sub_df, valid_ids = fit_bayesian_varx1(
-            model_df, unique_ids, id_map,
-            X_person=X_person,
-            include_agesex=True,
-            progressbar=True,
-        )
-
-        n_valid = len(valid_ids)
-        n_obs = len(sub_df)
-        results = extract_results(idata, moderator_name=roi_name)
-
-        sp_mean = results.get("gamma_sp_mean", np.nan)
-        sp_lo = results.get("gamma_sp_ci_lo", np.nan)
-        sp_hi = results.get("gamma_sp_ci_hi", np.nan)
-        sp_prob_neg = results.get("gamma_sp_prob_neg", np.nan)
-        sp_p = 2 * min(sp_prob_neg, 1 - sp_prob_neg) if np.isfinite(sp_prob_neg) else np.nan
-
-        ps_mean = results.get("gamma_ps_mean", np.nan)
-        ps_lo = results.get("gamma_ps_ci_lo", np.nan)
-        ps_hi = results.get("gamma_ps_ci_hi", np.nan)
-        ps_prob_neg = results.get("gamma_ps_prob_neg", np.nan)
-        ps_p = 2 * min(ps_prob_neg, 1 - ps_prob_neg) if np.isfinite(ps_prob_neg) else np.nan
-
-        rhat_max = results.get("rhat_max", np.nan)
-
-        if verbose:
-            print(f"    N={n_valid}, obs={n_obs}")
-            print(f"    gamma_sp = {sp_mean:+.4f} [{sp_lo:+.4f}, {sp_hi:+.4f}], p={sp_p:.4f}")
-            print(f"    gamma_ps = {ps_mean:+.4f} [{ps_lo:+.4f}, {ps_hi:+.4f}], p={ps_p:.4f}")
-            print(f"    R-hat max: {rhat_max:.3f}")
-
-        table_rows.append({
-            "ROI": roi_name, "Label": label, "Framework": framework,
-            "Source": mask_type, "N": n_valid, "N_obs": n_obs,
-            "gamma_sp": sp_mean, "gamma_sp_ci_lo": sp_lo,
-            "gamma_sp_ci_hi": sp_hi, "gamma_sp_p": sp_p,
-            "gamma_ps": ps_mean, "gamma_ps_ci_lo": ps_lo,
-            "gamma_ps_ci_hi": ps_hi, "gamma_ps_p": ps_p,
-            "rhat_max": rhat_max,
-        })
-
-        # Save posterior draws for JN step
-        a2_draws = idata.posterior["a2"].values.flatten()
-        gamma_sp_draws = idata.posterior["gamma_sp"].values.flatten()
-        u_sp_mean = idata.posterior["u_sp"].values.reshape(-1, len(valid_ids)).mean(axis=0)
-        X_vals = np.array([X_person[sid] for sid in valid_ids if sid in X_person])
-        draws_dict[f"{roi_name}_a2_draws"] = a2_draws
-        draws_dict[f"{roi_name}_gamma_sp_draws"] = gamma_sp_draws
-        draws_dict[f"{roi_name}_X_vals"] = X_vals
-        draws_dict[f"{roi_name}_raw_mean"] = np.array([raw_mean])
-        draws_dict[f"{roi_name}_raw_sd"] = np.array([raw_sd])
-        draws_dict[f"{roi_name}_u_sp_mean"] = u_sp_mean
-
-        del idata
-
-    # Save Table 5
-    table5 = pd.DataFrame(table_rows)
-    table5.to_csv(OUT_TABLE5_CSV, index=False)
-    if verbose:
-        print(f"\n  Saved Table 5: {OUT_TABLE5_CSV}")
-
-    # Save posterior draws
-    np.savez(OUT_DRAWS_NPZ, **draws_dict)
-    if verbose:
-        print(f"  Saved draws: {OUT_DRAWS_NPZ}")
 
     # Sign concordance test (Krause 6 ROIs only)
     n_concordant = 0
@@ -262,8 +280,10 @@ def main():
         description="Step 7 — fit SP moderation models (7 ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--refit", action="store_true",
+                        help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step8(verbose=not args.quiet)
+    run_step8(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

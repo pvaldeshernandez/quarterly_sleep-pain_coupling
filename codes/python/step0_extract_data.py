@@ -443,7 +443,7 @@ def filter_dictionary(dict_df: pd.DataFrame) -> pd.DataFrame:
 # Top-level entry point
 # =====================================================================
 
-def extract(verbose: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def extract(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Run the full extraction and write outputs.
 
     Returns
@@ -570,8 +570,12 @@ def main():
         "--quiet", action="store_true",
         help="Suppress progress output.",
     )
+    parser.add_argument(
+        "--refit", action="store_true",
+        help="Re-run computation from scratch instead of loading saved derivatives",
+    )
     args = parser.parse_args()
-    extract(verbose=not args.quiet)
+    extract(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

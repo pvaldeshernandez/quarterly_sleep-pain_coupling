@@ -31,6 +31,8 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step13_severity_moderation")
+os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
@@ -79,7 +81,7 @@ MODELS = [
 ]
 
 
-def run_step13(verbose=True):
+def run_step13(verbose=True, refit=False):
     from coupling_model import fit_bayesian_varx1, extract_results
 
     if verbose:
@@ -87,6 +89,24 @@ def run_step13(verbose=True):
         print("STEP 13 — Person-mean severity moderation (Table S2)")
         print("=" * 70)
 
+    # Check whether saved derivatives exist
+    saved_exist = os.path.exists(OUT_TABLE_CSV) and os.path.exists(OUT_TEXT_CSV)
+    if not refit and not saved_exist:
+        if verbose:
+            print("  Saved derivatives not found — forcing refit.")
+        refit = True
+
+    if not refit and saved_exist:
+        # ------ REPLOT MODE: load saved derivatives ------
+        if verbose:
+            print("  WARNING: Running in replot mode -- loading saved derivatives.")
+            print("  If you have changed upstream data or code, re-run with --refit.")
+            print(f"\n  Loaded Table S2: {OUT_TABLE_CSV}")
+            print(f"  Loaded text numbers: {OUT_TEXT_CSV}")
+            print("=" * 70)
+        return
+
+    # ------ FULL MCMC FIT ------
     df_full, model_df, unique_ids, id_map = load_data(IN_PROCESSED_CSV)
 
     # Compute person-mean z-scores for each moderator
@@ -382,8 +402,10 @@ def main():
         description="Step 13 — Person-mean severity moderation (Table S2)."
     )
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--refit", action="store_true",
+                        help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step13(verbose=not args.quiet)
+    run_step13(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

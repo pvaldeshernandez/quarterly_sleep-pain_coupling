@@ -572,7 +572,7 @@ def generate_figure1(
 # Top-level entry point
 # =====================================================================
 
-def run_step3(verbose: bool = True):
+def run_step3(verbose: bool = True, refit: bool = False):
     """Full Step 2 pipeline."""
     if verbose:
         print("=" * 70)
@@ -683,8 +683,12 @@ def main():
         "--quiet", action="store_true",
         help="Suppress progress output.",
     )
+    parser.add_argument(
+        "--refit", action="store_true",
+        help="Re-run computation from scratch instead of loading saved derivatives",
+    )
     args = parser.parse_args()
-    run_step3(verbose=not args.quiet)
+    run_step3(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

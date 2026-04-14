@@ -574,7 +574,7 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
 # Top-level entry point
 # =====================================================================
 
-def run_step1(verbose: bool = True) -> Tuple[pd.DataFrame, Dict]:
+def run_step1(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, Dict]:
     """Full Step 1 pipeline: load, factor-analyze, score, interpolate.
 
     Returns
@@ -813,8 +813,12 @@ def main():
         "--quiet", action="store_true",
         help="Suppress progress output.",
     )
+    parser.add_argument(
+        "--refit", action="store_true",
+        help="Re-run computation from scratch instead of loading saved derivatives",
+    )
     args = parser.parse_args()
-    run_step1(verbose=not args.quiet)
+    run_step1(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

@@ -242,7 +242,7 @@ def _generate_coupling_figure(person_df, pop_mean, pop_ci_lo, pop_ci_hi,
     plt.close(fig)
 
 
-def run_step4(verbose: bool = True):
+def run_step4(verbose: bool = True, refit: bool = False):
     """Fit the coupling model and LOO-CV, produce all Step 3 outputs."""
     from coupling_model import (
         fit_bayesian_varx1,
@@ -261,216 +261,260 @@ def run_step4(verbose: bool = True):
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-    df_full, model_df, unique_ids, id_map = load_data(IN_PROCESSED_CSV)
-    n_persons = len(unique_ids)
-    n_obs = len(model_df)
-
-    # ==================================================================
-    # 1. Fit the full VARX(1)
-    # ==================================================================
-    if verbose:
-        print(f"\n  Fitting full model (include_agesex=True)...")
-        print(f"    {n_persons} subjects, {n_obs} observations")
-        print(f"    MCMC: 4 chains x 2000 draws, 2000 tuning")
-
-    idata, sub_df, valid_ids = fit_bayesian_varx1(
-        model_df, unique_ids, id_map,
-        include_agesex=True,
-        progressbar=True,
-    )
-
-    # ==================================================================
-    # 2. Extract population parameters -> Table 4
-    # ==================================================================
-    results = extract_results(idata)
-    results["n_persons"] = n_persons
-    results["n_obs"] = n_obs
-
-    table4_rows = []
-    for key, desc in [
-        ("a0", "Pain intercept (mu_p)"),
-        ("a1", "Pain autoregression (phi_p)"),
-        ("a2", "Sleep->Pain coupling (lambda_sp)"),
-        ("a3", "Localization->Pain direct (delta_p)"),
-        ("a4", "Sleep x Localization->Pain (omega_sp)"),
-        ("b0", "Sleep intercept (mu_s)"),
-        ("b1", "Pain->Sleep coupling (lambda_ps)"),
-        ("b2", "Sleep autoregression (phi_s)"),
-        ("b3", "Localization->Sleep direct (delta_s)"),
-        ("b4", "Pain x Localization->Sleep (omega_ps)"),
-        ("tau_sp", "SD: Sleep->Pain random slope"),
-        ("tau_ps", "SD: Pain->Sleep random slope"),
-        ("sigma_pain", "Innovation SD (pain)"),
-        ("sigma_sleep", "Innovation SD (sleep)"),
-        ("rho_innov", "Innovation correlation (rho)"),
-    ]:
-        table4_rows.append({
-            "Parameter": key,
-            "Description": desc,
-            "Estimate": results.get(f"{key}_mean"),
-            "SD": results.get(f"{key}_sd"),
-            "CrI_lo": results.get(f"{key}_ci_lo"),
-            "CrI_hi": results.get(f"{key}_ci_hi"),
-            "P_neg": results.get(f"{key}_prob_neg"),
-        })
-
-    table4 = pd.DataFrame(table4_rows)
-    table4.to_csv(OUT_TABLE4_CSV, index=False)
-    if verbose:
-        print(f"\n  Saved Table 4: {OUT_TABLE4_CSV}")
-
-    # ==================================================================
-    # 3. Per-person coupling slopes
-    # ==================================================================
-    a2_flat = idata.posterior["a2"].values.reshape(-1)
-    b1_flat = idata.posterior["b1"].values.reshape(-1)
-    u_sp_flat = idata.posterior["u_sp"].values.reshape(-1, n_persons)
-    u_ps_flat = idata.posterior["u_ps"].values.reshape(-1, n_persons)
-
-    lambda_sp_i = a2_flat[:, None] + u_sp_flat
-    lambda_ps_i = b1_flat[:, None] + u_ps_flat
-
-    person_rows = []
-    for i, pid in enumerate(unique_ids):
-        sp = lambda_sp_i[:, i]
-        ps = lambda_ps_i[:, i]
-        person_rows.append({
-            "ID": pid,
-            "beta_sp_mean": float(np.mean(sp)),
-            "beta_sp_ci_lo": float(np.percentile(sp, 2.5)),
-            "beta_sp_ci_hi": float(np.percentile(sp, 97.5)),
-            "beta_sp_prob_neg": float((sp < 0).mean()),
-            "beta_ps_mean": float(np.mean(ps)),
-            "beta_ps_ci_lo": float(np.percentile(ps, 2.5)),
-            "beta_ps_ci_hi": float(np.percentile(ps, 97.5)),
-            "beta_ps_prob_neg": float((ps < 0).mean()),
-        })
-    person_df = pd.DataFrame(person_rows)
-    person_df.to_csv(OUT_PERSON_CSV, index=False)
-    if verbose:
-        print(f"  Saved per-person coupling: {OUT_PERSON_CSV}")
-
-    # ==================================================================
-    # 4. Save posterior draws for downstream steps
-    # ==================================================================
-    a4_draws = idata.posterior["a4"].values.flatten()
-    b4_draws = idata.posterior["b4"].values.flatten()
-    u_sp_mean = idata.posterior["u_sp"].values.mean(axis=(0, 1))
-    u_ps_mean = idata.posterior["u_ps"].values.mean(axis=(0, 1))
-    obs_pid_idx = model_df["pid_idx"].values.astype(int)
-    obs_contrast = model_df["contrast_within_lag1"].values.astype(float)
-    contrast_vals = model_df["contrast_within_lag1"].dropna().values.astype(float)
-
-    np.savez(
-        OUT_DRAWS_NPZ,
-        a2_draws=a2_flat, a4_draws=a4_draws,
-        b1_draws=b1_flat, b4_draws=b4_draws,
-        u_sp_mean=u_sp_mean, u_ps_mean=u_ps_mean,
-        obs_pid_idx=obs_pid_idx, obs_contrast=obs_contrast,
-        contrast_vals=contrast_vals,
-    )
-    if verbose:
-        print(f"  Saved posterior draws: {OUT_DRAWS_NPZ}")
-
-    # ==================================================================
-    # 5. LOO-CV model comparison
-    # ==================================================================
-    if verbose:
-        print("\n" + "=" * 70)
-        print("LOO-CV MODEL COMPARISON")
-        print("=" * 70)
-        print("  Fitting 4 nested models...")
-
-    # Free the main-fit idata before LOO
-    del idata
-    gc.collect()
-
-    # The LOO comparison function in coupling_model.py expects a
-    # data_dir with a processed CSV. We point it at our derivatives
-    # folder where step2_processed_long.csv lives, but the function
-    # looks for processed_data_contrast.csv or processed_data.csv.
-    # Easiest: symlink or pass the data directly. Instead, we
-    # inline the LOO logic here using the same primitives.
-
-    idata_kwargs = {"log_likelihood": True}
-
-    model_configs = [
-        ("full",  True,  True,  "full model (both SP and PS paths)"),
-        ("no_PS", True,  False, "no_PS model (SP only)"),
-        ("no_SP", False, True,  "no_SP model (PS only)"),
-        ("null",  False, False, "null model (no coupling)"),
-    ]
-
-    loo_dict = {}
-    for name, inc_sp, inc_ps, desc in model_configs:
+    # Check whether saved derivatives exist
+    saved_exist = (os.path.exists(OUT_DRAWS_NPZ) and os.path.exists(OUT_PERSON_CSV)
+                   and os.path.exists(OUT_TABLE4_CSV) and os.path.exists(OUT_LOO_CSV)
+                   and os.path.exists(OUT_TEXT_CSV))
+    if not refit and not saved_exist:
         if verbose:
-            print(f"\n  Fitting {desc}...")
-        idata_loo, _, _ = fit_bayesian_varx1(
+            print("  Saved derivatives not found — forcing refit.")
+        refit = True
+
+    if not refit and saved_exist:
+        # ==============================================================
+        # REPLOT MODE: load saved derivatives, regenerate figures only
+        # ==============================================================
+        if verbose:
+            print("  WARNING: Running in replot mode -- loading saved derivatives.")
+            print("  If you have changed upstream data or code, re-run with --refit.")
+
+        person_df = pd.read_csv(OUT_PERSON_CSV)
+        table4 = pd.read_csv(OUT_TABLE4_CSV)
+        loo_df = pd.read_csv(OUT_LOO_CSV)
+        text_df = pd.read_csv(OUT_TEXT_CSV)
+
+        # Reconstruct results dict from Table 4 for figure generation
+        results = {}
+        for _, row in table4.iterrows():
+            key = row["Parameter"]
+            results[f"{key}_mean"] = row["Estimate"]
+            results[f"{key}_sd"] = row["SD"]
+            results[f"{key}_ci_lo"] = row["CrI_lo"]
+            results[f"{key}_ci_hi"] = row["CrI_hi"]
+            results[f"{key}_prob_neg"] = row["P_neg"]
+        # Also read rhat_max from text numbers
+        rhat_row = text_df[text_df["metric"] == "rhat_max"]
+        if len(rhat_row) > 0:
+            results["rhat_max"] = float(rhat_row["value"].iloc[0])
+
+        if verbose:
+            print(f"  Loaded Table 4: {OUT_TABLE4_CSV}")
+            print(f"  Loaded person coupling: {OUT_PERSON_CSV}")
+            print(f"  Loaded LOO: {OUT_LOO_CSV}")
+    else:
+        # ==============================================================
+        # FULL MCMC FIT
+        # ==============================================================
+        df_full, model_df, unique_ids, id_map = load_data(IN_PROCESSED_CSV)
+        n_persons = len(unique_ids)
+        n_obs = len(model_df)
+
+        # ==============================================================
+        # 1. Fit the full VARX(1)
+        # ==============================================================
+        if verbose:
+            print(f"\n  Fitting full model (include_agesex=True)...")
+            print(f"    {n_persons} subjects, {n_obs} observations")
+            print(f"    MCMC: 4 chains x 2000 draws, 2000 tuning")
+
+        idata, sub_df, valid_ids = fit_bayesian_varx1(
             model_df, unique_ids, id_map,
             include_agesex=True,
-            include_sp=inc_sp, include_ps=inc_ps,
-            idata_kwargs=idata_kwargs,
-            cores=1,
             progressbar=True,
         )
+
+        # ==============================================================
+        # 2. Extract population parameters -> Table 4
+        # ==============================================================
+        results = extract_results(idata)
+        results["n_persons"] = n_persons
+        results["n_obs"] = n_obs
+
+        table4_rows = []
+        for key, desc in [
+            ("a0", "Pain intercept (mu_p)"),
+            ("a1", "Pain autoregression (phi_p)"),
+            ("a2", "Sleep->Pain coupling (lambda_sp)"),
+            ("a3", "Localization->Pain direct (delta_p)"),
+            ("a4", "Sleep x Localization->Pain (omega_sp)"),
+            ("b0", "Sleep intercept (mu_s)"),
+            ("b1", "Pain->Sleep coupling (lambda_ps)"),
+            ("b2", "Sleep autoregression (phi_s)"),
+            ("b3", "Localization->Sleep direct (delta_s)"),
+            ("b4", "Pain x Localization->Sleep (omega_ps)"),
+            ("tau_sp", "SD: Sleep->Pain random slope"),
+            ("tau_ps", "SD: Pain->Sleep random slope"),
+            ("sigma_pain", "Innovation SD (pain)"),
+            ("sigma_sleep", "Innovation SD (sleep)"),
+            ("rho_innov", "Innovation correlation (rho)"),
+        ]:
+            table4_rows.append({
+                "Parameter": key,
+                "Description": desc,
+                "Estimate": results.get(f"{key}_mean"),
+                "SD": results.get(f"{key}_sd"),
+                "CrI_lo": results.get(f"{key}_ci_lo"),
+                "CrI_hi": results.get(f"{key}_ci_hi"),
+                "P_neg": results.get(f"{key}_prob_neg"),
+            })
+
+        table4 = pd.DataFrame(table4_rows)
+        table4.to_csv(OUT_TABLE4_CSV, index=False)
         if verbose:
-            print(f"  Computing LOO for {name}...")
-        ll = idata_loo.log_likelihood
-        if "y_joint" not in ll.data_vars:
-            import xarray as xr
-            joint_vals = ll["y_pain"].values + ll["y_sleep"].values
-            dims = ll["y_pain"].dims
-            coords = {d: ll[d] for d in dims if d in ll.coords}
-            idata_loo.log_likelihood = idata_loo.log_likelihood.drop_vars(
-                ["y_pain", "y_sleep"]
-            )
-            idata_loo.log_likelihood["y_joint"] = xr.DataArray(
-                joint_vals, dims=dims, coords=coords
-            )
-            del joint_vals
-            gc.collect()
-        loo_dict[name] = az.loo(idata_loo, pointwise=True, var_name="y_joint")
-        del idata_loo, ll
+            print(f"\n  Saved Table 4: {OUT_TABLE4_CSV}")
+
+        # ==============================================================
+        # 3. Per-person coupling slopes
+        # ==============================================================
+        a2_flat = idata.posterior["a2"].values.reshape(-1)
+        b1_flat = idata.posterior["b1"].values.reshape(-1)
+        u_sp_flat = idata.posterior["u_sp"].values.reshape(-1, n_persons)
+        u_ps_flat = idata.posterior["u_ps"].values.reshape(-1, n_persons)
+
+        lambda_sp_i = a2_flat[:, None] + u_sp_flat
+        lambda_ps_i = b1_flat[:, None] + u_ps_flat
+
+        person_rows = []
+        for i, pid in enumerate(unique_ids):
+            sp = lambda_sp_i[:, i]
+            ps = lambda_ps_i[:, i]
+            person_rows.append({
+                "ID": pid,
+                "beta_sp_mean": float(np.mean(sp)),
+                "beta_sp_ci_lo": float(np.percentile(sp, 2.5)),
+                "beta_sp_ci_hi": float(np.percentile(sp, 97.5)),
+                "beta_sp_prob_neg": float((sp < 0).mean()),
+                "beta_ps_mean": float(np.mean(ps)),
+                "beta_ps_ci_lo": float(np.percentile(ps, 2.5)),
+                "beta_ps_ci_hi": float(np.percentile(ps, 97.5)),
+                "beta_ps_prob_neg": float((ps < 0).mean()),
+            })
+        person_df = pd.DataFrame(person_rows)
+        person_df.to_csv(OUT_PERSON_CSV, index=False)
+        if verbose:
+            print(f"  Saved per-person coupling: {OUT_PERSON_CSV}")
+
+        # ==============================================================
+        # 4. Save posterior draws for downstream steps
+        # ==============================================================
+        a4_draws = idata.posterior["a4"].values.flatten()
+        b4_draws = idata.posterior["b4"].values.flatten()
+        u_sp_mean = idata.posterior["u_sp"].values.mean(axis=(0, 1))
+        u_ps_mean = idata.posterior["u_ps"].values.mean(axis=(0, 1))
+        obs_pid_idx = model_df["pid_idx"].values.astype(int)
+        obs_contrast = model_df["contrast_within_lag1"].values.astype(float)
+        contrast_vals = model_df["contrast_within_lag1"].dropna().values.astype(float)
+
+        np.savez(
+            OUT_DRAWS_NPZ,
+            a2_draws=a2_flat, a4_draws=a4_draws,
+            b1_draws=b1_flat, b4_draws=b4_draws,
+            u_sp_mean=u_sp_mean, u_ps_mean=u_ps_mean,
+            obs_pid_idx=obs_pid_idx, obs_contrast=obs_contrast,
+            contrast_vals=contrast_vals,
+        )
+        if verbose:
+            print(f"  Saved posterior draws: {OUT_DRAWS_NPZ}")
+
+        # ==============================================================
+        # 5. LOO-CV model comparison
+        # ==============================================================
+        if verbose:
+            print("\n" + "=" * 70)
+            print("LOO-CV MODEL COMPARISON")
+            print("=" * 70)
+            print("  Fitting 4 nested models...")
+
+        # Free the main-fit idata before LOO
+        del idata
         gc.collect()
 
-    # Pairwise comparisons
-    pairs = [
-        ("full", "no_PS"),
-        ("no_SP", "null"),
-        ("full", "no_SP"),
-        ("no_PS", "null"),
-    ]
-    loo_rows = []
-    for a, b in pairs:
-        d = loo_dict[a].loo_i.values - loo_dict[b].loo_i.values
-        n = len(d)
-        delta = float(d.sum())
-        se = float(np.sqrt(n * d.var(ddof=1)))
-        ratio = delta / se if se > 0 else float("nan")
-        loo_rows.append({
-            "model_a": a, "model_b": b,
-            "delta_elpd": delta, "se": se, "delta_over_se": ratio,
-        })
+        # The LOO comparison function in coupling_model.py expects a
+        # data_dir with a processed CSV. We point it at our derivatives
+        # folder where step2_processed_long.csv lives, but the function
+        # looks for processed_data_contrast.csv or processed_data.csv.
+        # Easiest: symlink or pass the data directly. Instead, we
+        # inline the LOO logic here using the same primitives.
+
+        idata_kwargs = {"log_likelihood": True}
+
+        model_configs = [
+            ("full",  True,  True,  "full model (both SP and PS paths)"),
+            ("no_PS", True,  False, "no_PS model (SP only)"),
+            ("no_SP", False, True,  "no_SP model (PS only)"),
+            ("null",  False, False, "null model (no coupling)"),
+        ]
+
+        loo_dict = {}
+        for name, inc_sp, inc_ps, desc in model_configs:
+            if verbose:
+                print(f"\n  Fitting {desc}...")
+            idata_loo, _, _ = fit_bayesian_varx1(
+                model_df, unique_ids, id_map,
+                include_agesex=True,
+                include_sp=inc_sp, include_ps=inc_ps,
+                idata_kwargs=idata_kwargs,
+                cores=1,
+                progressbar=True,
+            )
+            if verbose:
+                print(f"  Computing LOO for {name}...")
+            ll = idata_loo.log_likelihood
+            if "y_joint" not in ll.data_vars:
+                import xarray as xr
+                joint_vals = ll["y_pain"].values + ll["y_sleep"].values
+                dims = ll["y_pain"].dims
+                coords = {d: ll[d] for d in dims if d in ll.coords}
+                idata_loo.log_likelihood = idata_loo.log_likelihood.drop_vars(
+                    ["y_pain", "y_sleep"]
+                )
+                idata_loo.log_likelihood["y_joint"] = xr.DataArray(
+                    joint_vals, dims=dims, coords=coords
+                )
+                del joint_vals
+                gc.collect()
+            loo_dict[name] = az.loo(idata_loo, pointwise=True, var_name="y_joint")
+            del idata_loo, ll
+            gc.collect()
+
+        # Pairwise comparisons
+        pairs = [
+            ("full", "no_PS"),
+            ("no_SP", "null"),
+            ("full", "no_SP"),
+            ("no_PS", "null"),
+        ]
+        loo_rows = []
+        for a, b in pairs:
+            d = loo_dict[a].loo_i.values - loo_dict[b].loo_i.values
+            n = len(d)
+            delta = float(d.sum())
+            se = float(np.sqrt(n * d.var(ddof=1)))
+            ratio = delta / se if se > 0 else float("nan")
+            loo_rows.append({
+                "model_a": a, "model_b": b,
+                "delta_elpd": delta, "se": se, "delta_over_se": ratio,
+            })
+            if verbose:
+                print(f"  {a:>6} vs {b:<6}: ΔELPD = {delta:+.2f}, "
+                      f"SE = {se:.2f}, Δ/SE = {ratio:+.2f}")
+
+        # Pareto k-hat diagnostics (full model)
+        khat = loo_dict["full"].pareto_k.values
+        k_max = float(np.nanmax(khat))
+        k_bad = int((khat > 0.7).sum())
+        n_loo_obs = len(khat)
         if verbose:
-            print(f"  {a:>6} vs {b:<6}: ΔELPD = {delta:+.2f}, "
-                  f"SE = {se:.2f}, Δ/SE = {ratio:+.2f}")
+            print(f"  Pareto k-hat (full): max={k_max:.2f}, "
+                  f"{k_bad}/{n_loo_obs} > 0.7")
 
-    # Pareto k-hat diagnostics (full model)
-    khat = loo_dict["full"].pareto_k.values
-    k_max = float(np.nanmax(khat))
-    k_bad = int((khat > 0.7).sum())
-    n_loo_obs = len(khat)
-    if verbose:
-        print(f"  Pareto k-hat (full): max={k_max:.2f}, "
-              f"{k_bad}/{n_loo_obs} > 0.7")
-
-    loo_df = pd.DataFrame(loo_rows)
-    loo_df.to_csv(OUT_LOO_CSV, index=False)
-    if verbose:
-        print(f"\n  Saved LOO: {OUT_LOO_CSV}")
+        loo_df = pd.DataFrame(loo_rows)
+        loo_df.to_csv(OUT_LOO_CSV, index=False)
+        if verbose:
+            print(f"\n  Saved LOO: {OUT_LOO_CSV}")
 
     # ==================================================================
-    # 6. Text numbers
+    # 6. Text numbers (always regenerated)
     # ==================================================================
     text_rows = []
 
@@ -513,9 +557,18 @@ def run_step4(verbose: bool = True):
            f"{row['se']:.2f}")
         _t(f"loo_{row['model_a']}_vs_{row['model_b']}_ratio",
            f"{row['delta_over_se']:+.2f}")
-    _t("pareto_khat_max", f"{k_max:.2f}")
-    _t("pareto_khat_above_07", str(k_bad))
-    _t("pareto_khat_n_obs", str(n_loo_obs))
+    # Pareto k-hat from text numbers if in replot mode
+    khat_row = text_df[text_df["metric"] == "pareto_khat_max"] if not refit and saved_exist else None
+    if khat_row is not None and len(khat_row) > 0:
+        _t("pareto_khat_max", khat_row["value"].iloc[0])
+        above_row = text_df[text_df["metric"] == "pareto_khat_above_07"]
+        _t("pareto_khat_above_07", above_row["value"].iloc[0] if len(above_row) > 0 else "")
+        nobs_row = text_df[text_df["metric"] == "pareto_khat_n_obs"]
+        _t("pareto_khat_n_obs", nobs_row["value"].iloc[0] if len(nobs_row) > 0 else "")
+    else:
+        _t("pareto_khat_max", f"{k_max:.2f}")
+        _t("pareto_khat_above_07", str(k_bad))
+        _t("pareto_khat_n_obs", str(n_loo_obs))
 
     text_df = pd.DataFrame(text_rows)
     text_df.to_csv(OUT_TEXT_CSV, index=False)
@@ -523,7 +576,7 @@ def run_step4(verbose: bool = True):
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
 
     # ==================================================================
-    # 7. Figures 2 & 3 — person-level coupling
+    # 7. Figures 2 & 3 — person-level coupling (always regenerated)
     # ==================================================================
     _generate_coupling_figure(
         person_df,
@@ -577,8 +630,12 @@ def main():
         "--quiet", action="store_true",
         help="Suppress progress output.",
     )
+    parser.add_argument(
+        "--refit", action="store_true",
+        help="Re-run computation from scratch instead of loading saved derivatives",
+    )
     args = parser.parse_args()
-    run_step4(verbose=not args.quiet)
+    run_step4(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

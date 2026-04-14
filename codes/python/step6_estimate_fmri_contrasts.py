@@ -227,7 +227,8 @@ def process_subject(subj_id: str, overwrite: bool = False,
     return f"{int(in_mask.sum())} masked / {int(valid.sum())} unmasked voxels"
 
 
-def run_step6(overwrite: bool = False, verbose: bool = True):
+def run_step6(overwrite: bool = False, verbose: bool = True, refit: bool = False):
+    overwrite = overwrite or refit
     os.makedirs(OUT_MASKED,   exist_ok=True)
     os.makedirs(OUT_UNMASKED, exist_ok=True)
 
@@ -278,9 +279,11 @@ def main():
     )
     parser.add_argument("--overwrite", action="store_true",
                         help="Re-estimate even if output files already exist.")
+    parser.add_argument("--refit", action="store_true",
+                        help="Re-run computation from scratch instead of loading saved derivatives")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    run_step6(overwrite=args.overwrite, verbose=not args.quiet)
+    run_step6(overwrite=args.overwrite, verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

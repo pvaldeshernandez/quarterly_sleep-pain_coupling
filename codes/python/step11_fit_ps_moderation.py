@@ -153,7 +153,7 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
     return pd.DataFrame(table_rows), draws_dict
 
 
-def run_step11(verbose=True):
+def run_step11(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
         print("STEP 9 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
@@ -164,31 +164,50 @@ def run_step11(verbose=True):
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-    _, model_df, unique_ids, id_map = load_step2_data(IN_PROCESSED_CSV)
+    # Check whether saved derivatives exist
+    saved_exist = (os.path.exists(OUT_FMRI_DRAWS) and os.path.exists(OUT_VBM_DRAWS)
+                   and os.path.exists(OUT_FMRI_TABLE) and os.path.exists(OUT_VBM_TABLE))
+    if not refit and not saved_exist:
+        if verbose:
+            print("  Saved derivatives not found — forcing refit.")
+        refit = True
+
+    if not refit and saved_exist:
+        # ------ REPLOT MODE: load saved derivatives ------
+        if verbose:
+            print("  WARNING: Running in replot mode -- loading saved derivatives.")
+            print("  If you have changed upstream data or code, re-run with --refit.")
+        fmri_table = pd.read_csv(OUT_FMRI_TABLE)
+        fmri_draws = dict(np.load(OUT_FMRI_DRAWS))
+        vbm_table = pd.read_csv(OUT_VBM_TABLE)
+        vbm_draws = dict(np.load(OUT_VBM_DRAWS))
+    else:
+        # ------ FULL MCMC FIT ------
+        _, model_df, unique_ids, id_map = load_step2_data(IN_PROCESSED_CSV)
+
+        # ---- fMRI BOLD ----
+        fmri_table, fmri_draws = fit_modality(
+            "fMRI_BOLD", IN_FMRI_CSV, model_df, unique_ids, id_map, verbose
+        )
+        fmri_table.to_csv(OUT_FMRI_TABLE, index=False)
+        np.savez(OUT_FMRI_DRAWS, **fmri_draws)
+        if verbose:
+            print(f"\n  Saved fMRI table: {OUT_FMRI_TABLE}")
+            print(f"  Saved fMRI draws: {OUT_FMRI_DRAWS}")
+
+        # ---- VBM GM volume ----
+        vbm_table, vbm_draws = fit_modality(
+            "VBM_GM_volume", IN_VBM_CSV, model_df, unique_ids, id_map, verbose
+        )
+        vbm_table.to_csv(OUT_VBM_TABLE, index=False)
+        np.savez(OUT_VBM_DRAWS, **vbm_draws)
+        if verbose:
+            print(f"\n  Saved VBM table: {OUT_VBM_TABLE}")
+            print(f"  Saved VBM draws: {OUT_VBM_DRAWS}")
 
     text_rows = []
     def _t(metric, value, note=""):
         text_rows.append({"metric": metric, "value": str(value), "note": note})
-
-    # ---- fMRI BOLD ----
-    fmri_table, fmri_draws = fit_modality(
-        "fMRI_BOLD", IN_FMRI_CSV, model_df, unique_ids, id_map, verbose
-    )
-    fmri_table.to_csv(OUT_FMRI_TABLE, index=False)
-    np.savez(OUT_FMRI_DRAWS, **fmri_draws)
-    if verbose:
-        print(f"\n  Saved fMRI table: {OUT_FMRI_TABLE}")
-        print(f"  Saved fMRI draws: {OUT_FMRI_DRAWS}")
-
-    # ---- VBM GM volume ----
-    vbm_table, vbm_draws = fit_modality(
-        "VBM_GM_volume", IN_VBM_CSV, model_df, unique_ids, id_map, verbose
-    )
-    vbm_table.to_csv(OUT_VBM_TABLE, index=False)
-    np.savez(OUT_VBM_DRAWS, **vbm_draws)
-    if verbose:
-        print(f"\n  Saved VBM table: {OUT_VBM_TABLE}")
-        print(f"  Saved VBM draws: {OUT_VBM_DRAWS}")
 
     # ---- VBM sign concordance (5/5 all negative expected) ----
     n_concordant = 0
@@ -240,8 +259,10 @@ def main():
         description="Step 10 — fit PS moderation (arousal relay ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--refit", action="store_true",
+                        help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step11(verbose=not args.quiet)
+    run_step11(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

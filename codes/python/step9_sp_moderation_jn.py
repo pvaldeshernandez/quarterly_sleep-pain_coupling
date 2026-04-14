@@ -244,7 +244,7 @@ def draw_jn_panel(ax, jn, direction_label, slopes_dict,
               borderaxespad=0.3)
 
 
-def run_step9(verbose=True):
+def run_step9(verbose=True, refit=False):
     from coupling_model import compute_jn_curve
 
     if verbose:
@@ -256,6 +256,11 @@ def run_step9(verbose=True):
     os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+
+    if not refit and os.path.exists(IN_DRAWS_NPZ) and os.path.exists(IN_TABLE5_CSV):
+        if verbose:
+            print("  WARNING: Running in replot mode -- loading saved derivatives.")
+            print("  If you have changed upstream data or code, re-run with --refit.")
 
     d = np.load(IN_DRAWS_NPZ)
     table5 = pd.read_csv(IN_TABLE5_CSV)
@@ -492,8 +497,10 @@ def main():
         description="Step 9 — SP moderation JN analysis."
     )
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--refit", action="store_true",
+                        help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step9(verbose=not args.quiet)
+    run_step9(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

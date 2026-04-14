@@ -63,11 +63,9 @@ python step4_fit_coupling_model.py
 python step5_contrast_moderation.py
 python step6_estimate_fmri_contrasts.py
 python step7_extract_sp_rois.py
-python step7b_plot_sp_roi_maps.py
 python step8_fit_sp_moderation.py
 python step9_sp_moderation_jn.py
 python step10_extract_ps_rois.py
-python step10b_plot_ps_roi_maps.py
 python step11_fit_ps_moderation.py
 python step12_ps_moderation_jn.py
 python step13_severity_moderation.py
@@ -89,12 +87,10 @@ Total time: ~45 minutes on a 4-core machine with 16 GB RAM. Steps
 | 4 | Fit the Bayesian VARX(1) coupling model + LOO-CV (4 nested models) | Tables 3-4, Figures 2-3, posterior draws |
 | 5 | Johnson-Neyman analysis of pain localization moderation | Figure 4, Figure S3 |
 | 6 | Re-estimate SPM contrast images without GM mask (OLS replication of SPM GLM) | Unmasked con images in `data/spm_nomask/` |
-| 7 | Extract mean fMRI BOLD in 8 spherical ROIs (6 Krause + bilateral dACC/MCC) | ROI values CSV |
-| 7b | Brain slice visualizations of SP ROIs on MNI template | Figure S4 |
+| 7 | Extract mean fMRI BOLD in 8 spherical ROIs (6 Krause + bilateral dACC/MCC) + brain maps | ROI values CSV, Figure S4 |
 | 8 | Fit 8 Sleep-to-Pain moderation models, Krause sign concordance test | Table 5 + sign concordance |
 | 9 | Johnson-Neyman analysis for SP moderation ROIs | Figures 5, 6, S5 |
-| 10 | Extract arousal relay ROI values (5 atlas ROIs x 2 modalities: fMRI + VBM) | ROI values CSVs |
-| 10b | Brain slice visualizations of PS arousal ROIs on MNI template | Figure S6 |
+| 10 | Extract arousal relay ROI values (5 atlas ROIs x 2 modalities: fMRI + VBM) + brain maps | ROI values CSVs, Figure S6 |
 | 11 | Fit 10 Pain-to-Sleep moderation models, VBM sign concordance | Table S1 |
 | 12 | Johnson-Neyman analysis for PS moderation ROIs | Figures S7, S8 |
 | 13 | Person-mean severity moderation of coupling (3 models) | Table S2 |
