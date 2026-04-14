@@ -477,7 +477,28 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
             f"was {min_p:.3f}."
         )
 
+    # ----- Table S2 markdown -----
+    table_s2_lines = []
+    table_s2_lines.append(
+        "| Moderator | Model | Direction | $\\hat{\\gamma}$ | 95% CrI | $p$ |"
+    )
+    table_s2_lines.append("|-----------|-------|-----------|----------|---------|-----|")
+
+    for _, row in table.iterrows():
+        table_s2_lines.append(
+            f"| {row['Moderator']} | {row['Model']} | {row['Direction']} "
+            f"| {row['gamma']:.3f} "
+            f"| [{row['CrI_lo']:.3f}, {row['CrI_hi']:.3f}] "
+            f"| {row['p']:.3f} |"
+        )
+
+    table_s2_md = "\n".join(table_s2_lines)
+
     text = f"""\
+## Supplementary Table S2
+
+{table_s2_md}
+
 ## Supplementary Table S2 note
 
 {paragraph}

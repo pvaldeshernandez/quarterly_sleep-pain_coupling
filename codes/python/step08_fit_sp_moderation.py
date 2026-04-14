@@ -403,6 +403,51 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         f"significance."
     )
 
+    # --- Table 5 ---
+    table5_text = ""
+    if os.path.exists(OUT_TABLE5_CSV):
+        t5 = pd.read_csv(OUT_TABLE5_CSV)
+        table5_lines = [
+            "| ROI | Framework | Expected $\\hat{\\gamma}_{sp}$ | $\\hat{\\gamma}_{sp}$ | 95% CrI | $p$ |",
+            "| :--- | :--- | :---: | ---: | :--- | ---: |",
+        ]
+        for _, row in t5.iterrows():
+            roi = row["ROI"].replace("_", " ")
+            fw = row["Framework"]
+            exp = row.get("expected_sign_sp", "")
+            gsp = f"{row['gamma_sp']:+.3f}"
+            ci = f"[{row['gamma_sp_ci_lo']:+.3f}, {row['gamma_sp_ci_hi']:+.3f}]"
+            p = f"{row['gamma_sp_p']:.3f}"
+            # Bold significant rows
+            is_sig = row["gamma_sp_p"] < 0.05
+            if is_sig:
+                table5_lines.append(
+                    f"| **{roi}** | **{fw}** | **{exp}** | **{gsp}** | **{ci}** | **{p}** |"
+                )
+            else:
+                table5_lines.append(
+                    f"| {roi} | {fw} | {exp} | {gsp} | {ci} | {p} |"
+                )
+        table5_text = "\n".join(table5_lines)
+
+    n_fmri = int(v.get("n_fmri", "174"))
+    table5_note = (
+        f"**Note.** Each ROI was tested in a separate model run. "
+        f"The six Krause et al. (2019) ROIs test the sleep deprivation "
+        f"framework: sleep deprivation decreased NAcc, insula, and thalamus "
+        f"responses while increasing S1 reactivity. S1 and middle insula "
+        f"were extracted from the hemisphere contralateral to the stimulated "
+        f"knee (see Methods). Krause et al. (2019) defined the NAcc "
+        f"bilaterally ($\\pm$9, 2, -7); left and right hemispheres were "
+        f"tested separately. The ACC ROI tests the Sardi et al. (2024) "
+        f"framework: ACC and NAcc as parallel D2-gated nodes. Both NAcc "
+        f"ROIs used GM-masked contrast images; all other ROIs used unmasked "
+        f"contrasts (see Methods). "
+        f"$p=2\\times\\min(P(\\gamma_{{sp}}<0),P(\\gamma_{{sp}}>0))$. "
+        f"\\*These may be considered as marginal results (i.e., p ~ 0.05) "
+        f"if we account for MCMC fluctuations."
+    )
+
     text = f"""\
 ## Results > 3.4 Sleep-to-pain fMRI moderation
 ### Paragraph 1 (NAcc results)
@@ -416,6 +461,12 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 ### Paragraph 3 (sign concordance)
 
 {p3}
+
+## Table 5. fMRI stimulation BOLD moderators of sleep-to-pain coupling (N = {n_fmri})
+
+{table5_text}
+
+{table5_note}
 """
 
     with open(OUT_TEXT_MD, "w") as f:

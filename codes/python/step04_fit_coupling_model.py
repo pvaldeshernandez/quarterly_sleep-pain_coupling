@@ -762,6 +762,27 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         f"prediction while sleep-to-pain coupling did not."
     )
 
+    # ----- Figure captions -----
+    fig2_caption = (
+        "Person-specific Pain-to-Sleep coupling estimates. "
+        "(A) Posterior means of person-specific coupling slopes. Each dot "
+        "represents one participant; the gray diamond indicates the "
+        "population mean; the dashed line marks zero. "
+        "(B) Posterior mean \u00b1 95% CrI, sorted by magnitude. Blue "
+        "segments indicate negative coupling; red segments indicate "
+        "positive coupling. The dashed gray line marks the population mean."
+    )
+
+    fig3_caption = (
+        "Person-specific Sleep-to-Pain coupling estimates. "
+        "(A) Posterior means of person-specific coupling slopes. Each dot "
+        "represents one participant; the gray diamond indicates the "
+        "population mean; the dashed line marks zero. "
+        "(B) Posterior mean \u00b1 95% CrI, sorted by magnitude. Blue "
+        "segments indicate negative coupling; red segments indicate "
+        "positive coupling. The dashed gray line marks the population mean."
+    )
+
     text = f"""\
 ## Results > 3.2 Population coupling estimates
 ### Paragraph 1 (pain-to-sleep coupling)
@@ -779,6 +800,16 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 ### Paragraph 4 (model comparison)
 
 {para4}
+
+## Figure Captions
+
+### Figure 2
+
+{fig2_caption}
+
+### Figure 3
+
+{fig3_caption}
 """
 
     with open(OUT_TEXT_MD, "w") as f:

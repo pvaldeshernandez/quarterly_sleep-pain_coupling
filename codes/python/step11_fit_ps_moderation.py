@@ -368,10 +368,65 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         + "Johnson-Neyman analyses for each ROI are shown in **Figures S7-S8**."
     )
 
+    # ----- Table S1 markdown -----
+    # Interleave fMRI and VBM rows per ROI
+    table_s1_lines = []
+    table_s1_lines.append("| ROI | Modality | $\\hat{\\gamma}_{ps}$ | 95% CrI | $p$ |")
+    table_s1_lines.append("|-----|----------|-----------|---------|-----|")
+
+    # Determine ROI ordering from fMRI table (preserves original order)
+    if fmri_table is not None:
+        roi_order = list(fmri_table["ROI"].values)
+    elif vbm_table is not None:
+        roi_order = list(vbm_table["ROI"].values)
+    else:
+        roi_order = []
+
+    fmri_dict = {}
+    if fmri_table is not None:
+        for _, row in fmri_table.iterrows():
+            fmri_dict[row["ROI"]] = row
+    vbm_dict = {}
+    if vbm_table is not None:
+        for _, row in vbm_table.iterrows():
+            vbm_dict[row["ROI"]] = row
+
+    for roi in roi_order:
+        if roi in fmri_dict:
+            r = fmri_dict[roi]
+            table_s1_lines.append(
+                f"| {r['Label']} | fMRI BOLD | {r['gamma_ps']:.3f} "
+                f"| [{r['gamma_ps_ci_lo']:.3f}, {r['gamma_ps_ci_hi']:.3f}] "
+                f"| {r['gamma_ps_p']:.3f} |"
+            )
+        if roi in vbm_dict:
+            r = vbm_dict[roi]
+            table_s1_lines.append(
+                f"| {r['Label']} | VBM GM vol. | {r['gamma_ps']:.3f} "
+                f"| [{r['gamma_ps_ci_lo']:.3f}, {r['gamma_ps_ci_hi']:.3f}] "
+                f"| {r['gamma_ps_p']:.3f} |"
+            )
+
+    table_s1_md = "\n".join(table_s1_lines)
+
+    # ----- Table S1 note -----
+    table_s1_note = (
+        f"*Note.* fMRI models: N = {n_fmri}; VBM models: N = {n_vbm}. "
+        f"Each ROI was tested separately as a moderator of pain-to-sleep "
+        f"coupling ($\\hat{{\\gamma}}_{{ps}}$). Moderator values were "
+        f"z-scored. No individual effect reached significance."
+    )
+
     text = f"""\
 ## Results > 3.5 Pain-arousal relay pathway moderation
 
 {paragraph}
+
+## Supplementary Table S1
+
+{table_s1_md}
+
+{table_s1_note}
 """
 
     with open(OUT_TEXT_MD, "w") as f:
