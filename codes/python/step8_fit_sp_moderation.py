@@ -254,25 +254,175 @@ def run_step8(verbose=True, refit=False):
     _t("sign_concordance", f"{n_concordant}/{n_tested}")
     _t("sign_concordance_p", f"{sign_p:.4f}")
 
-    # NAcc-ACC correlation
+    # NAcc-ACC correlations (left NAcc vs each ACC hemisphere)
     nacc_data = roi_df[roi_df["ROI"] == "Left_NAcc"][["ID", "z_value"]].rename(
         columns={"z_value": "nacc"})
-    acc_data = roi_df[roi_df["ROI"] == "Right_dACC_MCC"][["ID", "z_value"]].rename(
-        columns={"z_value": "acc"})
-    merged = nacc_data.merge(acc_data, on="ID")
-    if len(merged) > 10:
-        r_nacc_acc = float(np.corrcoef(merged["nacc"], merged["acc"])[0, 1])
-        _t("r_nacc_acc", f"{r_nacc_acc:.2f}")
-        if verbose:
-            print(f"  NAcc-ACC BOLD correlation: r = {r_nacc_acc:.2f}")
+    for acc_roi, acc_label in [("Left_dACC_MCC", "left"), ("Right_dACC_MCC", "right")]:
+        acc_data = roi_df[roi_df["ROI"] == acc_roi][["ID", "z_value"]].rename(
+            columns={"z_value": "acc"})
+        merged = nacc_data.merge(acc_data, on="ID")
+        if len(merged) > 10:
+            r_val = float(np.corrcoef(merged["nacc"], merged["acc"])[0, 1])
+            _t(f"r_nacc_acc_{acc_label}", f"{r_val:.2f}")
+            if verbose:
+                print(f"  Left NAcc vs {acc_label} ACC BOLD correlation: r = {r_val:.2f}")
 
     text_df = pd.DataFrame(text_rows)
     text_df.to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved: {OUT_TEXT_CSV}")
+
+    generate_text_paragraphs(verbose)
+
+    if verbose:
         print("\n" + "=" * 70)
         print("STEP 6 COMPLETE")
         print("=" * 70)
+
+
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step8_text.md with the manuscript paragraphs for Results
+    section 3.4 (sleep-to-pain fMRI moderation), populated from
+    step8_text_numbers.csv and step8_table5_sp_moderation.csv.
+    """
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step8_text.md")
+
+    if not os.path.exists(OUT_TEXT_CSV):
+        if verbose:
+            print("  SKIP: step8_text_numbers.csv not found — run step8 first")
+        return
+
+    if verbose:
+        print("  Generating step8_text.md ...")
+
+    tn = pd.read_csv(OUT_TEXT_CSV)
+    v = dict(zip(tn["metric"], tn["value"]))
+
+    # Helper to strip leading '+' for display
+    def _val(key):
+        return v.get(key, "N/A").lstrip("+")
+
+    def _signed(key):
+        return v.get(key, "N/A")
+
+    # --- Paragraph 1: NAcc results ---
+    p1 = (
+        "Left NAcc activation during painful knee stimulation was the only "
+        "Krause et al. (2019) ROI that significantly moderated sleep-to-pain "
+        f"coupling ($\\hat{{\\gamma}}_{{sp}}={_signed('gamma_sp_Left_NAcc')}$, "
+        f"95% CrI {v.get('gamma_sp_Left_NAcc_ci', 'N/A')}, "
+        f"$p={_val('gamma_sp_Left_NAcc_p')}$; **Table 5**): "
+        "the lower the left NAcc activation during painful stimulation, the "
+        "stronger the sleep-to-pain coupling. "
+        "The right NAcc showed the same direction but did not reach significance "
+        f"($\\hat{{\\gamma}}_{{sp}}={_signed('gamma_sp_Right_NAcc')}$, "
+        f"95% CrI {v.get('gamma_sp_Right_NAcc_ci', 'N/A')}, "
+        f"$p={_val('gamma_sp_Right_NAcc_p')}$). "
+    )
+
+    # JN info from step9 if available; otherwise from text_numbers
+    jn_text_csv = os.path.join(RESULTS_DIR, "step9_sp_jn", "step9_text_numbers.csv")
+    if os.path.exists(jn_text_csv):
+        jn_tn = pd.read_csv(jn_text_csv)
+        jv = dict(zip(jn_tn["metric"], jn_tn["value"]))
+        nacc_boundary = jv.get("jn_sp_Left_NAcc_boundary_raw", "N/A")
+        nacc_pct = jv.get("jn_sp_Left_NAcc_pct_credible", "N/A")
+        # Round pct to integer
+        try:
+            nacc_pct_int = f"{float(nacc_pct):.0f}"
+        except (ValueError, TypeError):
+            nacc_pct_int = nacc_pct
+        p1 += (
+            "Johnson-Neyman analysis (**Figure 5**) revealed that sleep-to-pain "
+            f"coupling was credibly negative for individuals with left NAcc "
+            f"activation below {nacc_boundary} (near the sample mean), "
+            f"encompassing {nacc_pct_int}% of the sample. Above this boundary, the "
+            "coupling was not credibly different from zero. JN analyses for the "
+            "remaining Krause et al. (2019) ROIs is provided in the "
+            "Supplementary Material (**Figure S5**)."
+        )
+    else:
+        p1 += (
+            "Johnson-Neyman analysis (**Figure 5**) revealed that sleep-to-pain "
+            "coupling was credibly negative for individuals with low left NAcc "
+            "activation. JN analyses for the remaining Krause et al. (2019) ROIs "
+            "is provided in the Supplementary Material (**Figure S5**)."
+        )
+
+    # --- Paragraph 2: ACC results ---
+    # Left dACC/MCC
+    l_acc_gamma = _signed("gamma_sp_Left_dACC_MCC")
+    l_acc_ci = v.get("gamma_sp_Left_dACC_MCC_ci", "N/A")
+    l_acc_p = _val("gamma_sp_Left_dACC_MCC_p")
+    # Right dACC/MCC
+    r_acc_gamma = _signed("gamma_sp_Right_dACC_MCC")
+    r_acc_ci = v.get("gamma_sp_Right_dACC_MCC_ci", "N/A")
+    r_acc_p = _val("gamma_sp_Right_dACC_MCC_p")
+
+    # ACC-NAcc correlations
+    r_nacc_acc_left = v.get("r_nacc_acc_left", v.get("r_nacc_acc", "N/A"))
+    r_nacc_acc_right = v.get("r_nacc_acc_right", "N/A")
+
+    p2 = (
+        "The ACC\u2014tested separately from the Krause et al. (2019) framework as a "
+        "Sardi et al. (2024)-motivated D2-gated node\u2014also significantly "
+        "moderated sleep-to-pain coupling "
+        f"($\\hat{{\\gamma}}_{{sp}}={l_acc_gamma}$, "
+        f"95% CrI {l_acc_ci}, "
+        f"$p={l_acc_p}$ for the left, and "
+        f"$\\hat{{\\gamma}}_{{sp}}={r_acc_gamma}$, "
+        f"95% CrI {r_acc_ci}, "
+        f"$p={r_acc_p}$ for the right; **Table 5**): "
+        "higher pain-evoked ACC activation was associated with less negative "
+        "sleep-to-pain coupling. "
+        "The Johnson-Neyman analysis (**Figure 6**) revealed a pattern closely "
+        "paralleling the NAcc, with credible sleep-to-pain coupling present only "
+        "in individuals with below-average ACC activation. "
+        f"The low correlation between ACCs and left NAcc BOLD values "
+        f"($r={r_nacc_acc_left}$ for the left ACC and "
+        f"$r={r_nacc_acc_right}$ for the right one) indicates that these two "
+        "regions capture largely independent aspects of pain processing, consistent "
+        "with the view that they operate as parallel rather than serial nodes "
+        "within the dopaminergic system (28)."
+    )
+
+    # --- Paragraph 3: Sign concordance ---
+    sign_conc = v.get("sign_concordance", "N/A")
+    sign_p = v.get("sign_concordance_p", "N/A")
+    n_match, n_total = sign_conc.split("/") if "/" in sign_conc else ("N", "N")
+
+    p3 = (
+        f"Finally, although only the left NAcc and both ACC reached individual "
+        f"significance among the seven sleep-to-pain ROIs (**Table 5**), all "
+        f"{n_total} Krause et al. (2019) univariate $\\hat{{\\gamma}}_{{sp}}$ "
+        f"estimates matched the direction predicted by the sleep deprivation "
+        f"framework. The probability of this occurring by chance is "
+        f"$p=(1/2)^{{{n_total}}}={sign_p}$ (exact sign test), providing "
+        f"convergent support for the Krause et al. (2019) framework at the "
+        f"pattern level even though only the left NAcc reached individual "
+        f"significance."
+    )
+
+    text = f"""\
+## Results > 3.4 Sleep-to-pain fMRI moderation
+### Paragraph 1 (NAcc results)
+
+{p1}
+
+### Paragraph 2 (ACC results)
+
+{p2}
+
+### Paragraph 3 (sign concordance)
+
+{p3}
+"""
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():

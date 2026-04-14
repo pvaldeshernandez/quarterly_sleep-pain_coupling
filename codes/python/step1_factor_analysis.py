@@ -799,9 +799,92 @@ def run_step1(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, 
     results_df.to_csv(OUT_RESULTS_CSV, index=False)
     if verbose:
         print(f"  Saved: {OUT_RESULTS_CSV}")
+
+    generate_text_paragraphs(verbose)
+
+    if verbose:
         print("=" * 70)
 
     return scored, model_json
+
+
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step1_text.md with the manuscript paragraph for Results
+    section 3.1 (factor analysis), populated from step1_factor_results.csv.
+
+    Reads all computed numbers from the results CSV and writes a
+    fully formatted markdown paragraph into the results directory.
+    """
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step1_text.md")
+    RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step1_factor_results.csv")
+
+    if not os.path.exists(RESULTS_CSV):
+        if verbose:
+            print("  SKIP: step1_factor_results.csv not found — run step1 first")
+        return
+
+    if verbose:
+        print("  Generating step1_text.md ...")
+
+    df = pd.read_csv(RESULTS_CSV)
+    v = dict(zip(df["metric"], df["value"]))
+
+    # Parse values
+    eig1 = v["eigenvalue_f1"]
+    eig2 = v["eigenvalue_f2"]
+    pct1 = v["variance_f1_pct"]
+    pct2 = v["variance_f2_pct"]
+    total_pct = v["total_variance_2factor_pct"]
+    pa1 = v["pa_95th_comp1"]
+    pa2 = v["pa_95th_comp2"]
+    f1_passes = v["f1_passes_pa_95th"]
+    f2_passes = v["f2_passes_pa_95th"]
+    r_f1f2 = v["r_f1_f2"]
+    f1_range = v["f1_loadings_range"]
+    f2_knee_range = v["f2_knee_loadings_range"]
+    f2_body_range = v["f2_body_loadings_range"]
+    n_interp_rows = v["n_interpolated_rows"]
+    n_interp_cells = v["n_interpolated_cells"]
+
+    # Parse loading ranges into lo/hi components
+    f1_lo, f1_hi = f1_range.split(" to ")
+    f2_knee_lo, f2_knee_hi = f2_knee_range.split(" to ")
+    f2_body_lo, f2_body_hi = f2_body_range.split(" to ")
+
+    # Exceeded or fell below for F2
+    if f2_passes == "YES":
+        exceeded_str = "exceeded"
+    else:
+        exceeded_str = "fell below"
+
+    text = f"""\
+## Results > 3.1 Factor analysis and pain localization contrast
+### Paragraph 1 (factor analysis)
+
+An exploratory factor analysis using principal axis factoring on the polychoric \
+correlation matrix of the eight pain items was conducted to separate general pain \
+severity from the knee-versus-body pain distribution. The number of factors to retain \
+was evaluated using Horn's parallel analysis (44), comparing observed eigenvalues of \
+the unreduced correlation matrix against the 95th percentile of eigenvalues from \
+1,000 random datasets of the same dimensions. The first factor was dominant \
+(eigenvalue = {eig1}, {pct1}% of variance) and exceeded the 95th-percentile \
+random eigenvalue threshold ({pa1}). The second eigenvalue ({eig2}, {pct2}% of \
+variance) {exceeded_str} the parallel analysis threshold ({pa2}). \
+The retained two-factor solution jointly accounted for {total_pct}% of the variance. \
+The first factor (F1: General Pain) had all eight items loading positively \
+(range: {f1_lo}\u2013{f1_hi}), capturing overall pain severity. The second factor \
+(F2: Contrast) showed positive loadings on knee items ({f2_knee_lo} to {f2_knee_hi}) \
+and negative loadings on body items ({f2_body_lo} to {f2_body_hi}), capturing \
+the relative predominance of knee-specific versus body-wide pain. \
+The two factors were orthogonal ($r = {r_f1f2}$). Single-gap interior interpolation \
+filled {n_interp_cells} factor-score cells across {n_interp_rows} person-quarter rows.
+"""
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():

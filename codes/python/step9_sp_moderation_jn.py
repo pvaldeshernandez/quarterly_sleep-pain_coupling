@@ -487,9 +487,111 @@ def run_step9(verbose=True, refit=False):
     pd.DataFrame(text_rows).to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
+
+    generate_text_paragraphs(verbose)
+
+    if verbose:
         print("\n" + "=" * 70)
         print("STEP 9 COMPLETE")
         print("=" * 70)
+
+
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step9_text.md with JN-specific numbers (boundaries,
+    % sample in credible region, simple slopes) for NAcc and ACC ROIs.
+    """
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step9_text.md")
+
+    if not os.path.exists(OUT_TEXT_CSV):
+        if verbose:
+            print("  SKIP: step9_text_numbers.csv not found — run step9 first")
+        return
+
+    if verbose:
+        print("  Generating step9_text.md ...")
+
+    tn = pd.read_csv(OUT_TEXT_CSV)
+    v = dict(zip(tn["metric"], tn["value"]))
+
+    # Helper: format a simple slope line
+    def _slope_line(roi_label, roi_key, level, level_label):
+        beta = v.get(f"slope_sp_{roi_key}_{level}", "N/A")
+        ci = v.get(f"slope_sp_{roi_key}_{level}_ci", "N/A")
+        # Check if credible (CrI excludes zero)
+        try:
+            lo_str, hi_str = ci.strip("[]").split(", ")
+            lo, hi = float(lo_str), float(hi_str)
+            sig = "*" if (lo > 0 or hi < 0) else ""
+        except (ValueError, AttributeError):
+            sig = ""
+        return f"- {level_label}: $\\hat{{\\lambda}}_{{sp}}={beta}$, 95% CrI {ci}{sig}"
+
+    sections = []
+
+    # --- Left NAcc ---
+    nacc_boundary = v.get("jn_sp_Left_NAcc_boundary_raw", None)
+    nacc_pct = v.get("jn_sp_Left_NAcc_pct_credible", None)
+
+    nacc_lines = ["### Left NAcc", ""]
+    if nacc_boundary is not None and nacc_boundary != "none":
+        try:
+            pct_int = f"{float(nacc_pct):.0f}"
+        except (ValueError, TypeError):
+            pct_int = nacc_pct
+        nacc_lines.append(
+            f"JN boundary at raw activation = {nacc_boundary}, "
+            f"with {pct_int}% of the sample in the credible region."
+        )
+    else:
+        nacc_lines.append("No JN boundary identified.")
+    nacc_lines.append("")
+    nacc_lines.append("Simple slopes:")
+    nacc_lines.append("")
+    nacc_lines.append(_slope_line("Left NAcc", "Left_NAcc", "low", "Low (Q1 - 1.5 x IQR)"))
+    nacc_lines.append(_slope_line("Left NAcc", "Left_NAcc", "median", "Median"))
+    nacc_lines.append(_slope_line("Left NAcc", "Left_NAcc", "high", "High (Q3 + 1.5 x IQR)"))
+    sections.append("\n".join(nacc_lines))
+
+    # --- Right dACC/MCC ---
+    for acc_key, acc_label in [("Right_dACC_MCC", "Right dACC/MCC"),
+                                ("Left_dACC_MCC", "Left dACC/MCC")]:
+        boundary = v.get(f"jn_sp_{acc_key}_boundary_raw", None)
+        pct = v.get(f"jn_sp_{acc_key}_pct_credible", None)
+        acc_lines = [f"### {acc_label}", ""]
+        if boundary is not None and boundary != "none":
+            try:
+                pct_int = f"{float(pct):.0f}"
+            except (ValueError, TypeError):
+                pct_int = pct
+            acc_lines.append(
+                f"JN boundary at raw activation = {boundary}, "
+                f"with {pct_int}% of the sample in the credible region."
+            )
+        else:
+            acc_lines.append("No JN boundary identified.")
+        acc_lines.append("")
+        acc_lines.append("Simple slopes:")
+        acc_lines.append("")
+        acc_lines.append(_slope_line(acc_label, acc_key, "low", "Low (Q1 - 1.5 x IQR)"))
+        acc_lines.append(_slope_line(acc_label, acc_key, "median", "Median"))
+        acc_lines.append(_slope_line(acc_label, acc_key, "high", "High (Q3 + 1.5 x IQR)"))
+        sections.append("\n".join(acc_lines))
+
+    text = f"""\
+## Step 9 — Johnson-Neyman analysis: SP moderation
+
+JN boundaries and simple slopes for the significant and near-significant
+sleep-to-pain moderation ROIs. An asterisk (*) after the CrI indicates
+the credible interval excludes zero.
+
+{chr(10).join(sections)}
+"""
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():

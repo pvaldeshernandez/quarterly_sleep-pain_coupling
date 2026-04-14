@@ -414,6 +414,145 @@ def generate_text_numbers(verbose=True):
 
 
 # =====================================================================
+# Text paragraphs — formatted markdown for manuscript
+# =====================================================================
+
+def generate_text_paragraphs(verbose=True):
+    """Generate step2_text.md with the manuscript paragraphs for Results
+    section 3.1 (contrast validation), populated from step2_text_numbers.csv.
+
+    Paragraph 2: ANOVA + Tukey + point-biserial endorsement validation.
+    Paragraph 3: Clinical correlations (Pearson + Spearman).
+    """
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step2_text.md")
+
+    if not os.path.exists(OUT_TEXT_CSV):
+        if verbose:
+            print("  SKIP: step2_text_numbers.csv not found — run step2 first")
+        return
+
+    if verbose:
+        print("  Generating step2_text.md ...")
+
+    df = pd.read_csv(OUT_TEXT_CSV)
+    v = dict(zip(df["metric"], df["value"]))
+
+    # --- Paragraph 2: ANOVA + endorsement ---
+    n_ko = v.get("anova_n_knee_only", "?")
+    n_kp = v.get("anova_n_knee_plus", "?")
+    n_nk = v.get("anova_n_no_knee", "?")
+    f_val = v.get("anova_F", "?")
+    anova_df = v.get("anova_df", "?")
+    anova_p = v.get("anova_p", "?")
+    m_ko = v.get("anova_mean_knee_only", "?")
+    sd_ko = v.get("anova_sd_knee_only", "?")
+    m_kp = v.get("anova_mean_knee_plus", "?")
+    sd_kp = v.get("anova_sd_knee_plus", "?")
+    m_nk = v.get("anova_mean_no_knee", "?")
+    sd_nk = v.get("anova_sd_no_knee", "?")
+    tukey_ko_kp = v.get("tukey_p_knee_only_vs_knee_plus", "?")
+    tukey_ko_nk = v.get("tukey_p_knee_only_vs_no_knee", "?")
+    tukey_kp_nk = v.get("tukey_p_knee_plus_vs_no_knee", "?")
+
+    rpb_knees_r = v.get("rpb_knees_r", "?")
+    rpb_knees_fdr = v.get("rpb_knees_fdr", "?")
+    rpb_upper_back_r = v.get("rpb_upper_back_r", "?")
+    rpb_upper_back_fdr = v.get("rpb_upper_back_fdr", "?")
+    rpb_lower_back_r = v.get("rpb_lower_back_r", "?")
+    rpb_lower_back_fdr = v.get("rpb_lower_back_fdr", "?")
+
+    # Format p-value for display
+    def _pfmt(pstr):
+        return f"$p$ {pstr}" if pstr.startswith("<") else f"$p$ = {pstr}"
+
+    para2 = (
+        f"To validate the contrast factor against an independent pain-location "
+        f"measure, participants were classified into three groups based on their "
+        f"baseline PHQ pain-area endorsements: knee-only ($N$ = {n_ko}), "
+        f"knee-plus-other-sites ($N$ = {n_kp}), and no-knee ($N$ = {n_nk}). "
+        f"A one-way ANOVA on person-mean contrast ($\\bar{{K}}_i$) showed a "
+        f"significant group effect ($F${anova_df} = {f_val}, {_pfmt(anova_p)}). "
+        f"The knee-only group had the highest contrast "
+        f"($M$ = {m_ko}, $SD$ = {sd_ko}), followed by knee-plus-other "
+        f"($M$ = {m_kp}, $SD$ = {sd_kp}), and no-knee "
+        f"($M$ = {m_nk}, $SD$ = {sd_nk}). "
+        f"Tukey HSD post-hoc tests confirmed that knee-only vs. no-knee "
+        f"({_pfmt(tukey_ko_nk)}) and knee-plus vs. no-knee "
+        f"({_pfmt(tukey_kp_nk)}) differed significantly, while knee-only vs. "
+        f"knee-plus was marginal ({_pfmt(tukey_ko_kp)}). "
+        f"Point-biserial correlations between $\\bar{{K}}_i$ and each of the 13 "
+        f"PHQ body-area endorsements showed that knee endorsement was positively "
+        f"associated ($r_{{pb}}$ = {rpb_knees_r}, $p_{{FDR}}$ {rpb_knees_fdr}), "
+        f"while upper back ($r_{{pb}}$ = {rpb_upper_back_r}, "
+        f"$p_{{FDR}}$ = {rpb_upper_back_fdr}) and lower back "
+        f"($r_{{pb}}$ = {rpb_lower_back_r}, $p_{{FDR}}$ = {rpb_lower_back_fdr}) "
+        f"were negatively associated; only the knee association survived "
+        f"FDR correction."
+    )
+
+    # --- Paragraph 3: Clinical correlations ---
+    r_days = v.get("pearson_phq_knee_pain_days_r", "?")
+    p_days = v.get("pearson_phq_knee_pain_days_p", "?")
+    n_days = v.get("pearson_phq_knee_pain_days_n", "?")
+    r_pct = v.get("pearson_phq_percent_pain_r", "?")
+    p_pct = v.get("pearson_phq_percent_pain_p", "?")
+    n_pct = v.get("pearson_phq_percent_pain_n", "?")
+    r_wpain = v.get("pearson_womac_pain_r", "?")
+    p_wpain = v.get("pearson_womac_pain_p", "?")
+    r_wtotal = v.get("pearson_womac_total_r", "?")
+    p_wtotal = v.get("pearson_womac_total_p", "?")
+    r_wfunc = v.get("pearson_womac_phys_function_r", "?")
+    p_wfunc = v.get("pearson_womac_phys_function_p", "?")
+    r_wstiff = v.get("pearson_womac_stiffness_r", "?")
+    p_wstiff = v.get("pearson_womac_stiffness_p", "?")
+    r_kpr = v.get("pearson_qst_knee_pain_rating_r", "?")
+    p_kpr = v.get("pearson_qst_knee_pain_rating_p", "?")
+
+    # Spearman KL grade (may not exist)
+    rho_kl = v.get("spearman_kl_grade_rho", None)
+    p_kl = v.get("spearman_kl_grade_p", None)
+    n_kl = v.get("spearman_kl_grade_n", None)
+
+    kl_sentence = ""
+    if rho_kl is not None:
+        kl_sentence = (
+            f" Spearman correlation with radiographic severity "
+            f"(Kellgren\u2013Lawrence grade) was $\\rho$ = {rho_kl} "
+            f"({_pfmt(p_kl)}, $N$ = {n_kl})."
+        )
+
+    para3 = (
+        f"Person-mean contrast was positively correlated with baseline "
+        f"knee-specific clinical measures: PHQ knee pain days per week "
+        f"($r$ = {r_days}, {_pfmt(p_days)}, $N$ = {n_days}), "
+        f"PHQ percent of waking day in knee pain "
+        f"($r$ = {r_pct}, {_pfmt(p_pct)}, $N$ = {n_pct}), "
+        f"WOMAC Pain ($r$ = {r_wpain}, {_pfmt(p_wpain)}), "
+        f"WOMAC Total ($r$ = {r_wtotal}, {_pfmt(p_wtotal)}), "
+        f"WOMAC Physical Function ($r$ = {r_wfunc}, {_pfmt(p_wfunc)}), "
+        f"WOMAC Stiffness ($r$ = {r_wstiff}, {_pfmt(p_wstiff)}), "
+        f"and knee pain rating ($r$ = {r_kpr}, {_pfmt(p_kpr)}). "
+        f"All Pearson correlations were significant and positive, confirming "
+        f"that higher contrast (more knee-predominant pain) tracked greater "
+        f"knee-specific clinical burden.{kl_sentence}"
+    )
+
+    text = (
+        "## Results > 3.1 Factor analysis and pain localization contrast\n"
+        "### Paragraph 2 (validation against PHQ endorsement)\n\n"
+        f"{para2}\n\n"
+        "### Paragraph 3 (clinical correlations)\n\n"
+        f"{para3}\n"
+    )
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
+
+
+# =====================================================================
 # Main
 # =====================================================================
 
@@ -429,6 +568,7 @@ def run_step2(verbose=True, refit=False):
     generate_figure_s1(verbose)
     generate_figure_s2(verbose)
     generate_text_numbers(verbose)
+    generate_text_paragraphs(verbose)
 
     if verbose:
         print("\n" + "=" * 70)

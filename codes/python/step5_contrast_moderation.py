@@ -457,6 +457,125 @@ def run_step5(verbose: bool = True, refit: bool = False):
         print("STEP 4 COMPLETE")
         print("=" * 70)
 
+    generate_text_paragraphs(verbose)
+
+
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step5_text.md with the manuscript paragraphs for Results
+    section 3.3 (contrast moderation / pain localization), populated from
+    step5_text_numbers.csv and step4_table4_coupling.csv.
+
+    Reads all computed numbers from saved CSVs and writes fully formatted
+    markdown paragraphs into the results directory.
+    """
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step5_text.md")
+    TABLE4_CSV = os.path.join(DERIV_DIR, "..", "results",
+                              "step4_coupling_model", "step4_table4_coupling.csv")
+
+    for required in (OUT_TEXT_CSV, TABLE4_CSV):
+        if not os.path.exists(required):
+            if verbose:
+                print(f"  SKIP: {os.path.basename(required)} not found — "
+                      f"run upstream step first")
+            return
+
+    if verbose:
+        print("  Generating step5_text.md ...")
+
+    text_df = pd.read_csv(OUT_TEXT_CSV)
+    v = dict(zip(text_df["metric"], text_df["value"]))
+    table4 = pd.read_csv(TABLE4_CSV)
+    t4 = dict(zip(table4["Parameter"], table4.to_dict("records")))
+
+    # ----- Table 4 values for contrast moderation -----
+    delta_s = t4["b3"]
+    delta_s_est = float(delta_s["Estimate"])
+    delta_s_ci = f"[{float(delta_s['CrI_lo']):.3f}, {float(delta_s['CrI_hi']):.3f}]"
+    delta_s_pneg = float(delta_s["P_neg"])
+
+    omega_ps = t4["b4"]
+    omega_ps_est = float(omega_ps["Estimate"])
+    omega_ps_pneg = float(omega_ps["P_neg"])
+
+    # ----- JN values from step5 text_numbers -----
+    has_ps_boundary = "jn_ps_boundary_K" in v
+    if has_ps_boundary:
+        jn_ps_K = float(v["jn_ps_boundary_K"])
+        jn_ps_sd = float(v["jn_ps_boundary_sd"])
+        jn_ps_pct = float(v["jn_ps_pct_credible"])
+
+    has_sp_boundary = "jn_sp_boundary_K" in v
+    # (SP boundary is typically "none")
+
+    # ----- Paragraph 1: Direct and interaction effects -----
+    para1 = (
+        f"The contrast moderation parameters "
+        f"($\\hat{{\\delta}}_{{p}}$, $\\hat{{\\omega}}_{{sp}}$, "
+        f"$\\hat{{\\delta}}_{{s}}$, $\\hat{{\\omega}}_{{ps}}$) are reported "
+        f"in **Table 4**. The direct effect of pain localization on "
+        f"next-quarter sleep quality was credible "
+        f"($\\hat{{\\delta}}_{{s}}={delta_s_est:.3f}$, "
+        f"$P<0={delta_s_pneg:.3f}$, "
+        f"95% CrI {delta_s_ci}): when a person's pain was more "
+        f"knee-dominant than usual, their next-quarter sleep quality worsened. "
+        f"The interaction between pain and localization trended toward "
+        f"strengthening the pain-to-sleep coupling when pain was "
+        f"knee-dominant ($\\hat{{\\omega}}_{{ps}}={omega_ps_est:.3f}$, "
+        f"$P<0={omega_ps_pneg:.3f}$) but did not reach the 0.95 "
+        f"credibility threshold. Neither localization term affected the "
+        f"sleep-to-pain pathway."
+    )
+
+    # ----- Paragraph 2: JN analysis -----
+    if has_ps_boundary:
+        jn_text = (
+            f"Although the interaction did not reach credibility, the credible "
+            f"direct effect ($\\hat{{\\delta}}_{{s}}$) shifts the conditional "
+            f"pain-to-sleep coupling so that it is credibly negative at "
+            f"balanced and knee-dominant localization levels but not at "
+            f"body-dominant levels. Johnson-Neyman analysis (**Figure 4**) "
+            f"confirmed that the pain-to-sleep coupling was credibly negative "
+            f"for localization values above {jn_ps_K:.3f} "
+            f"({jn_ps_sd:.2f} SD), encompassing {jn_ps_pct:.1f}% of "
+            f"observations."
+        )
+    else:
+        jn_text = (
+            f"Johnson-Neyman analysis (**Figure 4**) found no boundary "
+            f"within the observed range for the pain-to-sleep pathway."
+        )
+
+    if has_sp_boundary:
+        sp_K = float(v["jn_sp_boundary_K"])
+        jn_text += (
+            f" For the sleep-to-pain pathway, a JN boundary existed at "
+            f"K = {sp_K:.3f} (**Figure S3**)."
+        )
+    else:
+        jn_text += (
+            f" For the sleep-to-pain pathway, no JN boundary existed "
+            f"within the observed range (**Figure S3**)."
+        )
+
+    para2 = jn_text
+
+    text = f"""\
+## Results > 3.3 Moderation of pain location
+### Paragraph 1 (direct and interaction effects)
+
+{para1}
+
+### Paragraph 2 (JN analysis)
+
+{para2}
+"""
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
+
 
 def main():
     parser = argparse.ArgumentParser(

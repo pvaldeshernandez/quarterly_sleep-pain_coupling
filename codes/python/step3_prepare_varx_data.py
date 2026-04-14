@@ -668,10 +668,85 @@ def run_step3(verbose: bool = True, refit: bool = False):
     if verbose:
         print(f"  Saved: {OUT_TEXT_CSV}")
 
+    generate_text_paragraphs(verbose)
+
     if verbose:
         print("\n" + "=" * 70)
         print("STEP 2 COMPLETE")
         print("=" * 70)
+
+
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step3_text.md with the manuscript paragraphs that cite
+    analytic-sample counts, populated from step3_text_numbers.csv.
+
+    Covers: Results section 2.1 (analytic sample description) and
+    the Figure 1 caption.
+    """
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step3_text.md")
+    IN_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step3_text_numbers.csv")
+
+    if not os.path.exists(IN_TEXT_CSV):
+        if verbose:
+            print("  SKIP: step3_text_numbers.csv not found — run step3 first")
+        return
+
+    if verbose:
+        print("  Generating step3_text.md ...")
+
+    df = pd.read_csv(IN_TEXT_CSV)
+    v = dict(zip(df["metric"], df["value"].astype(str)))
+
+    n_parent = v["n_parent_study"]
+    n_analytic = v["n_analytic_sample"]
+    n_excluded = v["n_excluded"]
+    n_retained = v["n_retained_points"]
+    n_interp = v["n_interpolated_retained"]
+    n_lags = v["n_lag_transitions"]
+    med_lags = v["median_lags_per_person"]
+    min_lags = v["min_lags_per_person"]
+    max_lags = v["max_lags_per_person"]
+
+    para_sample = (
+        f"Of the {n_parent} participants in the parent study, "
+        f"{n_excluded} were excluded because they lacked three or more "
+        f"consecutive quarters with both pain and sleep data, yielding an "
+        f"analytic sample of $N$ = {n_analytic}. Across these participants, "
+        f"{n_retained} person-quarter observations were retained within "
+        f"valid segments (\u22653 consecutive quarters), of which "
+        f"{n_interp} ({float(n_interp)/float(n_retained)*100:.1f}%) were "
+        f"single-gap interpolated values. After applying the one-quarter "
+        f"lag, {n_lags} usable lag transitions remained "
+        f"(median = {med_lags} per person, range = {min_lags}\u2013{max_lags})."
+    )
+
+    fig1_caption = (
+        f"**Figure 1.** Data availability grid for the {n_analytic} "
+        f"analytic-sample participants across 11 quarterly assessments "
+        f"(Q1\u2013Q11). Blue dots indicate observed-and-retained person-quarters; "
+        f"red dots indicate single-gap interpolated values retained within "
+        f"valid segments; grey dots indicate available data discarded because "
+        f"the segment contained fewer than three consecutive quarters. "
+        f"Horizontal lines connect consecutive quarters within retained "
+        f"segments. Participants are sorted by number of retained time points "
+        f"(bottom = fewest). The dashed line separates the {n_excluded} "
+        f"excluded participants (below) from the {n_analytic} retained "
+        f"participants (above)."
+    )
+
+    text = (
+        "## Results > 2.1 Analytic sample\n"
+        "### Paragraph (analytic sample description)\n\n"
+        f"{para_sample}\n\n"
+        "### Figure 1 caption\n\n"
+        f"{fig1_caption}\n"
+    )
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():

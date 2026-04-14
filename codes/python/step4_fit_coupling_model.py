@@ -621,6 +621,172 @@ def run_step4(verbose: bool = True, refit: bool = False):
         print("STEP 3 COMPLETE")
         print("=" * 70)
 
+    generate_text_paragraphs(verbose)
+
+
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step4_text.md with the manuscript paragraphs for Results
+    section 3.2 (population coupling estimates), populated from saved CSVs.
+
+    Reads all computed numbers from text_numbers.csv, table4 CSV, LOO CSV,
+    and person_coupling CSV and writes fully formatted markdown paragraphs
+    into the results directory.
+    """
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step4_text.md")
+
+    for required in (OUT_TEXT_CSV, OUT_TABLE4_CSV, OUT_LOO_CSV, OUT_PERSON_CSV):
+        if not os.path.exists(required):
+            if verbose:
+                print(f"  SKIP: {os.path.basename(required)} not found — run step4 first")
+            return
+
+    if verbose:
+        print("  Generating step4_text.md ...")
+
+    text_df = pd.read_csv(OUT_TEXT_CSV)
+    v = dict(zip(text_df["metric"], text_df["value"]))
+    table4 = pd.read_csv(OUT_TABLE4_CSV)
+    loo_df = pd.read_csv(OUT_LOO_CSV, keep_default_na=False)
+    person_df = pd.read_csv(OUT_PERSON_CSV)
+
+    # ----- Parse values from text_numbers.csv -----
+    lps_mean = float(v["lambda_ps_mean"])
+    lps_ci = v["lambda_ps_ci"]
+    lps_pneg = float(v["lambda_ps_p_neg"])
+    tau_ps = float(v["tau_ps"])
+    ps_range = v["person_ps_range"]
+    ps_sd = float(v["person_ps_sd"])
+    n_ps_cred = int(v["person_ps_n_credible_neg"])
+
+    lsp_mean = float(v["lambda_sp_mean"])
+    lsp_ci = v["lambda_sp_ci"]
+    lsp_pneg = float(v["lambda_sp_p_neg"])
+    tau_sp = float(v["tau_sp"])
+    sp_range = v["person_sp_range"]
+    sp_sd = float(v["person_sp_sd"])
+    n_sp_cred = int(v["person_sp_n_credible_neg"])
+
+    rho_mean = float(v["rho_innov_mean"])
+    rho_ci = v["rho_innov_ci"]
+    rho_pneg = float(v["rho_innov_p_neg"])
+
+    n_persons = len(person_df)
+
+    # ----- LOO values -----
+    def _loo(model_a, model_b):
+        row = loo_df[(loo_df["model_a"] == model_a) & (loo_df["model_b"] == model_b)]
+        delta = float(row["delta_elpd"].iloc[0])
+        se = float(row["se"].iloc[0])
+        ratio = float(row["delta_over_se"].iloc[0])
+        return delta, se, ratio
+
+    loo_full_noPS_d, loo_full_noPS_se, loo_full_noPS_r = _loo("full", "no_PS")
+    loo_noSP_null_d, loo_noSP_null_se, loo_noSP_null_r = _loo("no_SP", "null")
+    loo_full_noSP_d, loo_full_noSP_se, loo_full_noSP_r = _loo("full", "no_SP")
+    loo_noPS_null_d, loo_noPS_null_se, loo_noPS_null_r = _loo("no_PS", "null")
+
+    khat_max = float(v["pareto_khat_max"])
+    khat_above = int(v["pareto_khat_above_07"])
+    khat_nobs = int(v["pareto_khat_n_obs"])
+    khat_pct = khat_above / khat_nobs * 100
+
+    # ----- Paragraph 1: Pain-to-sleep coupling -----
+    para1 = (
+        f"**Table 4** presents the population parameters from the Bayesian "
+        f"VARX(1) model. The pain-to-sleep pathway was the dominant coupling "
+        f"direction. The population mean "
+        f"($\\hat{{\\lambda}}_{{ps}}={lps_mean:.3f}$, "
+        f"$P(\\hat{{\\lambda}}_{{ps}}<0)={lps_pneg:.3f}$, "
+        f"95% CrI {lps_ci}) "
+        f"indicated that a one-unit within-person increase in general pain "
+        f"predicted a {abs(lps_mean):.3f}-unit decrease in next-quarter sleep "
+        f"quality. The random effect SD was substantial "
+        f"($\\hat{{\\tau}}_{{ps}}={tau_ps:.3f}$), reflecting meaningful "
+        f"between-person heterogeneity: person-level posterior means ranged "
+        f"from {ps_range} (SD = {ps_sd:.3f}), and {n_ps_cred} of "
+        f"{n_persons} participants ({n_ps_cred/n_persons*100:.1f}%) had "
+        f"$P(\\hat{{\\lambda}}_{{ps,i}}<0)>0.95$ (**Figure 2**)."
+    )
+
+    # ----- Paragraph 2: Sleep-to-pain coupling -----
+    para2 = (
+        f"The sleep-to-pain pathway did not reach credibility at the "
+        f"population level "
+        f"($\\hat{{\\lambda}}_{{sp}}={lsp_mean:.3f}$, "
+        f"$P(\\hat{{\\lambda}}_{{sp}}<0)={lsp_pneg:.3f}$, "
+        f"95% CrI {lsp_ci}). "
+        f"The random effect SD ($\\hat{{\\tau}}_{{sp}}={tau_sp:.3f}$) was "
+        f"smaller but non-negligible, with person-level posteriors ranging "
+        f"from {sp_range} (SD = {sp_sd:.3f}). "
+        f"{n_sp_cred} participants ({n_sp_cred/n_persons*100:.1f}%) had "
+        f"$P(\\hat{{\\lambda}}_{{sp,i}}<0)>0.95$ (**Figure 3**)."
+    )
+
+    # ----- Paragraph 3: Innovation correlation -----
+    para3 = (
+        f"Same-quarter innovations in pain and sleep quality were negatively "
+        f"correlated ($\\hat{{\\rho}}={rho_mean:.3f}$, $P(<0)={rho_pneg:.3f}$, "
+        f"95% CrI {rho_ci}), indicating that within a given quarter, "
+        f"unexplained increases in pain co-occurred with unexplained decreases "
+        f"in sleep quality, or vice versa. Because this is a residual "
+        f"correlation after controlling for all lagged effects, it may reflect "
+        f"within-quarter bidirectional processes, shared contemporaneous "
+        f"perturbations (e.g., a flare event affecting both pain and sleep "
+        f"within the same assessment window), or measurement timing effects."
+    )
+
+    # ----- Paragraph 4: Model comparison -----
+    para4 = (
+        f"The model comparison (see Methods: Model comparison) confirmed the "
+        f"dominance of the pain-to-sleep pathway. Including pain-to-sleep "
+        f"coupling improved predictive accuracy substantially "
+        f"($\\Delta LOO_{{elpd}}$ = {loo_full_noPS_d:+.1f}, "
+        f"SE = {loo_full_noPS_se:.1f}, "
+        f"$\\Delta$/SE = {loo_full_noPS_r:.2f} for full vs. no-PS; "
+        f"$\\Delta LOO_{{elpd}}$ = {loo_noSP_null_d:+.1f}, "
+        f"SE = {loo_noSP_null_se:.1f}, "
+        f"$\\Delta$/SE = {loo_noSP_null_r:.2f} for no-SP vs. null), "
+        f"whereas including sleep-to-pain coupling yielded negligible "
+        f"improvement "
+        f"($\\Delta LOO_{{elpd}}$ = {loo_full_noSP_d:+.1f}, "
+        f"SE = {loo_full_noSP_se:.1f}, "
+        f"$\\Delta$/SE = {loo_full_noSP_r:.2f} for full vs. no-SP; "
+        f"$\\Delta LOO_{{elpd}}$ = {loo_noPS_null_d:+.1f}, "
+        f"SE = {loo_noPS_null_se:.1f}, "
+        f"$\\Delta$/SE = {loo_noPS_null_r:.2f} for no-PS vs. null). "
+        f"Pareto $\\hat{{k}}$ diagnostics confirmed the reliability of the "
+        f"LOO-CV approximation: only {khat_above} of {khat_nobs} observations "
+        f"({khat_pct:.1f}%) exceeded the 0.7 threshold (maximum "
+        f"$\\hat{{k}}$ = {khat_max:.2f}). By the conventional threshold of "
+        f"$|\\Delta/SE|>2$, pain-to-sleep coupling substantially improved "
+        f"prediction while sleep-to-pain coupling did not."
+    )
+
+    text = f"""\
+## Results > 3.2 Population coupling estimates
+### Paragraph 1 (pain-to-sleep coupling)
+
+{para1}
+
+### Paragraph 2 (sleep-to-pain coupling)
+
+{para2}
+
+### Paragraph 3 (innovation correlation)
+
+{para3}
+
+### Paragraph 4 (model comparison)
+
+{para4}
+"""
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
+
 
 def main():
     parser = argparse.ArgumentParser(

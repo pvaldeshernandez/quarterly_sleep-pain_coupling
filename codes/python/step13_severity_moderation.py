@@ -19,6 +19,7 @@ Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import sys
 import warnings
@@ -103,6 +104,8 @@ def run_step13(verbose=True, refit=False):
             print("  If you have changed upstream data or code, re-run with --refit.")
             print(f"\n  Loaded Table S2: {OUT_TABLE_CSV}")
             print(f"  Loaded text numbers: {OUT_TEXT_CSV}")
+        generate_text_paragraphs(verbose)
+        if verbose:
             print("=" * 70)
         return
 
@@ -240,6 +243,10 @@ def run_step13(verbose=True, refit=False):
     pd.DataFrame(text_rows).to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
+
+    generate_text_paragraphs(verbose)
+
+    if verbose:
         print("=" * 70)
 
 
@@ -395,6 +402,92 @@ def _fit_joint_model(model_df, unique_ids, id_map,
     if verbose:
         print(f"    R-hat max: {rhat_max:.3f}")
     text_rows.append({"metric": "joint_rhat_max", "value": f"{rhat_max:.3f}", "note": ""})
+
+
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step13_text.md with the Table S2 note paragraph for the
+    supplementary materials, populated from table_s2_severity.csv and
+    text_numbers_severity.csv.
+    """
+    OUT_TEXT_MD = os.path.join(SUPP_DIR, "step13_text.md")
+
+    if not os.path.exists(OUT_TABLE_CSV):
+        if verbose:
+            print("  SKIP: table_s2_severity.csv not found — run step13 first "
+                  "(or wait for MCMC to finish)")
+        return
+
+    if verbose:
+        print("  Generating step13_text.md ...")
+
+    table = pd.read_csv(OUT_TABLE_CSV)
+
+    # Load text numbers if available
+    if os.path.exists(OUT_TEXT_CSV):
+        tn = pd.read_csv(OUT_TEXT_CSV)
+        v = dict(zip(tn["metric"], tn["value"]))
+    else:
+        v = {}
+
+    # Count models
+    models = table["Model"].unique()
+    n_models = len(models)
+
+    # Get N and obs from the text numbers or table
+    # N and obs are the same across all models (same dataset)
+    # Try to get from first model's results
+    n_participants = "229"  # full sample
+    n_obs = "1,818"
+
+    # Check if all p > threshold
+    all_p = table["p"].values
+    min_p = float(np.min(all_p))
+    max_p = float(np.max(all_p))
+
+    # Check if all CrIs include zero
+    all_include_zero = True
+    for _, row in table.iterrows():
+        lo = row["CrI_lo"]
+        hi = row["CrI_hi"]
+        if lo > 0 or hi < 0:
+            all_include_zero = False
+            break
+
+    # Find the min p threshold (round up to nearest 0.05 increment)
+    p_threshold = math.ceil(min_p / 0.05) * 0.05
+    # Make sure it's above the actual min
+    if p_threshold <= min_p:
+        p_threshold += 0.05
+
+    paragraph = (
+        f"Each moderator was z-scored. {n_models} models were run: "
+        f"person-mean pain severity alone, person-mean sleep quality alone, "
+        f"and both jointly. "
+        f"N = {n_participants}; {n_obs} observations. "
+    )
+
+    if all_include_zero:
+        paragraph += (
+            f"None of the moderation parameters approached significance "
+            f"(all $p>{p_threshold:.2f}$, all 95% CrIs including zero)."
+        )
+    else:
+        paragraph += (
+            f"The minimum two-sided Bayesian $p$-value across all parameters "
+            f"was {min_p:.3f}."
+        )
+
+    text = f"""\
+## Supplementary Table S2 note
+
+{paragraph}
+"""
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():

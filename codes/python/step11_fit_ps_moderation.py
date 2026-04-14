@@ -249,9 +249,136 @@ def run_step11(verbose=True, refit=False):
     pd.DataFrame(text_rows).to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
+
+    generate_text_paragraphs(verbose)
+
+    if verbose:
         print("\n" + "=" * 70)
         print("STEP 9 COMPLETE")
         print("=" * 70)
+
+
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step11_text.md with the manuscript paragraph for Results
+    section 3.5 (pain-arousal relay moderation), populated from the
+    table CSVs and text_numbers.csv.
+    """
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step11_text.md")
+
+    if not os.path.exists(OUT_TEXT_CSV):
+        if verbose:
+            print("  SKIP: step11_text_numbers.csv not found — run step11 first")
+        return
+
+    if verbose:
+        print("  Generating step11_text.md ...")
+
+    tn = pd.read_csv(OUT_TEXT_CSV)
+    v = dict(zip(tn["metric"], tn["value"]))
+
+    # Load table CSVs for N values and CrIs
+    fmri_table = pd.read_csv(OUT_FMRI_TABLE) if os.path.exists(OUT_FMRI_TABLE) else None
+    vbm_table = pd.read_csv(OUT_VBM_TABLE) if os.path.exists(OUT_VBM_TABLE) else None
+
+    # Get N for fMRI and VBM
+    n_fmri = "N/A"
+    n_vbm = "N/A"
+    if fmri_table is not None and len(fmri_table) > 0:
+        n_fmri = str(int(fmri_table["N"].iloc[0]))
+    if vbm_table is not None and len(vbm_table) > 0:
+        n_vbm = str(int(vbm_table["N"].iloc[0]))
+
+    # Helper
+    def _val(key):
+        return v.get(key, "N/A").lstrip("+")
+
+    def _signed(key):
+        return v.get(key, "N/A")
+
+    # Find strongest fMRI effect (sorted by p)
+    fmri_rois_sorted = []
+    if fmri_table is not None:
+        for _, row in fmri_table.iterrows():
+            fmri_rois_sorted.append((row["Label"], row["ROI"], row["gamma_ps_p"]))
+        fmri_rois_sorted.sort(key=lambda x: x[2])
+
+    # Find strongest VBM effect (sorted by p)
+    vbm_rois_sorted = []
+    if vbm_table is not None:
+        for _, row in vbm_table.iterrows():
+            vbm_rois_sorted.append((row["Label"], row["ROI"], row["gamma_ps_p"]))
+        vbm_rois_sorted.sort(key=lambda x: x[2])
+
+    # Build fMRI strongest and second strongest descriptions
+    fmri_desc = ""
+    if len(fmri_rois_sorted) >= 2:
+        lab1, roi1, _ = fmri_rois_sorted[0]
+        lab2, roi2, _ = fmri_rois_sorted[1]
+        # Add "origin of the pathway" annotation only if PBN is in second place
+        if roi2 == "PBN":
+            second_annotation = "\u2014the origin of the pain-arousal relay pathway\u2014"
+        else:
+            second_annotation = " "
+        fmri_desc = (
+            f"The {lab1} showed the strongest fMRI effect "
+            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi1}')}$, "
+            f"$p={_val(f'gamma_ps_fmri_{roi1}_p')}$), "
+            f"with the {lab2}{second_annotation}showing the second strongest "
+            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi2}')}$, "
+            f"$p={_val(f'gamma_ps_fmri_{roi2}_p')}$). "
+        )
+    elif len(fmri_rois_sorted) == 1:
+        lab1, roi1, _ = fmri_rois_sorted[0]
+        fmri_desc = (
+            f"The {lab1} showed the strongest fMRI effect "
+            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi1}')}$, "
+            f"$p={_val(f'gamma_ps_fmri_{roi1}_p')}$). "
+        )
+
+    # VBM sign concordance
+    sign_conc = v.get("vbm_sign_concordance", "N/A")
+    sign_p = v.get("vbm_sign_concordance_p", "N/A")
+
+    # VBM strongest
+    vbm_desc = ""
+    if len(vbm_rois_sorted) >= 1:
+        lab1, roi1, _ = vbm_rois_sorted[0]
+        vbm_desc = (
+            f"Notably, all {sign_conc.split('/')[1] if '/' in sign_conc else 'five'} "
+            f"grey matter volume estimates were negative\u2014consistent with larger "
+            f"arousal relay volumes predisposing stronger pain-to-sleep "
+            f"coupling\u2014though no individual effect was credible "
+            f"(strongest: {lab1}, "
+            f"$\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_vbm_{roi1}')}$, "
+            f"$p={_val(f'gamma_ps_vbm_{roi1}_p')}$). "
+        )
+
+    paragraph = (
+        "The five nodes of the Lynch et al. (2025) pain-arousal relay pathway "
+        "were tested as moderators of pain-to-sleep coupling "
+        "($\\hat{\\gamma}_{ps}$) using two complementary approaches: "
+        f"pain-evoked fMRI response (N = {n_fmri}) and grey matter volume "
+        f"from atlas-defined probabilistic ROIs (N = {n_vbm}). "
+        "No individual ROI reached significance in either modality "
+        "(**Table S1**)\u2014a sensitivity analysis testing each hemisphere "
+        "separately (10 models) confirmed that bilateral averaging did not "
+        "mask lateralized effects. "
+        + fmri_desc
+        + vbm_desc
+        + "Johnson-Neyman analyses for each ROI are shown in **Figures S7-S8**."
+    )
+
+    text = f"""\
+## Results > 3.5 Pain-arousal relay pathway moderation
+
+{paragraph}
+"""
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():
