@@ -366,6 +366,64 @@ def generate_figure_s4(verbose=True):
 # Main
 # =====================================================================
 
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step07_text.md with the Figure S4 caption, built
+    programmatically from the FIG_S4_ROIS dictionary so it stays in
+    sync with the actual ROI definitions used.
+    """
+    STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step07_sp_roi_extraction")
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step07_text.md")
+
+    if verbose:
+        print("  Generating step07_text.md ...")
+
+    # Build ROI description list from FIG_S4_ROIS
+    roi_descs = []
+    for roi_key, cfg in FIG_S4_ROIS.items():
+        mni = cfg["mni"]
+        r = cfg["radius_mm"]
+        if "mni_mirror" in cfg:
+            x = abs(mni[0])
+            coord_str = f"MNI $\\pm${x}, {mni[1]}, {mni[2]}"
+        else:
+            coord_str = f"MNI {mni[0]}, {mni[1]}, {mni[2]}"
+        roi_descs.append(f"{cfg['label']} ({coord_str}; $r$ = {r} mm)")
+
+    roi_list = "; ".join(roi_descs)
+
+    # Also note masking rule from SP_ROIS
+    masked_rois = [SP_ROIS[k]["label"] for k in SP_ROIS if SP_ROIS[k]["mask"] == "gm_masked"]
+    unmasked_rois = [SP_ROIS[k]["label"] for k in SP_ROIS if SP_ROIS[k]["mask"] == "unmasked"]
+    mask_note = ""
+    if masked_rois:
+        mask_note = (
+            f" {', '.join(masked_rois)} used GM-masked contrast images; "
+            f"all other ROIs used unmasked re-estimated contrasts."
+        )
+
+    fig_s4_caption = (
+        f"**Figure S4.** Spherical ROI locations for the sleep-to-pain "
+        f"moderation analysis, shown on the MNI152 template. "
+        f"Eight ROIs are displayed in orthogonal slices: {roi_list}. "
+        f"Krause et al. ROIs (S1, Middle Insula, Thalamus, Anterior Insula, "
+        f"Left and Right NAcc) are based on coordinates from Krause et al. "
+        f"(2019); dACC/MCC ROIs are from Xu et al. (2020).{mask_note}"
+    )
+
+    text = (
+        "## Step 07 — SP ROI extraction\n\n"
+        "## Figure Captions\n\n"
+        f"{fig_s4_caption}\n"
+    )
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
+
+
 def run_step07(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
@@ -381,6 +439,7 @@ def run_step07(verbose=True, refit=False):
         extract_rois(verbose)
 
     generate_figure_s4(verbose)
+    generate_text_paragraphs(verbose)
 
     if verbose:
         print("=" * 70)

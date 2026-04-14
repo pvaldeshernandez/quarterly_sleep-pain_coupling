@@ -489,9 +489,76 @@ def run_step12(verbose=True, refit=False):
     pd.DataFrame(all_text).to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
+
+    generate_text_paragraphs(verbose)
+
+    if verbose:
         print("\n" + "=" * 70)
         print("STEP 12 COMPLETE")
         print("=" * 70)
+
+
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step12_text.md with figure captions for Figures S7 and S8,
+    populated from the table CSVs.
+    """
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step12_text.md")
+
+    if verbose:
+        print("  Generating step12_text.md ...")
+
+    # Load table CSVs to get N values
+    n_fmri = "?"
+    n_vbm = "?"
+    if os.path.exists(IN_FMRI_TABLE):
+        fmri_tab = pd.read_csv(IN_FMRI_TABLE)
+        if "N" in fmri_tab.columns and len(fmri_tab) > 0:
+            n_fmri = str(int(fmri_tab["N"].iloc[0]))
+        fmri_rois = ", ".join(fmri_tab["Label"].tolist()) if "Label" in fmri_tab.columns else ""
+    else:
+        fmri_rois = ""
+
+    if os.path.exists(IN_VBM_TABLE):
+        vbm_tab = pd.read_csv(IN_VBM_TABLE)
+        if "N" in vbm_tab.columns and len(vbm_tab) > 0:
+            n_vbm = str(int(vbm_tab["N"].iloc[0]))
+        vbm_rois = ", ".join(vbm_tab["Label"].tolist()) if "Label" in vbm_tab.columns else ""
+    else:
+        vbm_rois = ""
+
+    fig_s7_caption = (
+        f"**Figure S7.** Johnson-Neyman analysis of pain-to-sleep coupling "
+        f"moderated by fMRI BOLD activation in five arousal relay ROIs "
+        f"($N$ = {n_fmri}): {fmri_rois}. "
+        f"Each panel shows the posterior mean of the conditional coupling "
+        f"coefficient $\\lambda_{{ps}}$ as a function of the ROI's BOLD "
+        f"activation (raw units). Green shading marks regions where the 95% "
+        f"credible interval excludes zero; grey shading marks non-credible "
+        f"regions. Blue dots show person-level fitted coupling values. "
+        f"Black error bars show simple slopes at three reference points "
+        f"with 95% CrI. Same conventions as Figure 5."
+    )
+
+    fig_s8_caption = (
+        f"**Figure S8.** Johnson-Neyman analysis of pain-to-sleep coupling "
+        f"moderated by grey matter volume in five arousal relay ROIs "
+        f"($N$ = {n_vbm}): {vbm_rois}. "
+        f"Same conventions as Figure S7, with GM volume (probability-weighted "
+        f"integral, mm$^3$) on the x-axis."
+    )
+
+    text = (
+        "## Step 12 — PS arousal moderation Johnson-Neyman analysis\n\n"
+        "## Figure Captions\n\n"
+        f"{fig_s7_caption}\n\n"
+        f"{fig_s8_caption}\n"
+    )
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():

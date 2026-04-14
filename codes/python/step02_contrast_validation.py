@@ -537,12 +537,40 @@ def generate_text_paragraphs(verbose=True):
         f"knee-specific clinical burden.{kl_sentence}"
     )
 
+    # --- Figure captions ---
+    fig_s1_caption = (
+        f"**Figure S1.** Pain localization contrast factor and PHQ body map "
+        f"endorsements. **(A)** Point-biserial correlations between person-mean "
+        f"contrast ($\\bar{{K}}$) and each of 13 PHQ body-area endorsements. "
+        f"Asterisk indicates FDR-corrected significance ($q<0.05$). Only knee "
+        f"endorsement survived correction ($r_{{pb}}$ = {rpb_knees_r}, "
+        f"$p_{{FDR}}$ {rpb_knees_fdr}). **(B)** Person-mean contrast "
+        f"($\\bar{{K}}$) by pain distribution group: Knee only: endorsed knee "
+        f"pain but no other areas ($N$ = {n_ko}); Knee + others: endorsed knee "
+        f"pain plus at least one other area ($N$ = {n_kp}); No knee: did not "
+        f"endorse knee pain ($N$ = {n_nk}). Horizontal lines indicate "
+        f"significant Tukey post-hoc comparisons. One-way ANOVA: "
+        f"$F${anova_df} = {f_val}, {_pfmt(anova_p)}."
+    )
+
+    fig_s2_caption = (
+        f"**Figure S2.** Convergent validity: scatter plots of person-mean "
+        f"contrast ($\\bar{{K}}$) against seven baseline clinical measures. "
+        f"Each panel shows the Pearson correlation ($r$), $p$-value, and "
+        f"sample size ($N$). Red lines are least-squares fits. "
+        f"All correlations are positive, confirming that higher contrast "
+        f"tracks greater knee-specific clinical burden."
+    )
+
     text = (
         "## Results > 3.1 Factor analysis and pain localization contrast\n"
         "### Paragraph 2 (validation against PHQ endorsement)\n\n"
         f"{para2}\n\n"
         "### Paragraph 3 (clinical correlations)\n\n"
-        f"{para3}\n"
+        f"{para3}\n\n"
+        "## Figure Captions\n\n"
+        f"{fig_s1_caption}\n\n"
+        f"{fig_s2_caption}\n"
     )
 
     with open(OUT_TEXT_MD, "w") as f:

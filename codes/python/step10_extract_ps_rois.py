@@ -403,6 +403,81 @@ def generate_figure_s6(verbose=True):
 # Main
 # =====================================================================
 
+def generate_text_paragraphs(verbose: bool = True) -> None:
+    """Generate step10_text.md with the Figure S6 caption, built
+    programmatically from the FIG_S6_ROIS dictionary and extraction
+    results. Includes atlas source references and PBN voxel count
+    at fMRI resolution when available.
+    """
+    STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step10_ps_roi_extraction")
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step10_text.md")
+
+    if verbose:
+        print("  Generating step10_text.md ...")
+
+    # Build ROI description list from FIG_S6_ROIS
+    roi_descs = []
+    for roi_key, cfg in FIG_S6_ROIS.items():
+        roi_descs.append(f"{cfg['label']} ({cfg['title'].split('(')[-1].rstrip(')')}"
+                         f")" if "(" in cfg["title"] else cfg["label"])
+
+    # Cleaner version: just use title which already has atlas ref
+    roi_lines = []
+    for roi_key, cfg in FIG_S6_ROIS.items():
+        roi_lines.append(cfg["title"])
+    roi_list = "; ".join(roi_lines)
+
+    # Try to read PBN voxel count from fMRI extraction results
+    pbn_note = ""
+    if os.path.exists(OUT_FMRI_CSV):
+        fmri_df = pd.read_csv(OUT_FMRI_CSV)
+        pbn_rows = fmri_df[fmri_df["ROI"] == "PBN"]
+        if len(pbn_rows) > 0:
+            n_pbn_subj = pbn_rows["ID"].nunique()
+            pbn_note = (
+                f" At 3 mm fMRI resolution, the PBN ROI contained a small "
+                f"number of voxels; extraction was successful for "
+                f"$N$ = {n_pbn_subj} participants."
+            )
+        elif "PBN" not in fmri_df["ROI"].values:
+            pbn_note = (
+                " Note: PBN yielded 0 brain voxels at 3 mm fMRI resolution "
+                "and was excluded from fMRI analyses."
+            )
+
+    # Masking note
+    masked_rois = [v["label"] for k, v in AROUSAL_ROIS.items()
+                   if v.get("fmri_mask") == "gm_masked"]
+    mask_note = ""
+    if masked_rois:
+        mask_note = (
+            f" {', '.join(masked_rois)} used GM-masked contrast images; "
+            f"all other ROIs used unmasked re-estimated contrasts."
+        )
+
+    fig_s6_caption = (
+        f"**Figure S6.** Atlas-defined arousal relay ROI locations for the "
+        f"pain-to-sleep moderation analysis, shown on the MNI152 template. "
+        f"Five ROIs are displayed in orthogonal slices centered on each "
+        f"region's center of mass: {roi_list}. "
+        f"Probability-weighted maps were used for extraction of both fMRI "
+        f"BOLD activation and VBM grey matter volume.{pbn_note}{mask_note}"
+    )
+
+    text = (
+        "## Step 10 — PS arousal ROI extraction\n\n"
+        "## Figure Captions\n\n"
+        f"{fig_s6_caption}\n"
+    )
+
+    with open(OUT_TEXT_MD, "w") as f:
+        f.write(text)
+
+    if verbose:
+        print(f"    Saved: {OUT_TEXT_MD}")
+
+
 def run_step10(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
@@ -439,6 +514,7 @@ def run_step10(verbose=True, refit=False):
                   f"{vbm_df['ID'].nunique()} subjects)")
 
     generate_figure_s6(verbose)
+    generate_text_paragraphs(verbose)
 
     if verbose:
         print("=" * 70)

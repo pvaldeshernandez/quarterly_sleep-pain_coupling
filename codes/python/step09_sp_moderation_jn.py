@@ -577,6 +577,61 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         acc_lines.append(_slope_line(acc_label, acc_key, "high", "High (Q3 + 1.5 x IQR)"))
         sections.append("\n".join(acc_lines))
 
+    # --- Figure captions ---
+
+    # Figure 5: Left NAcc (no computed numbers needed, just template)
+    fig5_caption = (
+        "**Figure 5.** Johnson-Neyman analysis of sleep-to-pain coupling "
+        "moderated by left nucleus accumbens (NAcc) fMRI BOLD activation. "
+        "The solid blue line shows the posterior mean of the conditional "
+        "coupling coefficient $\\lambda_{sp}$ as a function of left NAcc "
+        "activation (raw units). Dashed lines indicate 95% credible "
+        "intervals (CrI). Green shading marks the region where the CrI "
+        "excludes zero (credible effect); grey shading marks the "
+        "non-credible region. Blue dots show person-level fitted coupling "
+        "values. Black error bars show simple slopes at three reference "
+        "points (Q1 $-$ 1.5 $\\times$ IQR, median, Q3 + 1.5 $\\times$ IQR) "
+        "with 95% CrI. The vertical dotted line marks the Johnson-Neyman "
+        "boundary. Tick marks along the bottom show the observed "
+        "distribution of left NAcc values."
+    )
+
+    # Figure 6: ACC JN — load gamma/p from Table 5
+    table5 = pd.read_csv(IN_TABLE5_CSV)
+    t5 = dict(zip(table5["ROI"], table5.itertuples(index=False)))
+
+    acc_parts = []
+    for panel_letter, acc_key, acc_label in [
+        ("A", "Right_dACC_MCC", "right dACC/MCC"),
+        ("B", "Left_dACC_MCC", "left dACC/MCC"),
+    ]:
+        row = t5.get(acc_key)
+        if row is not None:
+            gamma = f"{row.gamma_sp:.3f}"
+            p_val = f"{row.gamma_sp_p:.3f}" if row.gamma_sp_p >= 0.001 else "<0.001"
+            acc_parts.append(
+                f"**({panel_letter})** {acc_label} "
+                f"($\\gamma_{{sp}}$ = {gamma}, $p$ = {p_val})"
+            )
+
+    n_fmri = int(t5[list(t5.keys())[0]].N) if t5 else "?"
+    fig6_caption = (
+        f"**Figure 6.** Johnson-Neyman analysis of sleep-to-pain coupling "
+        f"moderated by dorsal anterior cingulate / midcingulate cortex "
+        f"(dACC/MCC) fMRI BOLD activation ($N$ = {n_fmri}). "
+        + " ".join(acc_parts)
+        + " Same conventions as Figure 5."
+    )
+
+    # Figure S5: non-significant Krause ROIs
+    fig_s5_caption = (
+        "**Figure S5.** Johnson-Neyman analysis of sleep-to-pain coupling "
+        "moderated by four non-significant Krause et al. ROIs: "
+        "right somatosensory cortex (S1), right middle insula, left thalamus, "
+        "and left anterior insula. Same conventions as Figure 5. "
+        "None of these ROIs showed a credible moderation effect."
+    )
+
     text = f"""\
 ## Step 09 — Johnson-Neyman analysis: SP moderation
 
@@ -585,6 +640,14 @@ sleep-to-pain moderation ROIs. An asterisk (*) after the CrI indicates
 the credible interval excludes zero.
 
 {chr(10).join(sections)}
+
+## Figure Captions
+
+{fig5_caption}
+
+{fig6_caption}
+
+{fig_s5_caption}
 """
 
     with open(OUT_TEXT_MD, "w") as f:

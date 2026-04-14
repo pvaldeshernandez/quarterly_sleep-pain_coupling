@@ -721,17 +721,15 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     )
 
     fig1_caption = (
-        f"**Figure 1.** Data availability grid for the {n_analytic} "
-        f"analytic-sample participants across 11 quarterly assessments "
-        f"(Q1\u2013Q11). Blue dots indicate observed-and-retained person-quarters; "
-        f"red dots indicate single-gap interpolated values retained within "
-        f"valid segments; grey dots indicate available data discarded because "
-        f"the segment contained fewer than three consecutive quarters. "
-        f"Horizontal lines connect consecutive quarters within retained "
-        f"segments. Participants are sorted by number of retained time points "
-        f"(bottom = fewest). The dashed line separates the {n_excluded} "
-        f"excluded participants (below) from the {n_analytic} retained "
-        f"participants (above)."
+        f"**Figure 1.** Data availability grid (participants x quarters). "
+        f"Blue dots indicate observed retained data points; red dots indicate "
+        f"retained points for which scores were interpolated "
+        f"({n_interp} of {n_retained} retained points); grey dots indicate "
+        f"observations discarded due to segment length < 3. Horizontal lines "
+        f"connect consecutive quarters within retained segments. Participants "
+        f"are sorted by number of retained points (bottom = fewest). "
+        f"Participants below the dashed line ($N$ = {n_excluded}) were excluded "
+        f"for lacking any segment of three or more consecutive quarters."
     )
 
     text = (
