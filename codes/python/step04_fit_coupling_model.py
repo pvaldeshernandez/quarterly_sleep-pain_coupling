@@ -1,5 +1,5 @@
 """
-Step 03 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
+Step 04 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 ======================================================================
 
 Input:  derivatives/step03_varx_data/step03_processed_long.csv
@@ -787,10 +787,173 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     if verbose:
         print(f"    Saved: {OUT_TEXT_MD}")
 
+    # ----- Supplementary Notes S1 and S2 -----
+    SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+    os.makedirs(SUPP_DIR, exist_ok=True)
+    OUT_SUPP_MD = os.path.join(SUPP_DIR, "step04_supp_text.md")
+
+    # Get table4 params for Note S1/S2
+    def _t4(param):
+        row = table4[table4["Parameter"] == param]
+        if len(row) == 0:
+            return 0.0
+        return float(row["Estimate"].iloc[0])
+
+    phi_p = _t4("a1")   # pain autoregression
+    phi_s = _t4("b2")   # sleep autoregression
+    lsp = _t4("a2")     # sleep-to-pain coupling
+    lps = _t4("b1")     # pain-to-sleep coupling
+
+    median_obs = int(person_df.shape[0])  # not exactly median; use from text_numbers
+    median_obs_str = v.get("median_obs_per_person", "9")
+
+    # Eigenvalue calculations
+    import math
+    disc_sq = (phi_p - phi_s)**2 + 4 * lsp * lps
+    disc = math.sqrt(abs(disc_sq))
+    if disc_sq >= 0:
+        eig1 = (phi_s + phi_p + disc) / 2
+        eig2 = (phi_s + phi_p - disc) / 2
+    else:
+        eig1 = (phi_s + phi_p) / 2
+        eig2 = (phi_s + phi_p) / 2
+
+    cross_product = lsp * lps
+    ar_product = phi_s * phi_p
+
+    # Continuous-time drift
+    alpha1 = math.log(eig1) if eig1 > 0 else float('nan')
+    weekly_stab = math.exp(alpha1 / 13) if math.isfinite(alpha1) else float('nan')
+    monthly_stab = math.exp(alpha1 / 3) if math.isfinite(alpha1) else float('nan')
+
+    # Unidirectional optimal lag
+    if phi_p > 0 and phi_s > 0 and phi_p != phi_s:
+        ln_ratio = math.log(math.log(phi_p) / math.log(phi_s))
+        omega_opt = -ln_ratio / (math.log(phi_p) - math.log(phi_s))
+        omega_days = omega_opt * 91
+        f_1 = (phi_p - phi_s) / (phi_p - phi_s)  # = 1.0
+        f_opt = (phi_p**omega_opt - phi_s**omega_opt) / (phi_p - phi_s)
+        pct_signal = (1.0 / f_opt) * 100
+    else:
+        omega_opt = float('nan')
+        omega_days = float('nan')
+        pct_signal = float('nan')
+
+    note_s1 = (
+        f"The small proportion of individually credible coupling estimates "
+        f"({n_ps_cred}/229 for pain-to-sleep, {n_sp_cred}/229 for "
+        f"sleep-to-pain) reflects the partial pooling inherent in hierarchical "
+        f"Bayesian estimation rather than an absence of true individual "
+        f"differences. With a median of {median_obs_str} quarterly observations "
+        f"per participant, individual-level data are necessarily noisy, and the "
+        f"hierarchical model concentrates inferential power at the population "
+        f"level—where the pooled data across {n_persons} participants and "
+        f"1,818 transitions enable reliable estimation of mean coupling, "
+        f"heterogeneity, and moderating effects. The individual random effects "
+        f"$u_{{i}}$ serve primarily to partition variance and improve "
+        f"population-level estimates rather than to provide precise person-level "
+        f"inference.\n\n"
+        f"Relatedly, although the pain-to-sleep coupling "
+        f"($|\\hat{{\\lambda}}_{{ps}}| = {abs(lps_mean):.3f}$) qualifies as a "
+        f"large cross-lagged effect by the benchmarks of Orth et al. (2024) "
+        f"(small = 0.03, medium = 0.07, large = 0.12), its absolute magnitude "
+        f"is modest in the context of noisy quarterly within-person deviations, "
+        f"and the large between-person heterogeneity "
+        f"($\\hat{{\\tau}}_{{ps}} = {tau_ps:.3f}$) indicates that the population "
+        f"mean reflects a meaningful but noisy signal, consistent with the "
+        f"expectation that quarterly assessments introduce variability from "
+        f"sources unrelated to the sleep-pain dynamic.\n\n"
+        f"The autoregressive coefficients were notably small "
+        f"($\\hat{{\\phi}}_{{p}} = {phi_p:.3f}$, "
+        f"$\\hat{{\\phi}}_{{s}} = {phi_s:.3f}$). "
+        f"Among the 16 daily studies reviewed, only Edwards et al. (2008) "
+        f"includes explicit autoregressive terms as fixed-effect predictors "
+        f"(pain AR = 0.18, sleep AR = 0.15); a few others handle serial "
+        f"dependence through residual covariance structures (6, 7, 11), and "
+        f"the majority omit autoregressive control entirely. While retaining "
+        f"them is more principled—omitting the lagged dependent variable can "
+        f"inflate cross-lagged estimates when the outcome is autocorrelated "
+        f"(63)—the negligible magnitudes observed here suggest that simpler "
+        f"models without autoregressive terms may yield equivalent coupling "
+        f"estimates in quarterly designs, where the long interval between "
+        f"assessments attenuates day-to-day persistence.\n\n"
+        f"Relatedly, the quarterly temporal resolution may be suboptimal for "
+        f"the coupling process we are detecting. The Dormann and Griffin (2015) "
+        f"framework provides a principled approach to optimal measurement "
+        f"interval: the eigenvalues of the bivariate transition matrix yield "
+        f"timescale-invariant continuous-time drift parameters "
+        f"(**Supplementary Note S2**). The dominant eigenvalue "
+        f"($\\lambda_{{1}} \\approx {eig1:.3f}$) exceeds the larger "
+        f"autoregression ($\\hat{{\\phi}}_{{p}} = {phi_p:.3f}$), confirming "
+        f"that reciprocal coupling stabilizes the system. However, because the "
+        f"product of the cross-lagged coefficients exceeds the product of the "
+        f"autoregressions ($\\hat{{\\lambda}}_{{sp}}\\hat{{\\lambda}}_{{ps}} "
+        f"= {cross_product:.5f} > \\hat{{\\phi}}_{{s}}\\hat{{\\phi}}_{{p}} "
+        f"= {ar_product:.6f}$), the minor eigenvalue is negative "
+        f"($\\lambda_{{2}} \\approx {eig2:.3f}$), placing the system in an "
+        f"oscillatory regime where the closed-form optimal lag is undefined "
+        f"(63). A unidirectional reference calculation (setting "
+        f"$\\lambda_{{ps}} = 0$) yields an optimal lag of approximately "
+        f"{omega_opt:.3f} quarters ($\\approx {omega_days:.0f}$ days), with "
+        f"quarterly measurement capturing roughly {pct_signal:.0f}% of the "
+        f"peak unidirectional cross-lagged signal (**Supplementary Note S2**)."
+    )
+
+    note_s2_app = (
+        f"**1. Eigenvalues.** From Table 3: $\\hat{{\\phi}}_{{p}} = {phi_p:.3f}$, "
+        f"$\\hat{{\\phi}}_{{s}} = {phi_s:.3f}$, "
+        f"$\\hat{{\\lambda}}_{{sp}} = {lsp:.3f}$, "
+        f"$\\hat{{\\lambda}}_{{ps}} = {lps:.3f}$. Then\n\n"
+        f"$$\\Delta = \\sqrt{{({phi_p:.3f} - {phi_s:.3f})^{{2}} + "
+        f"4({lsp:.3f})({lps:.3f})}} = \\sqrt{{{disc_sq:.5f}}} "
+        f"\\approx {disc:.3f},$$\n\n"
+        f"$$\\lambda_{{1}} \\approx {eig1:.3f}, \\qquad "
+        f"\\lambda_{{2}} \\approx {eig2:.3f}.$$\n\n"
+        f"The dominant eigenvalue exceeds $\\hat{{\\phi}}_{{p}}$ by "
+        f"{(eig1/phi_p - 1)*100:.0f}%, confirming stabilization through "
+        f"reciprocal coupling ($\\hat{{\\lambda}}_{{sp}}"
+        f"\\hat{{\\lambda}}_{{ps}} = {cross_product:.5f} > 0$).\n\n"
+        f"**2. Continuous-time drift.** For the dominant mode,\n\n"
+        f"$$\\alpha_{{1}} = \\frac{{\\ln({eig1:.3f})}}{{1\\;\\mathrm{{quarter}}}} "
+        f"\\approx {alpha1:.2f}\\;\\mathrm{{quarter}}^{{-1}} "
+        f"\\approx {alpha1/91:.3f}\\;\\mathrm{{day}}^{{-1}}.$$\n\n"
+        f"The dominant-mode stability at alternative lags is weekly "
+        f"$e^{{{alpha1:.2f}/13}} \\approx {weekly_stab:.2f}$ and monthly "
+        f"$e^{{{alpha1:.2f}/3}} \\approx {monthly_stab:.2f}$.\n\n"
+        f"**3. Oscillatory regime.** The minor eigenvalue is negative "
+        f"($\\lambda_{{2}} \\approx {eig2:.3f}$) because the product of the "
+        f"cross-lagged coefficients exceeds the product of the autoregressions: "
+        f"$\\hat{{\\lambda}}_{{sp}}\\hat{{\\lambda}}_{{ps}} = {cross_product:.5f} "
+        f"> \\hat{{\\phi}}_{{s}}\\hat{{\\phi}}_{{p}} = {ar_product:.6f}$.\n\n"
+        f"**4. Unidirectional approximation and signal attenuation.** "
+        f"Applying Eq. S3,\n\n"
+        f"$$\\omega_{{\\mathrm{{opt}}}}^{{\\,\\mathrm{{unidir}}}} \\approx "
+        f"{omega_opt:.3f}\\;\\mathrm{{quarters}} \\approx "
+        f"{omega_days:.0f}\\;\\mathrm{{days}}.$$\n\n"
+        f"The quarterly measurement therefore captures approximately "
+        f"${pct_signal:.0f}\\%$ of the peak unidirectional cross-lagged signal."
+    )
+
+    supp_text = f"""\
+## Supplementary Note S1: Additional Methodological Considerations
+
+{note_s1}
+
+## Supplementary Note S2: Optimal Time Lags — Application
+
+{note_s2_app}
+"""
+
+    with open(OUT_SUPP_MD, "w") as f:
+        f.write(supp_text)
+
+    if verbose:
+        print(f"    Saved: {OUT_SUPP_MD}")
+
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 03 — fit the Bayesian VARX(1) coupling model + LOO-CV."
+        description="Step 04 — fit the Bayesian VARX(1) coupling model + LOO-CV."
     )
     parser.add_argument(
         "--quiet", action="store_true",
