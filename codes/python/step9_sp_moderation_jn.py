@@ -45,7 +45,9 @@ IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step8_sp_moderation", "step8_table5_s
 OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step9_jn_sp_results.csv")
 OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step9_figure5_jn_nacc.png")
 OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step9_figure6_jn_acc.png")
-OUT_FIG_S5 = os.path.join(STEP_RESULTS_DIR, "step9_figure_s5_krause_jn.png")
+SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+os.makedirs(SUPP_DIR, exist_ok=True)
+OUT_FIG_S5 = os.path.join(SUPP_DIR, "figure_s5_krause_jn.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step9_text_numbers.csv")
 
 # ROI for Figure 5 (single panel)

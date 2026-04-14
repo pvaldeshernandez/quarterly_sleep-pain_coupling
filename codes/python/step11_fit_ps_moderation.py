@@ -52,9 +52,11 @@ IN_VBM_CSV = os.path.join(DERIV_DIR, "step10_ps_roi_values", "step10_ps_vbm_roi_
 
 OUT_FMRI_DRAWS = os.path.join(STEP_DERIV_DIR, "step11_ps_fmri_posterior_draws.npz")
 OUT_VBM_DRAWS = os.path.join(STEP_DERIV_DIR, "step11_ps_vbm_posterior_draws.npz")
-OUT_FMRI_TABLE = os.path.join(STEP_RESULTS_DIR, "step11_table_s1_fmri_arousal.csv")
-OUT_VBM_TABLE = os.path.join(STEP_RESULTS_DIR, "step11_table_s1_vbm_arousal.csv")
-OUT_VBM_SIGN = os.path.join(STEP_RESULTS_DIR, "step11_vbm_sign_concordance.csv")
+SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+os.makedirs(SUPP_DIR, exist_ok=True)
+OUT_FMRI_TABLE = os.path.join(SUPP_DIR, "table_s1_fmri_arousal.csv")
+OUT_VBM_TABLE = os.path.join(SUPP_DIR, "table_s1_vbm_arousal.csv")
+OUT_VBM_SIGN = os.path.join(SUPP_DIR, "vbm_sign_concordance.csv")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step11_text_numbers.csv")
 
 

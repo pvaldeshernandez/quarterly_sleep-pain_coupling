@@ -30,10 +30,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 ATLAS_DIR = os.path.join(ROOT, "data", "atlases")
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step10b_ps_roi_maps")
-os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+os.makedirs(SUPP_DIR, exist_ok=True)
 
-OUT_FIG_S6 = os.path.join(STEP_RESULTS_DIR, "step10b_figure_s6_arousal_rois.png")
+OUT_FIG_S6 = os.path.join(SUPP_DIR, "figure_s6_arousal_rois.png")
 
 ROIS = {
     "PBN": {

@@ -1,0 +1,390 @@
+"""
+Step 13 — Person-mean severity moderation of coupling (Table S2).
+======================================================================
+
+Tests whether person-mean pain severity or sleep quality moderate
+the coupling parameters. Three models:
+  1. Mean pain severity alone
+  2. Mean sleep quality alone
+  3. Both jointly
+
+Input:  derivatives/step3_varx_data/step3_processed_long.csv
+Output:
+  results/step13_severity_moderation/
+    step13_table_s2_severity.csv   — Table S2
+    step13_text_numbers.csv        — estimates for manuscript text
+
+Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+import warnings
+
+import numpy as np
+import pandas as pd
+
+warnings.filterwarnings("ignore")
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+DERIV_DIR = os.path.join(ROOT, "derivatives")
+RESULTS_DIR = os.path.join(ROOT, "results")
+SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+os.makedirs(SUPP_DIR, exist_ok=True)
+
+LIB_DIR = os.path.join(HERE, "lib")
+sys.path.insert(0, LIB_DIR)
+
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step3_varx_data",
+                                "step3_processed_long.csv")
+
+OUT_TABLE_CSV = os.path.join(SUPP_DIR, "table_s2_severity.csv")
+OUT_TEXT_CSV = os.path.join(SUPP_DIR, "text_numbers_severity.csv")
+
+
+def load_data(csv_path):
+    df = pd.read_csv(csv_path)
+    df["Age_z"] = (df["Age"] - df["Age"].mean()) / df["Age"].std()
+    df["Sex_coded"] = (df["Sex"] == 2).astype(float)
+    df["Sex_c"] = df["Sex_coded"] - df["Sex_coded"].mean()
+    unique_ids = sorted(df["ID"].unique())
+    id_map = {sid: i for i, sid in enumerate(unique_ids)}
+    df["pid_idx"] = df["ID"].map(id_map)
+    model_df = df.dropna(subset=["pain_within_lag1", "sleep_within_lag1"]).copy()
+    return df, model_df, unique_ids, id_map
+
+
+MODELS = [
+    {
+        "name": "pain_alone",
+        "label": "Mean Pain Severity",
+        "model_label": "Alone",
+        "moderators": ["pain_person_mean"],
+    },
+    {
+        "name": "sleep_alone",
+        "label": "Mean Sleep Quality",
+        "model_label": "Alone",
+        "moderators": ["sleep_person_mean"],
+    },
+    {
+        "name": "joint",
+        "label": None,  # both reported
+        "model_label": "Joint",
+        "moderators": ["pain_person_mean", "sleep_person_mean"],
+    },
+]
+
+
+def run_step13(verbose=True):
+    from coupling_model import fit_bayesian_varx1, extract_results
+
+    if verbose:
+        print("=" * 70)
+        print("STEP 13 — Person-mean severity moderation (Table S2)")
+        print("=" * 70)
+
+    df_full, model_df, unique_ids, id_map = load_data(IN_PROCESSED_CSV)
+
+    # Compute person-mean z-scores for each moderator
+    person_means = model_df.groupby("ID").agg(
+        pain_pm=("pain_person_mean", "first"),
+        sleep_pm=("sleep_person_mean", "first"),
+    ).reset_index()
+    pain_mean, pain_sd = person_means["pain_pm"].mean(), person_means["pain_pm"].std()
+    sleep_mean, sleep_sd = person_means["sleep_pm"].mean(), person_means["sleep_pm"].std()
+
+    if verbose:
+        print(f"  Pain severity:  mean={pain_mean:.3f}, SD={pain_sd:.3f}")
+        print(f"  Sleep quality:  mean={sleep_mean:.3f}, SD={sleep_sd:.3f}")
+        print(f"  N={len(person_means)}, obs={len(model_df)}")
+
+    table_rows = []
+    text_rows = []
+
+    def _t(metric, value, note=""):
+        text_rows.append({"metric": metric, "value": str(value), "note": note})
+
+    _t("pain_severity_mean", f"{pain_mean:.3f}")
+    _t("pain_severity_sd", f"{pain_sd:.3f}")
+    _t("sleep_quality_mean", f"{sleep_mean:.3f}")
+    _t("sleep_quality_sd", f"{sleep_sd:.3f}")
+
+    for model_cfg in MODELS:
+        mod_name = model_cfg["name"]
+        mod_label = model_cfg["model_label"]
+        moderators = model_cfg["moderators"]
+
+        if verbose:
+            print(f"\n  Model: {mod_name} ({', '.join(moderators)})")
+
+        # For single-moderator models, use fit_bayesian_varx1 with X_person
+        # For joint model, we need to fit twice (once per moderator) or
+        # use a custom approach. Since coupling_model only supports one
+        # X_person at a time, fit twice for joint with both z-scored.
+        # Actually — for joint, we need both in the same model.
+        # coupling_model.fit_bayesian_varx1 only supports one moderator.
+        # For the joint model, we'll fit with pain controlling for sleep
+        # by residualizing, or we fit a custom model.
+        #
+        # Simpler approach: since Table S2 shows the joint model has
+        # essentially the same results, and coupling_model supports only
+        # one moderator, we fit each moderator separately for "Alone"
+        # models. For "Joint", we need a 2-moderator model.
+        #
+        # Let's check if coupling_model supports multiple moderators...
+        # It doesn't — X_person is a single dict. So for the joint model
+        # we need to extend it or use a workaround.
+        #
+        # Workaround: for the joint model, residualize each moderator
+        # against the other and fit with the residual.
+
+        if mod_name == "joint":
+            # Fit a 2-moderator model by extending the PyMC model directly
+            _fit_joint_model(model_df, unique_ids, id_map,
+                             pain_mean, pain_sd, sleep_mean, sleep_sd,
+                             table_rows, text_rows, verbose)
+            continue
+
+        # Single moderator
+        col = moderators[0]
+        if col == "pain_person_mean":
+            pm_mean, pm_sd = pain_mean, pain_sd
+            label = "Mean Pain Severity"
+        else:
+            pm_mean, pm_sd = sleep_mean, sleep_sd
+            label = "Mean Sleep Quality"
+
+        # Build X_person: z-scored person means
+        X_person = {}
+        for sid in unique_ids:
+            sub = model_df[model_df["ID"] == sid]
+            if len(sub) == 0:
+                continue
+            raw = sub[col].iloc[0]
+            X_person[str(sid)] = (raw - pm_mean) / pm_sd
+
+        idata, sub_df, valid_ids = fit_bayesian_varx1(
+            model_df, unique_ids, id_map,
+            X_person=X_person,
+            include_agesex=True,
+            progressbar=True,
+        )
+
+        results = extract_results(idata, moderator_name=col)
+        sp_mean = results.get("gamma_sp_mean", np.nan)
+        sp_lo = results.get("gamma_sp_ci_lo", np.nan)
+        sp_hi = results.get("gamma_sp_ci_hi", np.nan)
+        sp_pneg = results.get("gamma_sp_prob_neg", np.nan)
+        sp_p = 2 * min(sp_pneg, 1 - sp_pneg) if np.isfinite(sp_pneg) else np.nan
+
+        ps_mean = results.get("gamma_ps_mean", np.nan)
+        ps_lo = results.get("gamma_ps_ci_lo", np.nan)
+        ps_hi = results.get("gamma_ps_ci_hi", np.nan)
+        ps_pneg = results.get("gamma_ps_prob_neg", np.nan)
+        ps_p = 2 * min(ps_pneg, 1 - ps_pneg) if np.isfinite(ps_pneg) else np.nan
+
+        rhat = results.get("rhat_max", np.nan)
+
+        if verbose:
+            print(f"    gamma_sp = {sp_mean:+.4f} [{sp_lo:+.4f}, {sp_hi:+.4f}], "
+                  f"p={sp_p:.4f}")
+            print(f"    gamma_ps = {ps_mean:+.4f} [{ps_lo:+.4f}, {ps_hi:+.4f}], "
+                  f"p={ps_p:.4f}")
+            print(f"    R-hat max: {rhat:.3f}")
+
+        table_rows.append({
+            "Moderator": label, "Model": mod_label, "Direction": "SP",
+            "gamma": sp_mean, "CrI_lo": sp_lo, "CrI_hi": sp_hi, "p": sp_p,
+        })
+
+        _t(f"{mod_name}_gamma_sp", f"{sp_mean:+.4f}")
+        _t(f"{mod_name}_gamma_sp_ci", f"[{sp_lo:+.4f}, {sp_hi:+.4f}]")
+        _t(f"{mod_name}_gamma_sp_p", f"{sp_p:.4f}")
+        _t(f"{mod_name}_gamma_ps", f"{ps_mean:+.4f}")
+        _t(f"{mod_name}_gamma_ps_ci", f"[{ps_lo:+.4f}, {ps_hi:+.4f}]")
+        _t(f"{mod_name}_gamma_ps_p", f"{ps_p:.4f}")
+        _t(f"{mod_name}_rhat_max", f"{rhat:.3f}")
+
+        del idata
+
+    # Save Table S2
+    table_s2 = pd.DataFrame(table_rows)
+    table_s2.to_csv(OUT_TABLE_CSV, index=False)
+    if verbose:
+        print(f"\n  Saved Table S2: {OUT_TABLE_CSV}")
+
+    pd.DataFrame(text_rows).to_csv(OUT_TEXT_CSV, index=False)
+    if verbose:
+        print(f"  Saved text numbers: {OUT_TEXT_CSV}")
+        print("=" * 70)
+
+
+def _fit_joint_model(model_df, unique_ids, id_map,
+                     pain_mean, pain_sd, sleep_mean, sleep_sd,
+                     table_rows, text_rows, verbose=True):
+    """Fit a 2-moderator VARX(1) model with both pain and sleep severity."""
+    import pymc as pm
+    import arviz as az
+
+    # Build data arrays
+    sub_df = model_df.dropna(subset=["pain_within_lag1", "sleep_within_lag1"]).copy()
+
+    # Person-level moderators (z-scored)
+    person_pain_z = {}
+    person_sleep_z = {}
+    for sid in unique_ids:
+        rows = sub_df[sub_df["ID"] == sid]
+        if len(rows) == 0:
+            continue
+        person_pain_z[str(sid)] = (rows["pain_person_mean"].iloc[0] - pain_mean) / pain_sd
+        person_sleep_z[str(sid)] = (rows["sleep_person_mean"].iloc[0] - sleep_mean) / sleep_sd
+
+    valid_ids = [sid for sid in unique_ids if str(sid) in person_pain_z]
+    valid_set = set(valid_ids)
+    sub_df = sub_df[sub_df["ID"].isin(valid_set)].copy()
+    id_map_local = {sid: i for i, sid in enumerate(valid_ids)}
+    sub_df["pid_idx"] = sub_df["ID"].map(id_map_local)
+
+    N = len(valid_ids)
+    pain_w = sub_df["pain_within"].values
+    sleep_w = sub_df["sleep_within"].values
+    pain_lag = sub_df["pain_within_lag1"].values
+    sleep_lag = sub_df["sleep_within_lag1"].values
+    contrast_lag = sub_df["contrast_within_lag1"].values
+    sleep_x_contrast = sub_df["sleep_x_contrast_lag1"].values
+    pain_x_contrast = sub_df["pain_x_contrast_lag1"].values
+    age_z = sub_df["Age_z"].values
+    sex_c = sub_df["Sex_c"].values
+    pid = sub_df["pid_idx"].values.astype(int)
+
+    X_pain = np.array([person_pain_z[str(sid)] for sid in valid_ids])
+    X_sleep = np.array([person_sleep_z[str(sid)] for sid in valid_ids])
+    x_pain_obs = X_pain[pid]
+    x_sleep_obs = X_sleep[pid]
+
+    if verbose:
+        print(f"    Joint model: N={N}, obs={len(sub_df)}")
+
+    with pm.Model() as model:
+        # Fixed effects
+        a0 = pm.Normal("a0", 0, 5)   # pain intercept
+        a1 = pm.Normal("a1", 0, 5)   # pain AR
+        a2 = pm.Normal("a2", 0, 5)   # SP coupling (sleep->pain)
+        a3 = pm.Normal("a3", 0, 5)   # contrast->pain
+        a4 = pm.Normal("a4", 0, 5)   # sleep*contrast->pain
+
+        b0 = pm.Normal("b0", 0, 5)   # sleep intercept
+        b1 = pm.Normal("b1", 0, 5)   # PS coupling (pain->sleep)
+        b2 = pm.Normal("b2", 0, 5)   # sleep AR
+        b3 = pm.Normal("b3", 0, 5)   # contrast->sleep
+        b4 = pm.Normal("b4", 0, 5)   # pain*contrast->sleep
+
+        # Age/Sex moderation
+        g_sp_age = pm.Normal("g_sp_age", 0, 1)
+        g_sp_sex = pm.Normal("g_sp_sex", 0, 1)
+        g_ps_age = pm.Normal("g_ps_age", 0, 1)
+        g_ps_sex = pm.Normal("g_ps_sex", 0, 1)
+
+        # Severity moderation (2 moderators for each direction)
+        gamma_sp_pain = pm.Normal("gamma_sp_pain", 0, 1)
+        gamma_sp_sleep = pm.Normal("gamma_sp_sleep", 0, 1)
+        gamma_ps_pain = pm.Normal("gamma_ps_pain", 0, 1)
+        gamma_ps_sleep = pm.Normal("gamma_ps_sleep", 0, 1)
+
+        # Random effects
+        tau_sp = pm.HalfCauchy("tau_sp", 1)
+        tau_ps = pm.HalfCauchy("tau_ps", 1)
+        u_sp = pm.Normal("u_sp", 0, tau_sp, shape=N)
+        u_ps = pm.Normal("u_ps", 0, tau_ps, shape=N)
+
+        # Residual SDs
+        sigma_p = pm.HalfCauchy("sigma_p", 2)
+        sigma_s = pm.HalfCauchy("sigma_s", 2)
+
+        # Correlation via Beta(2,2) -> [-1,1]
+        rho_raw = pm.Beta("rho_raw", 2, 2)
+        rho = pm.Deterministic("rho", 2 * rho_raw - 1)
+
+        # SP coupling (sleep -> pain)
+        lambda_sp = (a2
+                     + g_sp_age * age_z
+                     + g_sp_sex * sex_c
+                     + gamma_sp_pain * x_pain_obs
+                     + gamma_sp_sleep * x_sleep_obs
+                     + u_sp[pid])
+
+        # PS coupling (pain -> sleep)
+        lambda_ps = (b1
+                     + g_ps_age * age_z
+                     + g_ps_sex * sex_c
+                     + gamma_ps_pain * x_pain_obs
+                     + gamma_ps_sleep * x_sleep_obs
+                     + u_ps[pid])
+
+        # Means
+        mu_p = a0 + a1 * pain_lag + lambda_sp * sleep_lag + a3 * contrast_lag + a4 * sleep_x_contrast
+        mu_s = b0 + lambda_ps * pain_lag + b2 * sleep_lag + b3 * contrast_lag + b4 * pain_x_contrast
+
+        # Cholesky for correlated innovations
+        L = pm.math.stack([
+            [sigma_p, 0],
+            [rho * sigma_s, sigma_s * pm.math.sqrt(1 - rho ** 2)],
+        ])
+
+        obs_stack = pm.math.stack([pain_w, sleep_w], axis=0)
+        mu_stack = pm.math.stack([mu_p, mu_s], axis=0)
+
+        pm.MvNormal("likelihood", mu=mu_stack.T, chol=L, observed=obs_stack.T)
+
+        idata = pm.sample(2000, tune=2000, chains=4, cores=4,
+                          target_accept=0.95, progressbar=True,
+                          return_inferencedata=True)
+
+    # Extract results
+    def _summarize(var_name):
+        draws = idata.posterior[var_name].values.flatten()
+        mean = float(np.mean(draws))
+        lo, hi = float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5))
+        pneg = float(np.mean(draws < 0))
+        p = 2 * min(pneg, 1 - pneg)
+        return mean, lo, hi, p
+
+    rhat_vals = az.rhat(idata)
+    rhat_max = float(max(rhat_vals[v].values.max() for v in rhat_vals
+                         if hasattr(rhat_vals[v], "values")))
+
+    for var, label, direction in [
+        ("gamma_sp_pain", "Mean Pain Severity", "SP"),
+        ("gamma_sp_sleep", "Mean Sleep Quality", "SP"),
+    ]:
+        mean, lo, hi, p = _summarize(var)
+        if verbose:
+            print(f"    {var} = {mean:+.4f} [{lo:+.4f}, {hi:+.4f}], p={p:.4f}")
+        table_rows.append({
+            "Moderator": label, "Model": "Joint", "Direction": direction,
+            "gamma": mean, "CrI_lo": lo, "CrI_hi": hi, "p": p,
+        })
+        text_rows.append({"metric": f"joint_{var}", "value": f"{mean:+.4f}", "note": ""})
+        text_rows.append({"metric": f"joint_{var}_ci", "value": f"[{lo:+.4f}, {hi:+.4f}]", "note": ""})
+        text_rows.append({"metric": f"joint_{var}_p", "value": f"{p:.4f}", "note": ""})
+
+    if verbose:
+        print(f"    R-hat max: {rhat_max:.3f}")
+    text_rows.append({"metric": "joint_rhat_max", "value": f"{rhat_max:.3f}", "note": ""})
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Step 13 — Person-mean severity moderation (Table S2)."
+    )
+    parser.add_argument("--quiet", action="store_true")
+    args = parser.parse_args()
+    run_step13(verbose=not args.quiet)
+
+
+if __name__ == "__main__":
+    main()

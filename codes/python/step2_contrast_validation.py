@@ -44,8 +44,11 @@ IN_SCORED_CSV = os.path.join(DERIV_DIR, "step1_factor_analysis", "step1_scored_l
 IN_EXTRACTED_CSV = os.path.join(DATA_DIR, "step0_extracted_long.csv")
 IN_WIDE_XLSX = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
 
-OUT_FIG_S1 = os.path.join(STEP_RESULTS_DIR, "step2_figure_s1_endorsement.png")
-OUT_FIG_S2 = os.path.join(STEP_RESULTS_DIR, "step2_figure_s2_convergent.png")
+SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+os.makedirs(SUPP_DIR, exist_ok=True)
+
+OUT_FIG_S1 = os.path.join(SUPP_DIR, "figure_s1_endorsement.png")
+OUT_FIG_S2 = os.path.join(SUPP_DIR, "figure_s2_convergent.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step2_text_numbers.csv")
 
 AREA_LABELS = [
@@ -80,6 +83,7 @@ def generate_figure_s1(verbose=True):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from scipy import stats as sp_stats
+    from statsmodels.stats.multitest import multipletests
 
     if verbose:
         print("  Figure S1: Factor endorsement validation")
@@ -116,19 +120,22 @@ def generate_figure_s1(verbose=True):
             print("    SKIP: no valid point-biserial correlations")
         return
 
-    rpb_df = pd.DataFrame(rpb_results).sort_values("r_pb", ascending=True)
+    rpb_df = pd.DataFrame(rpb_results)
+    # FDR correction across all 13 areas
+    _, rpb_df["p_fdr"], _, _ = multipletests(rpb_df["p"].values, method="fdr_bh")
+    rpb_df = rpb_df.sort_values("r_pb", ascending=True).reset_index(drop=True)
 
     fig, ax = plt.subplots(figsize=(10, 7))
     colors = ["#1565C0" if r < 0 else "#D32F2F" for r in rpb_df["r_pb"]]
     ax.barh(range(len(rpb_df)), rpb_df["r_pb"].values, color=colors, alpha=0.7)
     ax.set_yticks(range(len(rpb_df)))
     ax.set_yticklabels(rpb_df["area"].values, fontsize=11)
-    ax.set_xlabel("Point-biserial correlation with mean contrast ($\\bar{K}_i$)",
+    ax.set_xlabel("Point-biserial correlation with mean contrast ($\\bar{K}$)",
                   fontsize=12)
     ax.axvline(0, color="black", linewidth=0.8)
 
     for i, (_, row) in enumerate(rpb_df.iterrows()):
-        if row["p"] < 0.05:
+        if row["p_fdr"] < 0.05:
             ax.text(row["r_pb"] + 0.01 * np.sign(row["r_pb"]),
                     i, "*", fontsize=14, ha="center", va="center",
                     fontweight="bold")
@@ -212,7 +219,7 @@ def generate_figure_s2(verbose=True):
                 transform=ax.transAxes, va="top", ha="left", fontsize=9,
                 bbox=dict(boxstyle="round,pad=0.3", facecolor="wheat",
                           alpha=0.85, edgecolor="gray"))
-        ax.set_xlabel("Person-mean contrast ($\\bar{K}_i$)", fontsize=10)
+        ax.set_xlabel("Person-mean contrast ($\\bar{K}$)", fontsize=10)
         ax.set_ylabel(label, fontsize=10)
         ax.tick_params(labelsize=9)
 

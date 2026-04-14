@@ -42,7 +42,7 @@ data/
 └── atlases/*.nii.gz
 ```
 
-**Why both `fmri_contrasts/` and `spm_nomask/`?** NAcc ROIs use
+**Why both `fmri_contrasts/` and `spm_nomask/`?** NAcc and LH ROIs use
 GM-masked contrasts (`fmri_contrasts/`). All other fMRI ROIs use
 unmasked re-estimated contrasts (`spm_nomask/`), because subcortical
 and brainstem ROIs lose coverage under per-subject GM masking.
@@ -54,23 +54,27 @@ and brainstem ROIs lose coverage under per-subject GM masking.
 From the repo root:
 
 ```bash
-cd python
+cd codes/python
 python step0_extract_data.py
 python step1_factor_analysis.py
-python step2_prepare_varx_data.py
-python step3_fit_coupling_model.py
-python step4_contrast_moderation.py
-python step5_extract_sp_rois.py
-python step6_fit_sp_moderation.py
-python step7_sp_moderation_jn.py
-python step8_extract_ps_rois.py
-python step9_fit_ps_moderation.py
-python step10_ps_moderation_jn.py
-python step11_remaining_figures.py
+python step2_contrast_validation.py
+python step3_prepare_varx_data.py
+python step4_fit_coupling_model.py
+python step5_contrast_moderation.py
+python step6_estimate_fmri_contrasts.py
+python step7_extract_sp_rois.py
+python step7b_plot_sp_roi_maps.py
+python step8_fit_sp_moderation.py
+python step9_sp_moderation_jn.py
+python step10_extract_ps_rois.py
+python step10b_plot_ps_roi_maps.py
+python step11_fit_ps_moderation.py
+python step12_ps_moderation_jn.py
+python step13_severity_moderation.py
 ```
 
-Total time: ~30 minutes on a 4-core machine with 16 GB RAM. Steps
-3, 6, and 9 are the slow ones (Bayesian model fitting).
+Total time: ~45 minutes on a 4-core machine with 16 GB RAM. Steps
+4, 8, 11, and 13 are the slow ones (Bayesian model fitting via MCMC).
 
 ---
 
@@ -80,33 +84,39 @@ Total time: ~30 minutes on a 4-core machine with 16 GB RAM. Steps
 |------|-------------|-----------------|
 | 0 | Extract paper-relevant variables from the legacy wide-format xlsx, apply gateway imputation | `data/step0_extracted_long.csv` |
 | 1 | Factor analysis (polychoric, 2-factor PAF, parallel analysis), Bartlett scoring, interpolation | Factor scores + model JSON |
-| 2 | Segment filter (≥3 consecutive quarters), within-between decomposition, lag creation | VARX-ready data + Figure 1 + Table 3 |
-| 3 | Fit the Bayesian VARX(1) coupling model + LOO-CV (4 nested models) | Table 4 + LOO comparison + posterior draws |
-| 4 | Johnson-Neyman analysis of pain localization moderation | Figures 4, S3 |
-| 5 | Extract mean fMRI BOLD in 7 spherical ROIs (6 Krause + ACC) | ROI values CSV |
-| 6 | Fit 7 Sleep-to-Pain moderation models, sign concordance test | Table 5 + sign concordance |
-| 7 | Johnson-Neyman analysis for SP moderation ROIs | Figures 5, 6, S5 |
-| 8 | Extract arousal relay ROI values (5 atlas ROIs x 2 modalities: fMRI + VBM) | ROI values CSVs |
-| 9 | Fit 10 Pain-to-Sleep moderation models, VBM sign concordance | Table S1 |
-| 10 | Johnson-Neyman analysis for PS moderation ROIs | Figures S7, S8 |
-| 11 | Person-level coupling plots, factor validation, convergent validity | Figures 2, 3, S1, S2 |
+| 2 | External validation of contrast factor: point-biserial correlations, convergent validity | Figures S1, S2 + text numbers |
+| 3 | Segment filter (>=3 consecutive quarters), within-between decomposition, lag creation | VARX-ready data + Figure 1 + Table 3 |
+| 4 | Fit the Bayesian VARX(1) coupling model + LOO-CV (4 nested models) | Tables 3-4, Figures 2-3, posterior draws |
+| 5 | Johnson-Neyman analysis of pain localization moderation | Figure 4, Figure S3 |
+| 6 | Re-estimate SPM contrast images without GM mask (OLS replication of SPM GLM) | Unmasked con images in `data/spm_nomask/` |
+| 7 | Extract mean fMRI BOLD in 8 spherical ROIs (6 Krause + bilateral dACC/MCC) | ROI values CSV |
+| 7b | Brain slice visualizations of SP ROIs on MNI template | Figure S4 |
+| 8 | Fit 8 Sleep-to-Pain moderation models, Krause sign concordance test | Table 5 + sign concordance |
+| 9 | Johnson-Neyman analysis for SP moderation ROIs | Figures 5, 6, S5 |
+| 10 | Extract arousal relay ROI values (5 atlas ROIs x 2 modalities: fMRI + VBM) | ROI values CSVs |
+| 10b | Brain slice visualizations of PS arousal ROIs on MNI template | Figure S6 |
+| 11 | Fit 10 Pain-to-Sleep moderation models, VBM sign concordance | Table S1 |
+| 12 | Johnson-Neyman analysis for PS moderation ROIs | Figures S7, S8 |
+| 13 | Person-mean severity moderation of coupling (3 models) | Table S2 |
 
 ---
 
 ## 5. Where to find outputs
 
 - **`data/`** — only the Step 0 extraction. No other step writes here.
-- **`derivatives/`** — intermediate files passed between steps (factor scores, processed data, posterior draws, ROI values). You don't need to look at these unless debugging.
-- **`results/`** — every table (CSV), figure (PNG), and text number (CSV) that appears in the manuscript. Each file is prefixed with its step number so you know where it came from.
+- **`derivatives/`** — intermediate files passed between steps (factor scores, processed data, posterior draws, ROI values). Each subfolder is named `stepN_description/`. You don't need to look at these unless debugging.
+- **`results/`** — every table (CSV), figure (PNG), and text number (CSV) that appears in the manuscript:
+  - Main-text figures and tables are in step-specific subfolders (e.g. `results/step4_coupling_model/`)
+  - **All supplementary materials** (Figures S1-S8, Tables S1-S2) are in `results/supplementary_materials/`
 
 ---
 
 ## 6. Checking your results
 
-Each results file has a `text_numbers.csv` companion that lists
+Each step produces a `text_numbers.csv` companion that lists
 every number stated in the manuscript text from that step. Compare
 your values against the manuscript — they should match within MCMC
-noise (|Δ| ≤ 0.005 for coupling parameters, ≤ 0.02 for JN
+noise (|delta| <= 0.005 for coupling parameters, <= 0.02 for JN
 boundaries).
 
 If something looks off:
@@ -116,22 +126,36 @@ If something looks off:
 - **Factor scores different?** Step 1 uses polychoric correlations
   by default. Make sure you're running it without extra flags.
 - **VBM N too low?** The VBM filenames use `x` instead of `-` in
-  subject IDs (BIDS convention). Step 8 handles this mapping.
+  subject IDs (BIDS convention). Step 10 handles this mapping.
   If you see N < 189 for VBM, the mapping may need updating.
 
 ---
 
-## 7. What the MATLAB code does
+## 7. Replotting figures without refitting models
+
+If you only need to change figure aesthetics (colors, fonts, axis
+limits) without re-running MCMC:
+
+```bash
+python replot_all_figures.py
+```
+
+This reads saved posterior draws from `derivatives/` and regenerates
+all figures. Takes ~30 seconds.
+
+---
+
+## 8. What the MATLAB code does
 
 You don't need to run the MATLAB pipeline — the neuroimaging
 inputs (`fmri_contrasts/`, `spm_nomask/`, `vbm/`, `atlases/`) are
-provided pre-computed. The MATLAB code is in the repo for
+provided pre-computed. The MATLAB code is in `codes/matlab/` for
 transparency; it documents how the raw DICOM files were
 preprocessed into the NIfTI contrast images that the Python
 pipeline reads.
 
 ---
 
-## 8. Questions
+## 9. Questions
 
 Ping Pedro or open an issue on the repo.

@@ -46,24 +46,74 @@ To address these questions, the present study leveraged a longitudinal cohort of
 
 **Table 1.** Notation glossary.
 
-|  |  |
-| --- | --- |
-| Symbol | Meaning |
-| $P$, $S$ | Pain and sleep scores |
-| $$K$$ | Pain localization (knee-vs-body contrast) |
-| $$X$$ | Neuroimaging moderator |
-| $$W$$ | Generic conditioning variable (Johnson-Neyman analysis) |
-| $$μ$$ | Intercept |
-| $$φ$$ | Autoregression |
-| $$λ$$ | Cross-lagged coupling |
-| $$δ$$ | Direct effect of pain localization |
-| $$ω$$ | Within-person interaction (coupling$×$ localization) |
-| $$γ$$ | Between-person moderation |
-| $$τ$$ | Random effect SD |
-| $$σ$$ | Innovation SD |
-| $$ρ$$ | Innovation correlation |
-| $$u$$ | Person-specific random coupling deviation |
-| $$ε$$ | Innovation |
+|              |                                                         |
+| ------------ | ------------------------------------------------------- |
+| Symbol       | Meaning                                                 |
+| $P$, $S$ | Pain and sleep scores                                   |
+| $$K$$      | Pain localization (knee-vs-body contrast)               |
+| $$X$$      | Neuroimaging moderator                                  |
+| $$W$$      | Generic conditioning variable (Johnson-Neyman analysis) |
+| 
+$$
+μ
+$$
+
+        | Intercept                                               |
+| 
+$$
+φ
+$$
+
+        | Autoregression                                          |
+| 
+$$
+λ
+$$
+
+        | Cross-lagged coupling                                   |
+| 
+$$
+δ
+$$
+
+        | Direct effect of pain localization                      |
+| 
+$$
+ω
+$$
+
+        | Within-person interaction (coupling$×$ localization) |
+| 
+$$
+γ
+$$
+
+        | Between-person moderation                               |
+| 
+$$
+τ
+$$
+
+        | Random effect SD                                        |
+| 
+$$
+σ
+$$
+
+        | Innovation SD                                           |
+| 
+$$
+ρ
+$$
+
+        | Innovation correlation                                  |
+| $$u$$      | Person-specific random coupling deviation               |
+| 
+$$
+ε
+$$
+
+        | Innovation                                              |
 
 **Note.** Uppercase letters denote observed variables and scores; lowercase Greek letters denote model coefficients and parameters. Subscripts: $p$ = pain, $s$ = sleep, $sp$ = sleep-to-pain direction, $ps$ = pain-to-sleep direction. Superscript $w$ = within-person centered.
 
@@ -79,18 +129,18 @@ At each quarterly visit, participants completed a set of self-report items asses
 
 **Table 2.** Quarterly assessment items.
 
-|  |  |  |
-| --- | --- | --- |
-| Item | Description | Scale |
-| q2 | Worst knee pain in the past 7 days | 0 (no pain) – 10 (worst imaginable) |
-| q3 | Average knee pain in the past 7 days | 0–10 |
-| q4 | Current knee pain | 0–10 |
-| q5 | Knee stiffness in the past 7 days | 0 (no stiffness) – 10 (worst imaginable) |
-| q7 | Worst body pain in the past 7 days | 0 (no pain) – 10 (worst imaginable) |
-| q8 | Average body pain in the past 7 days | 0–10 |
-| q9 | Current body pain | 0–10 |
-| q10 | Body stiffness in the past 7 days | 0 (no stiffness) – 10 (worst imaginable) |
-| q13 | Sleep quality in the past 7 days | 0 (very poorly) – 10 (very well) |
+|      |                                      |                                           |
+| ---- | ------------------------------------ | ----------------------------------------- |
+| Item | Description                          | Scale                                     |
+| q2   | Worst knee pain in the past 7 days   | 0 (no pain) – 10 (worst imaginable)      |
+| q3   | Average knee pain in the past 7 days | 0–10                                     |
+| q4   | Current knee pain                    | 0–10                                     |
+| q5   | Knee stiffness in the past 7 days    | 0 (no stiffness) – 10 (worst imaginable) |
+| q7   | Worst body pain in the past 7 days   | 0 (no pain) – 10 (worst imaginable)      |
+| q8   | Average body pain in the past 7 days | 0–10                                     |
+| q9   | Current body pain                    | 0–10                                     |
+| q10  | Body stiffness in the past 7 days    | 0 (no stiffness) – 10 (worst imaginable) |
+| q13  | Sleep quality in the past 7 days     | 0 (very poorly) – 10 (very well)         |
 
 **Note.** Items q1 and q6 are binary gateway items (not listed) that gate the corresponding pain block. Items q11 (fatigue) and q12 (mood) were collected but not analyzed. Higher pain scores = more pain; higher sleep score (q13) = better sleep quality.
 
@@ -144,15 +194,23 @@ All time-varying variables ($Y\in P,S,K$) were decomposed into between-person me
 
 To estimate the bidirectional within-person coupling between pain and sleep while accounting for autoregressive dynamics and pain localization, a Bayesian bivariate vector autoregressive model with exogenous contrast moderation (VARX(1)) was specified, where $K^{w}$ denotes the within-person pain localization contrast (knee-vs-body; see Table 1):
 
-$$P\_{it}^{w}=μ\_{p}+φ\_{p}P\_{i,t-1}^{w}+λ\_{sp,it}S\_{i,t-1}^{w}+δ\_{p}K\_{i,t-1}^{w}+ε\_{p,it}$$
+$$
+P\_{it}^{w}=μ\_{p}+φ\_{p}P\_{i,t-1}^{w}+λ\_{sp,it}S\_{i,t-1}^{w}+δ\_{p}K\_{i,t-1}^{w}+ε\_{p,it}
+$$
 
-$$S\_{it}^{w}=μ\_{s}+λ\_{ps,it}P\_{i,t-1}^{w}+φ\_{s}S\_{i,t-1}^{w}+δ\_{s}K\_{i,t-1}^{w}+ε\_{s,it}$$
+$$
+S\_{it}^{w}=μ\_{s}+λ\_{ps,it}P\_{i,t-1}^{w}+φ\_{s}S\_{i,t-1}^{w}+δ\_{s}K\_{i,t-1}^{w}+ε\_{s,it}
+$$
 
 where the coupling coefficients $λ\_{sp,it}$ and $λ\_{ps,it}$ are allowed to vary as a function of demographic covariates, pain localization, and person-specific random effects:
 
-$$λ\_{sp,it}=λ\_{sp}+γ\_{sp,age} Age\_{i}^{z}+γ\_{sp,sex} Sex\_{i}^{c}+ω\_{sp} K\_{i,t-1}^{w}+u\_{sp,i}$$
+$$
+λ\_{sp,it}=λ\_{sp}+γ\_{sp,age} Age\_{i}^{z}+γ\_{sp,sex} Sex\_{i}^{c}+ω\_{sp} K\_{i,t-1}^{w}+u\_{sp,i}
+$$
 
-$$λ\_{ps,it}=λ\_{ps}+γ\_{ps,age} Age\_{i}^{z}+γ\_{ps,sex} Sex\_{i}^{c}+ω\_{ps} K\_{i,t-1}^{w}+u\_{ps,i}$$
+$$
+λ\_{ps,it}=λ\_{ps}+γ\_{ps,age} Age\_{i}^{z}+γ\_{ps,sex} Sex\_{i}^{c}+ω\_{ps} K\_{i,t-1}^{w}+u\_{ps,i}
+$$
 
 Here $λ\_{sp}$ and $λ\_{ps}$ are the population-average coupling coefficients, $γ\_{age}$ and $γ\_{sex}$ adjust coupling for demographic differences (included as nuisance covariates so that $λ\_{sp}$ and $λ\_{ps}$ represent coupling at sample-average age and sex), $ω$ captures within-person moderation by pain localization, and $u\_{sp,i}∼N(0,τ\_{sp}^{2})$ and $u\_{ps,i}∼N(0,τ\_{ps}^{2})$ are person-specific random deviations. Age was z-scored; sex was coded 0 = male, 1 = female and centered at the sample mean ($Sex\_{i}^{c}=Sex\_{i}-0.646$). The within-person pain localization contrast ($K^{w}$) also entered as a direct effect on each dependent variable ($δ\_{p}$, $δ\_{s}$).
 
@@ -168,7 +226,9 @@ To assess the evidence for each coupling direction, four nested models were fit 
 
 All ROIs were defined a priori from the published frameworks described above, with no data-driven selection. For each moderator analysis, the ROI's z-scored value ($X\_{i}$; fMRI response contrast or GM volume) was added as an additional between-person term in the coupling coefficients:
 
-$$λ\_{sp,it}=λ\_{sp}+γ\_{sp,age}Age\_{i}^{z}+γ\_{sp,sex}Sex\_{i}^{c}+ω\_{sp}K\_{i,t-1}^{w}+γ\_{sp}X\_{i}+u\_{sp,i}$$
+$$
+λ\_{sp,it}=λ\_{sp}+γ\_{sp,age}Age\_{i}^{z}+γ\_{sp,sex}Sex\_{i}^{c}+ω\_{sp}K\_{i,t-1}^{w}+γ\_{sp}X\_{i}+u\_{sp,i}
+$$
 
 (and analogously for $λ\_{ps,it}$). The parameters $γ\_{sp}$ and $γ\_{ps}$ quantify how a one-SD increase in the moderator shifts the population coupling slope. For the Krause et al. (2019) ROIs (23) and the ACC (Sardi et al. (2024) framework (28)), we tested moderation of the sleep-to-pain coupling ($γ\_{sp}$) because these theoretical frameworks concern how sleep loss amplifies pain. For the Lynch et al. (2025) arousal pathway ROIs (31), we tested moderation of the pain-to-sleep coupling ($γ\_{ps}$) because the theoretical framework concerns how pain disrupts sleep via arousal relay circuits. Each ROI was tested as a moderator in a separate model run.
 
@@ -178,7 +238,9 @@ Because sleep deprivation increased pain-evoked activation in S1, middle insula,
 
 To characterize the continuous range of moderator values over which coupling was credibly different from zero, Johnson-Neyman (JN) analyses were conducted for all moderation effects. For a given conditioning value $W$, the conditional coupling slope is:
 
-$$λ(W)=λ\_{0}+γW$$
+$$
+λ(W)=λ\_{0}+γW
+$$
 
 where $λ\_{0}$ is the population-average coupling coefficient (equivalent to the adjusted intercept in a frequentist regression framework; $λ\_{sp}$ for sleep-to-pain, $λ\_{ps}$ for pain-to-sleep) and $γ$ is the corresponding moderation parameter ($ω\_{sp}$ or $ω\_{ps}$ for the within-person contrast moderator; $γ\_{sp}$ or $γ\_{ps}$ for between-person neuroimaging moderators). Here $W$ is a free conditioning variable—not a specific person's or quarter's value, but a hypothetical moderator value at which the population-average coupling is evaluated. Because both $λ\_{0}$ and $γ$ are estimated as full posterior distributions, the posterior of $λ(W)$ was computed draw-by-draw for a dense grid of $W$ values spanning the observed moderator range. At each $W$, the 2.5th and 97.5th percentiles of the posterior defined the 95% credible interval. The JN boundary was identified as the moderator value at which the credible interval first included zero. That is, the threshold beyond which the conditional coupling is no longer credibly different from zero.
 
@@ -198,31 +260,31 @@ Of the 243 participants in the parent study, 229 had at least one continuous seg
 
 **Table 3.** Demographic and baseline clinical characteristics (N = 229).
 
-|  |  |  |
-| --- | --- | --- |
-| Variable | Level | Value |
-| Age, years, mean (SD) [range] |  | 58.1 (8.2) [31–79] |
-| Female sex, N (%) |  | 148 (64.6) |
-| Race/ethnicity, N (%) |  |  |
-|  | Black/African American | 91 (39.7) |
-|  | White/Caucasian | 67 (29.3) |
-|  | Hispanic/Latino | 55 (24.0) |
-|  | Other | 16 (7.0) |
-| BMI, kg/m², mean (SD) [range] |  | 31.6 (7.7) [18.7–65.4] |
-| WOMAC Pain (0–20), mean (SD) |  | 5.8 (5.0) |
-| WOMAC Stiffness (0–8), mean (SD) |  | 2.5 (2.2) |
-| WOMAC Physical Function (0–68), mean (SD) |  | 18.5 (16.1) |
-| WOMAC Total (0–96), mean (SD) |  | 26.7 (22.6) |
-| PHQ knee pain days per week, mean (SD) |  | 3.9 (2.8) |
-| PHQ % waking day in knee pain, mean (SD) |  | 36.3 (33.4) |
-| Knee pain rating (0–100), mean (SD) |  | 11.1 (18.6) |
-| PHQ endorses knee pain, N (%) |  | 162 (70.7) |
-| Kellgren-Lawrence grade, N (%) |  |  |
-|  | 0 | 70 (31.2) |
-|  | 1 | 43 (19.2) |
-|  | 2 | 48 (21.4) |
-|  | 3 | 34 (15.2) |
-|  | 4 | 29 (12.9) |
+|                                            |                        |                         |
+| ------------------------------------------ | ---------------------- | ----------------------- |
+| Variable                                   | Level                  | Value                   |
+| Age, years, mean (SD) [range]              |                        | 58.1 (8.2) [31–79]     |
+| Female sex, N (%)                          |                        | 148 (64.6)              |
+| Race/ethnicity, N (%)                      |                        |                         |
+|                                            | Black/African American | 91 (39.7)               |
+|                                            | White/Caucasian        | 67 (29.3)               |
+|                                            | Hispanic/Latino        | 55 (24.0)               |
+|                                            | Other                  | 16 (7.0)                |
+| BMI, kg/m², mean (SD) [range]             |                        | 31.6 (7.7) [18.7–65.4] |
+| WOMAC Pain (0–20), mean (SD)              |                        | 5.8 (5.0)               |
+| WOMAC Stiffness (0–8), mean (SD)          |                        | 2.5 (2.2)               |
+| WOMAC Physical Function (0–68), mean (SD) |                        | 18.5 (16.1)             |
+| WOMAC Total (0–96), mean (SD)             |                        | 26.7 (22.6)             |
+| PHQ knee pain days per week, mean (SD)     |                        | 3.9 (2.8)               |
+| PHQ % waking day in knee pain, mean (SD)   |                        | 36.3 (33.4)             |
+| Knee pain rating (0–100), mean (SD)       |                        | 11.1 (18.6)             |
+| PHQ endorses knee pain, N (%)              |                        | 162 (70.7)              |
+| Kellgren-Lawrence grade, N (%)             |                        |                         |
+|                                            | 0                      | 70 (31.2)               |
+|                                            | 1                      | 43 (19.2)               |
+|                                            | 2                      | 48 (21.4)               |
+|                                            | 3                      | 34 (15.2)               |
+|                                            | 4                      | 29 (12.9)               |
 
 **Note.** WOMAC = Western Ontario and McMaster Universities Osteoarthritis Index. PHQ = Pain History Questionnaire. Knee pain rating: 0–100 numerical rating scale during quantitative sensory testing. Kellgren-Lawrence grades from weight-bearing radiographs of the index knee (5 missing). BMI = body mass index.
 
@@ -236,32 +298,115 @@ Other baseline clinical measures further confirmed this pattern. The person-mean
 
 ## Population coupling estimates
 
-**Table 4** presents the population parameters from the Bayesian VARX(1) model.
-
 **Table 4.** Population parameters from Bayesian VARX(1).
 
-|  |  |  |  |  |  |  |
-| --- | --- | --- | --- | --- | --- | --- |
-| Parameter | Description | Estimate | SD | 95% CrI | $$P(<0)$$ | $$\hat{R}$$ |
-| $$\hat{μ}\_{p}$$ | Pain intercept | 0.009 | 0.010 | [-0.011, 0.027] |  | 1.00 |
-| $$\hat{φ}\_{p}$$ | Pain autoregression | 0.106 | 0.025 | [0.059, 0.152] |  | 1.00 |
-| $$\hat{λ}\_{sp}$$ | **Sleep** $\rightarrow $ **Pain** | **-0.021** | **0.018** | **[-0.054, 0.015]** | **0.877** | **1.00** |
-| $$\hat{δ}\_{p}$$ | Localization$\rightarrow $ Pain (direct) | 0.024 | 0.015 | [-0.004, 0.051] | 0.056 | 1.00 |
-| $$\hat{ω}\_{sp}$$ | Sleep$×$ Localization $\rightarrow $ Pain | 0.009 | 0.018 | [-0.026, 0.043] | 0.313 | 1.00 |
-| $$\hat{μ}\_{s}$$ | Sleep intercept | 0.004 | 0.016 | [-0.025, 0.034] |  | 1.00 |
-| $$\hat{λ}\_{ps}$$ | **Pain** $\rightarrow $ **Sleep** | **-0.140** | **0.050** | **[-0.238, -0.042]** | **0.998** | **1.00** |
-| $$\hat{φ}\_{s}$$ | Sleep autoregression | 0.004 | 0.023 | [-0.038, 0.049] |  | 1.00 |
-| $$\hat{δ}\_{s}$$ | **Localization** $\rightarrow $ **Sleep (direct)** | **-0.050** | **0.023** | **[-0.093, -0.006]** | **0.986** | 1.00 |
-| $$\hat{ω}\_{ps}$$ | Pain$×$ Localization $\rightarrow $ Sleep | -0.050 | 0.038 | [-0.124, 0.021] | 0.903 | 1.00 |
-| $$\hat{τ}\_{sp}$$ | SD: Sleep$\rightarrow $ Pain | 0.115 | 0.022 | [0.073, 0.156] |  | 1.01 |
-| $$\hat{τ}\_{ps}$$ | SD: Pain$\rightarrow $ Sleep | 0.362 | 0.058 | [0.244, 0.464] |  | 1.00 |
-| $$\hat{σ}\_{p}$$ | Innovation SD (pain) | 0.437 | 0.008 | [0.424, 0.452] |  | 1.00 |
-| $$\hat{σ}\_{s}$$ | Innovation SD (sleep) | 0.661 | 0.011 | [0.640, 0.682] |  | 1.00 |
-| $$\hat{ρ}$$ | Innovation correlation | -0.155 | 0.024 | [-0.202, -0.111] | 1.000 | 1.00 |
+|                   |                                                                  |                  |                 |                            |                 |                |
+| ----------------- | ---------------------------------------------------------------- | ---------------- | --------------- | -------------------------- | --------------- | -------------- |
+| Parameter         | Description                                                      | Estimate         | SD              | 95% CrI                    | 
+$$
+P(<0)
+$$
+
+        | 
+$$
+\hat{R}
+$$
+
+     |
+| 
+$$
+\hat{μ}\_{p}
+$$
+
+  | Pain intercept                                                   | 0.009            | 0.010           | [-0.011, 0.027]            |                 | 1.00           |
+| 
+$$
+\hat{φ}\_{p}
+$$
+
+  | Pain autoregression                                              | 0.106            | 0.025           | [0.059, 0.152]             |                 | 1.00           |
+| 
+$$
+\hat{λ}\_{sp}
+$$
+
+ | **Sleep** $\rightarrow $ **Pain**                  | **-0.021** | **0.018** | **[-0.054, 0.015]**  | **0.877** | **1.00** |
+| 
+$$
+\hat{δ}\_{p}
+$$
+
+  | Localization$\rightarrow $ Pain (direct)                       | 0.024            | 0.015           | [-0.004, 0.051]            | 0.056           | 1.00           |
+| 
+$$
+\hat{ω}\_{sp}
+$$
+
+ | Sleep$×$ Localization $\rightarrow $ Pain                   | 0.009            | 0.018           | [-0.026, 0.043]            | 0.313           | 1.00           |
+| 
+$$
+\hat{μ}\_{s}
+$$
+
+  | Sleep intercept                                                  | 0.004            | 0.016           | [-0.025, 0.034]            |                 | 1.00           |
+| 
+$$
+\hat{λ}\_{ps}
+$$
+
+ | **Pain** $\rightarrow $ **Sleep**                  | **-0.140** | **0.050** | **[-0.238, -0.042]** | **0.998** | **1.00** |
+| 
+$$
+\hat{φ}\_{s}
+$$
+
+  | Sleep autoregression                                             | 0.004            | 0.023           | [-0.038, 0.049]            |                 | 1.00           |
+| 
+$$
+\hat{δ}\_{s}
+$$
+
+  | **Localization** $\rightarrow $ **Sleep (direct)** | **-0.050** | **0.023** | **[-0.093, -0.006]** | **0.986** | 1.00           |
+| 
+$$
+\hat{ω}\_{ps}
+$$
+
+ | Pain$×$ Localization $\rightarrow $ Sleep                   | -0.050           | 0.038           | [-0.124, 0.021]            | 0.903           | 1.00           |
+| 
+$$
+\hat{τ}\_{sp}
+$$
+
+ | SD: Sleep$\rightarrow $ Pain                                   | 0.115            | 0.022           | [0.073, 0.156]             |                 | 1.01           |
+| 
+$$
+\hat{τ}\_{ps}
+$$
+
+ | SD: Pain$\rightarrow $ Sleep                                   | 0.362            | 0.058           | [0.244, 0.464]             |                 | 1.00           |
+| 
+$$
+\hat{σ}\_{p}
+$$
+
+  | Innovation SD (pain)                                             | 0.437            | 0.008           | [0.424, 0.452]             |                 | 1.00           |
+| 
+$$
+\hat{σ}\_{s}
+$$
+
+  | Innovation SD (sleep)                                            | 0.661            | 0.011           | [0.640, 0.682]             |                 | 1.00           |
+| 
+$$
+\hat{ρ}
+$$
+
+       | Innovation correlation                                           | -0.155           | 0.024           | [-0.202, -0.111]           | 1.000           | 1.00           |
 
 **Note.** N = 229; 1,818 observations; 4 chains $×$ 2,000 posterior draws (see Methods). Convergence was adequate: maximum $\hat{R}=1.01$; all effective sample sizes $>$ 7,000. Age and sex nuisance terms ($\hat{γ}\_{age}$, $\hat{γ}\_{sex}$) are omitted from the table and none approached significance in either coupling direction (all $|\hat{γ}|<0.03$, all $p>0.30$). $P(<0)$ is the one-sided posterior probability that the parameter is negative; blank cells indicate parameters for which directionality is not of primary interest. Throughout this paper, one-sided posterior probabilities $P(<0)$ or $P(>0)$ are reported for coupling coefficients and direct effects, while two-sided Bayesian $p$-values ($p=2×min(P(<0),P(>0))$) are reported for moderation parameters ($γ$) in Table 5 (see Methods: Neuroimaging moderator analyses for rationale).
 
-The pain-to-sleep pathway was the dominant coupling direction. The population mean ($\hat{λ}\_{ps}=-0.140$, $P(\hat{λ}\_{ps}<0)=0.998$, 95% CrI [-0.238, -0.042]) indicated that a one-unit within-person increase in general pain predicted a 0.140-unit decrease in next-quarter sleep quality. The random effect SD was substantial ($\hat{τ}\_{ps}=0.362$), reflecting meaningful between-person heterogeneity: person-level posterior means ranged from -0.878 to +0.810 (SD = 0.180), and 9 of 229 participants (3.9%) had $P(\hat{λ}\_{ps,i}<0)>0.95$ (**Figure 2**).
+**Table 4** presents the population parameters from the Bayesian VARX(1) model. The pain-to-sleep pathway was the dominant coupling direction. The population mean ($\hat{λ}\_{ps}=-0.140$, $P(\hat{λ}\_{ps}<0)=0.998$, 95% CrI [-0.238, -0.042]) indicated that a one-unit within-person increase in general pain predicted a 0.140-unit decrease in next-quarter sleep quality. The random effect SD was substantial ($\hat{τ}\_{ps}=0.362$), reflecting meaningful between-person heterogeneity: person-level posterior means ranged from -0.878 to +0.810 (SD = 0.180), and 9 of 229 participants (3.9%) had $P(\hat{λ}\_{ps,i}<0)>0.95$ (**Figure 2**).
 
 ![](../results/step4_coupling_model/step4_figure2_ps_coupling.png)
 
@@ -296,17 +441,22 @@ Both ACC hemispheres—tested separately from the Krause et al. (2019) framework
 
 **Table 5.** fMRI stimulation BOLD moderators of sleep-to-pain coupling (N = 174).
 
-|  |  |  |  |  |  |
-| --- | --- | --- | --- | --- | --- |
-| ROI | Framework | Expected $\hat{γ}\_{sp}$ | $$\hat{γ}\_{sp}$$ | 95% CrI | $$p$$ |
-| **Left NAcc** | **Krause et al. (2019)** | **+** | **+0.040** | **[+0.004, +0.076]** | **0.027** |
-| Right NAcc | Krause et al. (2019) | + | +0.023 | [-0.013, +0.057] | 0.194 |
-| Contralateral S1 | Krause et al. (2019) | $$-$$ | -0.017 | [-0.056, +0.024] | 0.414 |
-| Contralateral Middle Insula | Krause et al. (2019) | + | +0.017 | [-0.025, +0.060] | 0.435 |
-| Left Thalamus | Krause et al. (2019) | + | +0.013 | [-0.025, +0.051] | 0.507 |
-| Left Anterior Insula | Krause et al. (2019) | + | +0.006 | [-0.034, +0.050] | 0.831 |
-| **Right dACC/MCC** | **Sardi et al. (2024)** | **+** | **+0.038** | **[+0.000, +0.077]** | **0.047** |
-| **Left dACC/MCC** | **Sardi et al. (2024)** | **+** | **+0.042** | **[+0.003, +0.081]** | **0.035** |
+|                             |                                |                            |                   |                            |                 |
+| --------------------------- | ------------------------------ | -------------------------- | ----------------- | -------------------------- | --------------- |
+| ROI                         | Framework                      | Expected$\hat{γ}\_{sp}$ | 
+$$
+\hat{γ}\_{sp}
+$$
+
+ | 95% CrI                    | $$p$$         |
+| **Left NAcc**         | **Krause et al. (2019)** | **+**                | **+0.040**  | **[+0.004, +0.076]** | **0.027** |
+| Right NAcc                  | Krause et al. (2019)           | +                          | +0.023            | [-0.013, +0.057]           | 0.194           |
+| Contralateral S1            | Krause et al. (2019)           | $$-$$                    | -0.017            | [-0.056, +0.024]           | 0.414           |
+| Contralateral Middle Insula | Krause et al. (2019)           | +                          | +0.017            | [-0.025, +0.060]           | 0.435           |
+| Left Thalamus               | Krause et al. (2019)           | +                          | +0.013            | [-0.025, +0.051]           | 0.507           |
+| Left Anterior Insula        | Krause et al. (2019)           | +                          | +0.006            | [-0.034, +0.050]           | 0.831           |
+| **Right dACC/MCC**    | **Sardi et al. (2024)**  | **+**                | **+0.038**  | **[+0.000, +0.077]** | **0.047** |
+| **Left dACC/MCC**     | **Sardi et al. (2024)**  | **+**                | **+0.042**  | **[+0.003, +0.081]** | **0.035** |
 
 **Note.** Each ROI was tested in a separate model run. The six Krause et al. (2019) ROIs test the sleep deprivation framework: sleep deprivation decreased NAcc, insula, and thalamus responses while increasing S1 reactivity. S1 and middle insula were extracted from the hemisphere contralateral to the stimulated knee (see Methods). Krause et al. (2019) defined the NAcc bilaterally ($\pm $9, 2, -7); left and right hemispheres were tested separately. The two ACC ROIs test the Sardi et al. (2024) framework: ACC and NAcc as parallel D2-gated nodes; both hemispheres were tested given that the left ACC was mirrored from the right coordinate. Both NAcc ROIs used GM-masked contrast images; all other ROIs used unmasked contrasts (see Methods). $p=2×min(P(γ\_{sp}<0),P(γ\_{sp}>0))$.
 
@@ -374,7 +524,7 @@ Although participants also underwent MRI at the two-year follow-up, we did not u
 
 # Data Availability
 
-The data that support the findings of this study contain protected health information from human subjects and cannot be shared publicly due to IRB and HIPAA restrictions. De-identified data are available from the corresponding author upon reasonable request, subject to institutional data use agreements. Analysis code is available at <https://github.com/pvaldeshernandez/quarterly_sleep-pain_coupling.>
+The data that support the findings of this study contain protected health information from human subjects and cannot be shared publicly due to IRB and HIPAA restrictions. De-identified data are available from the corresponding author upon reasonable request, subject to institutional data use agreements. Analysis code is available at [https://github.com/pvaldeshernandez/quarterly_sleep-pain_coupling.](https://github.com/pvaldeshernandez/quarterly_sleep-pain_coupling.)
 
 # Acknowledgements
 
@@ -391,139 +541,71 @@ This work was supported by NIH/NIA Grants K01AG083228 (PAVH); R01AG059809, R01AG
 # References
 
 1. M. T. Smith, J. A. Haythornthwaite, How do sleep disturbance and chronic pain inter-relate? Insights from the longitudinal and cognitive-behavioral clinical trials literature. *Sleep Med. Rev.* **8**, 119–132 (2004).
-
 2. P. H. Finan, B. R. Goodin, M. T. Smith, The Association of Sleep and Pain: An Update and a Path Forward. *J. Pain* **14**, 1539–1552 (2013).
-
 3. J. I. Gerhart, *et al.*, Relationships Between Sleep Quality and Pain-Related Factors for People with Chronic Low Back Pain: Tests of Reciprocal and Time of Day Effects. *Annals of Behavioral Medicine* **51**, 365–375 (2017).
-
 4. D. Whibley, T. J. Braley, A. L. Kratz, S. L. Murphy, Transient Effects of Sleep on Next-Day Pain and Fatigue in Older Adults With Symptomatic Osteoarthritis. *J. Pain* **20**, 1373–1382 (2019).
-
 5. A. S. Lewandowski, T. M. Palermo, S. De la Motte, R. Fu, Temporal daily associations between pain and sleep in adolescents with chronic pain versus healthy adolescents. *Pain* **151**, 220–225 (2010).
-
 6. M. H. Bromberg, K. M. Gil, L. E. Schanberg, Daily sleep quality and mood as predictors of pain in children with juvenile polyarticular arthritis. *Health Psychology* **31**, 202–209 (2012).
-
 7. K. Abeler, S. Bergvik, T. Sand, O. Friborg, Daily associations between sleep and pain in patients with chronic musculoskeletal pain. *J. Sleep Res.* **30** (2021).
-
 8. Z. Goossens, *et al.*, Day-to-day associations between pain intensity and sleep outcomes in an adult chronic musculoskeletal pain population: A systematic review. *Sleep Med. Rev.* **79**, 102013 (2025).
-
 9. P. J. Quartana, E. M. Wickwire, B. Klick, E. Grace, M. T. Smith, Naturalistic changes in insomnia symptoms and pain in temporomandibular joint disorder: A cross-lagged panel analysis. *Pain* **149**, 325–331 (2010).
-
 10. G. Affleck, S. Urrows, H. Tennen, P. Higgins, M. Abeles, Sequential daily relations of sleep, pain intensity, and attention to pain among women with fibromyalgia. *Pain* **68**, 363–368 (1996).
-
 11. J. M. Dzierzewski, *et al.*, Daily Variations in Objective Nighttime Sleep and Subjective Morning Pain in Older Adults with Insomnia: Evidence of Covariation over Time. *J. Am. Geriatr. Soc.* **58**, 925–930 (2010).
-
 12. D. J. Kothari, M. C. Davis, E. W. Yeung, H. A. Tennen, Positive affect and pain: mediators of the within-day relation linking sleep quality to activity interference in fibromyalgia. *Pain* **156**, 540–546 (2015).
-
 13. C. J. Mun, *et al.*, Pain Expectancy and Positive Affect Mediate the day-to-day Association Between Objectively Measured Sleep and Pain Severity Among Women With Temporomandibular Disorder. *J. Pain* **23**, 669–679 (2022).
-
 14. E. M. O’Brien, *et al.*, Intraindividual Variability in Daily Sleep and Pain Ratings Among Chronic Pain Patients. *Clin. J. Pain* **27**, 425–433 (2011).
-
 15. N. K. Y. Tang, C. E. Goodchild, A. N. Sanborn, J. Howard, P. M. Salkovskis, Deciphering the Temporal Link between Pain and Sleep in a Heterogeneous Chronic Pain Patient Sample: A Multilevel Daily Process Study. *Sleep* **35**, 675–687 (2012).
-
 16. C. R. Valrie, K. M. Gil, R. Redding-Lallinger, C. Daeschner, Brief Report: Daily Mood as a Mediator or Moderator of the Pain-Sleep Relationship in Children with Sickle Cell Disease. *J. Pediatr. Psychol.* **33**, 317–322 (2007).
-
 17. S. M. Alsaadi, *et al.*, The Bidirectional Relationship Between Pain Intensity and Sleep Disturbance/Quality in Patients With Low Back Pain. *Clin. J. Pain* **30**, 755–765 (2014).
-
 18. R. R. Edwards, D. M. Almeida, B. Klick, J. A. Haythornthwaite, M. T. Smith, Duration of sleep contributes to next-day pain report in the general population ☆. *Pain* **137**, 202–207 (2008).
-
 19. R. E. Lucas, Why the Cross-Lagged Panel Model Is Almost Never the Right Choice. *Adv. Methods Pract. Psychol. Sci.* **6** (2023).
-
 20. M. T. Smith, R. R. Edwards, U. D. McCann, J. A. Haythornthwaite, The Effects of Sleep Deprivation on Pain Inhibition and Spontaneous Pain in Women. *Sleep* **30**, 494–505 (2007).
-
 21. T. Roehrs, M. Hyde, B. Blaisdell, M. Greenwald, T. Roth, Sleep Loss and REM Sleep Loss are Hyperalgesic. *Sleep* **29**, 145–151 (2006).
-
 22. K. Kourbanova, C. Alexandre, A. Latremoliere, Effect of sleep loss on pain—New conceptual and mechanistic avenues. *Front. Neurosci.* **16** (2022).
-
 23. A. J. Krause, A. A. Prather, T. D. Wager, M. A. Lindquist, M. P. Walker, The Pain of Sleep Loss: A Brain Characterization in Humans. *The Journal of Neuroscience* **39**, 2291–2300 (2019).
-
 24. M. N. Baliki, P. Y. Geha, H. L. Fields, A. V. Apkarian, Predicting Value of Pain and Analgesia: Nucleus Accumbens Response to Noxious Stimuli Changes in the Presence of Chronic Pain. *Neuron* **66**, 149–160 (2010).
-
 25. E. Navratilova, F. Porreca, Reward and motivation in pain and pain relief. *Nat. Neurosci.* **17**, 1304–1312 (2014).
-
 26. M. M. Makary, *et al.*, Loss of nucleus accumbens low-frequency fluctuations is a signature of chronic pain. *Proceedings of the National Academy of Sciences* **117**, 10015–10023 (2020).
-
 27. M. N. Baliki, *et al.*, Corticostriatal functional connectivity predicts transition to chronic back pain. *Nat. Neurosci.* **15**, 1117–1119 (2012).
-
 28. N. F. Sardi, *et al.*, Sleep and Pain: A Role for the Anterior Cingulate Cortex, Nucleus Accumbens, and Dopamine in the Increased Pain Sensitivity Following Sleep Restriction. *J. Pain* **25**, 331–349 (2024).
-
 29. N. D. Volkow, *et al.*, Evidence That Sleep Deprivation Downregulates Dopamine D2R in Ventral Striatum in the Human Brain. *The Journal of Neuroscience* **32**, 6711–6717 (2012).
-
 30. H. Ito, *et al.*, Chronic pain recruits hypothalamic dynorphin/kappa opioid receptor signalling to promote wakefulness and vigilance. *Brain* **146**, 1186–1199 (2023).
-
 31. N. Lynch, *et al.*, Calcitonin Gene‐Related Peptide (CGRP)‐Expressing Neurons in the External Lateral Parabrachial Area Regulate Pain‐Induced Sleep Disturbances. *Advanced Science* **12** (2025).
-
 32. M. Davis, D. L. Walker, L. Miles, C. Grillon, Phasic vs Sustained Fear in Rats and Humans: Role of the Extended Amygdala in Fear vs Anxiety. *Neuropsychopharmacology* **35**, 105–135 (2010).
-
 33. P. A. Valdes-Hernandez, *et al.*, Widespread and prolonged pain may reduce brain clearance capacity only via sleep impairment: Evidence from participants with knee pain. *J. Pain* **30**, 105356 (2025).
-
 34. P. A. Valdes-Hernandez, *et al.*, Accelerated Brain Aging Mediates the Association Between Psychological Profiles and Clinical Pain in Knee Osteoarthritis. *J. Pain* **25**, 104423 (2024).
-
 35. A. J. Johnson, *et al.*, Psychological profiles in adults with knee OA-related pain: a replication study. *Ther. Adv. Musculoskelet. Dis.* **13** (2021).
-
 36. P. A. Valdes-Hernandez, *et al.*, Brain-predicted age difference estimated using DeepBrainNet is significantly associated with pain and function—a multi-institutional and multiscanner study. *Pain* **164**, 2822–2838 (2023).
-
 37. E. L. Terry, *et al.*, Associations of pain catastrophizing with pain-related brain structure in individuals with or at risk for knee osteoarthritis: Sociodemographic considerations. *Brain Imaging Behav.* **15**, 1769–1777 (2021).
-
 38. S. Booker, *et al.*, Movement-evoked pain, physical function, and perceived stress: An observational study of ethnic/racial differences in aging non-Hispanic Blacks and non-Hispanic Whites with knee osteoarthritis. *Exp. Gerontol.* **124**, 110622 (2019).
-
 39. E. J. Bartley, *et al.*, Race/Ethnicity Moderates the Association Between Psychosocial Resilience and Movement‐Evoked Pain in Knee Osteoarthritis. *ACR Open Rheumatol.* **1**, 16–25 (2019).
-
 40. J. J. Tanner, *et al.*, More than chronic pain: behavioural and psychosocial protective factors predict lower brain age in adults with/at risk of knee osteoarthritis over two years. *Brain Commun.* **7** (2025).
-
 41. F. A. Huber, *et al.*, Neighborhood Disadvantage and Knee Osteoarthritis Pain: Do Sleep and Catastrophizing Play a Role? *Arthritis Care Res. (Hoboken).* **77**, 95–103 (2025).
-
 42. A. J. Johnson, J. Cole, R. B. Fillingim, Y. Cruz-Almeida, Persistent Non-pharmacological Pain Management and Brain-Predicted Age Differences in Middle-Aged and Older Adults With Chronic Knee Pain. *Frontiers in Pain Research* **3** (2022).
-
 43. A. J. Johnson, *et al.*, Cross-Sectional Brain-Predicted Age Differences in Community-Dwelling Middle-Aged and Older Adults with High Impact Knee Pain. *J. Pain Res.* **Volume 15**, 3575–3587 (2022).
-
 44. J. L. Horn, A Rationale and Test for the Number of Factors in Factor Analysis. *Psychometrika* **30**, 179–185 (1965).
-
 45. N. Bellamy, W. W. Buchanan, C. H. Goldsmith, J. Campbell, L. W. Stitt, Validation study of WOMAC: a health status instrument for measuring clinically important patient relevant outcomes to antirheumatic drug therapy in patients with osteoarthritis of the hip or knee. *J. Rheumatol.* **15**, 1833–40 (1988).
-
 46. J. H. Kellgren, J. S. Lawrence, Radiological Assessment of Osteo-Arthrosis. *Ann. Rheum. Dis.* **16**, 494–502 (1957).
-
 47. J. Ashburner, K. J. Friston, Unified segmentation. *Neuroimage* **26**, 839–851 (2005).
-
 48. J. Ashburner, A fast diffeomorphic image registration algorithm. *Neuroimage* **38**, 95–113 (2007).
-
 49. P. D. Youell, *et al.*, Lateralisation of nociceptive processing in the human brain: a functional magnetic resonance imaging study. *Neuroimage* **23**, 1068–1077 (2004).
-
 50. A. Xu, *et al.*, Convergent neural representations of experimentally-induced acute pain in healthy volunteers: A large-scale fMRI meta-analysis. *Neurosci. Biobehav. Rev.* **112**, 300–323 (2020).
-
 51. L. L. Symonds, N. S. Gordon, J. C. Bixby, M. M. Mande, Right-Lateralized Pain Processing in the Human Cortex: An fMRI Study. *J. Neurophysiol.* **95**, 3823–3830 (2006).
-
 52. K. Singh, *et al.*, Structural connectivity of autonomic, pain, limbic, and sensory brainstem nuclei in living humans based on 7 Tesla and 3 Tesla MRI. *Hum. Brain Mapp.* **43**, 3086–3112 (2022).
-
 53. L. Zaborszky, *et al.*, Stereotaxic probabilistic maps of the magnocellular cell groups in human basal forebrain. *Neuroimage* **42**, 1127–1141 (2008).
-
 54. W. M. Pauli, A. N. Nili, J. M. Tyszka, A high-resolution probabilistic in vivo atlas of human subcortical brain nuclei. *Sci. Data* **5**, 180063 (2018).
-
 55. J. D. Theiss, C. Ridgewell, M. McHugo, S. Heckers, J. U. Blackford, Manual segmentation of the human bed nucleus of the stria terminalis using 3 T MRI. *Neuroimage* **146**, 288–292 (2017).
-
 56. C. Neudorfer, *et al.*, A high-resolution in vivo magnetic resonance imaging atlas of the human hypothalamic region. *Sci. Data* **7**, 305 (2020).
-
 57. P. J. Curran, D. J. Bauer, The Disaggregation of Within-Person and Between-Person Effects in Longitudinal Models of Change. *Annu. Rev. Psychol.* **62**, 583–619 (2011).
-
 58. O. Abril-Pla, *et al.*, PyMC: a modern, and comprehensive probabilistic programming framework in Python. *PeerJ Comput. Sci.* **9**, e1516 (2023).
-
 59. A. Vehtari, A. Gelman, J. Gabry, Practical Bayesian model evaluation using leave-one-out cross-validation and WAIC. *Stat. Comput.* **27**, 1413–1432 (2017).
-
 60. R. Kumar, C. Carroll, A. Hartikainen, O. Martin, ArviZ a unified library for exploratory analysis of Bayesian models in Python. *J. Open Source Softw.* **4**, 1143 (2019).
-
 61. A. F. Hayes, *Introduction to Mediation, Moderation, and Conditional Process Analysis*, Second Edi (The Guilford Press, 2018).
-
 62. C. Alexandre, *et al.*, Decreased alertness due to sleep loss increases pain sensitivity in mice. *Nat. Med.* **23**, 768–774 (2017).
-
 63. C. Dormann, M. A. Griffin, Optimal time lags in panel studies. *Psychol. Methods* **20**, 489–505 (2015).
-
 64. N. Egorova-Brumley, *et al.*, Left nucleus accumbens volume is associated with poor sleep in hip osteoarthritis. *Neurobiology of Pain* **18**, 100203 (2025).
-
 65. C. S. Mccrae, *et al.*, Sleep and affect in older adults: Using multilevel modeling to examine daily associations. *J. Sleep Res.* **17**, 42–53 (2008).
-
 66. J. J. Liszka-Hackzell, D. P. Martin, Analysis of Nighttime Activity and Daytime Pain in Patients with Chronic Back Pain Using a Self-Organizing Map Neural Network. *J. Clin. Monit. Comput.* **19**, 411–414 (2005).
-
 67. E. L. Hamaker, R. M. Kuiper, R. P. P. P. Grasman, A critique of the cross-lagged panel model. *Psychol. Methods* **20**, 102–116 (2015).
-
 68. E. F. Afolalu, F. Ramlee, N. K. Y. Tang, Effects of sleep changes on pain-related health outcomes in the general population: A systematic review of longitudinal studies with exploratory meta-analysis. *Sleep Med. Rev.* **39**, 82–97 (2018).
-
 69. M. T. Smith, R. R. Edwards, G. L. Stonerock, U. D. McCann, Individual Variation in Rapid Eye Movement Sleep Is Associated With Pain Perception in Healthy Women: Preliminary Data. *Sleep* **28**, 809–812 (2005).

@@ -28,10 +28,10 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step7b_sp_roi_maps")
-os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+os.makedirs(SUPP_DIR, exist_ok=True)
 
-OUT_FIG_S4 = os.path.join(STEP_RESULTS_DIR, "step7b_figure_s4_stim_rois.png")
+OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_s4_stim_rois.png")
 
 # ROIs: 6 Krause + 2 Sardi (Right + Left dACC/MCC)
 ROIS = {
@@ -67,14 +67,14 @@ ROIS = {
         "mni": (9, 2, -7),
         "radius_mm": 6,
     },
-    "Right_dACC_MCC": {
-        "label": "Right dACC/MCC (Xu et al. 2020)",
-        "mni": (6, 12, 38),
-        "radius_mm": 6,
-    },
     "Left_dACC_MCC": {
         "label": "Left dACC/MCC (Xu et al. 2020)",
         "mni": (-6, 12, 38),
+        "radius_mm": 6,
+    },
+    "Right_dACC_MCC": {
+        "label": "Right dACC/MCC (Xu et al. 2020)",
+        "mni": (6, 12, 38),
         "radius_mm": 6,
     },
 }

@@ -61,7 +61,9 @@ OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step5_jn_localization_results.csv")
 
 # Results
 OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step5_figure4_jn_localization_ps.png")
-OUT_FIG_S3 = os.path.join(STEP_RESULTS_DIR, "step5_figure_s3_jn_localization_sp.png")
+SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+os.makedirs(SUPP_DIR, exist_ok=True)
+OUT_FIG_S3 = os.path.join(SUPP_DIR, "figure_s3_jn_localization_sp.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step5_text_numbers.csv")
 
 
@@ -198,7 +200,7 @@ def draw_jn_panel(ax, jn, panel_label, direction_label, slopes_dict,
     prefix = f"{panel_label}.  " if panel_label else ""
     ax.set_title(
         f"{prefix}{direction_label} coupling: "
-        f"\u03bb(K) = {jn['intercept_mean']:.3f} + ({jn['slope_mean']:.3f})\u00b7K",
+        f"\u03bb(K\u1d42) = {jn['intercept_mean']:.3f} + ({jn['slope_mean']:.3f})\u00b7K\u1d42",
         fontsize=20, fontweight="bold", loc="left", pad=10)
 
     # JN boundaries
