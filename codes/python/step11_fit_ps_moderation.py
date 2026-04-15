@@ -414,17 +414,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
     table_s1_md = "\n".join(table_s1_lines)
 
-    # ----- Table S1 note -----
-    table_s1_note = (
-        f"**Note.** Each ROI was tested in a separate model run. "
-        f"fMRI response: N = {n_fmri}; unmasked contrast images were used "
-        f"for PBN, SI-BF/Ch4, CeA, and BNST; GM-masked contrasts for LH "
-        f"(see Methods). GM volume: N = {n_vbm}. Johnson-Neyman analyses "
-        f"for each ROI are shown in Figures S7 (fMRI BOLD) and S8 "
-        f"(GM volume). Sleep-to-pain moderation results for all six "
-        f"spherical ROIs (including ACC) are reported in Table 5 of the "
-        f"main text."
-    )
+        # Table S1 Note is descriptive (method cross-refs, static Ns);
+    # lives only in docs/supplementary_materials.md.
 
     text = f"""\
 ## Results > 3.5 Pain-arousal relay pathway moderation
@@ -434,8 +425,6 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 **Table S1.** Pain-arousal relay moderation of pain-to-sleep coupling (atlas-defined ROIs).
 
 {table_s1_md}
-
-{table_s1_note}
 """
 
     with open(OUT_TEXT_MD, "w") as f:

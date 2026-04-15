@@ -707,29 +707,40 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     min_lags = v["min_lags_per_person"]
     max_lags = v["max_lags_per_person"]
 
+    # Format n_lags with comma separator (matches manuscript: 1,818)
+    try:
+        n_lags_fmt = f"{int(n_lags):,}"
+    except (TypeError, ValueError):
+        n_lags_fmt = str(n_lags)
     para_sample = (
-        f"Of the {n_parent} participants in the parent study, "
-        f"{n_excluded} were excluded because they lacked three or more "
-        f"consecutive quarters with both pain and sleep data, yielding an "
-        f"analytic sample of $N$ = {n_analytic}. Across these participants, "
-        f"{n_retained} person-quarter observations were retained within "
-        f"valid segments (\u22653 consecutive quarters), of which "
-        f"{n_interp} ({float(n_interp)/float(n_retained)*100:.1f}%) were "
-        f"single-gap interpolated values. After applying the one-quarter "
-        f"lag, {n_lags} usable lag transitions remained "
-        f"(median = {med_lags} per person, range = {min_lags}\u2013{max_lags})."
+        f"Of the {n_parent} participants in the parent study, {n_analytic} "
+        f"had at least one continuous segment of three or more consecutive "
+        f"quarterly timepoints with both pain factor scores and sleep "
+        f"scores available, while {n_excluded} were excluded for lacking "
+        f"such a segment (**Figure 1**). Among retained participants, the "
+        f"median number of usable lag-1 transitions was {med_lags} "
+        f"(range: {min_lags}\u2013{max_lags}), totaling {n_lags_fmt} "
+        f"transitions. **Table 3** presents the demographic and baseline "
+        f"clinical characteristics of this final analytic sample."
     )
 
+    try:
+        n_interp_fmt = f"{int(n_interp):,}"
+        n_retained_fmt = f"{int(n_retained):,}"
+    except (TypeError, ValueError):
+        n_interp_fmt = str(n_interp)
+        n_retained_fmt = str(n_retained)
     fig1_caption = (
-        f"**Figure 1.** Data availability grid (participants x quarters). "
-        f"Blue dots indicate observed retained data points; red dots indicate "
-        f"retained points for which scores were interpolated "
-        f"({n_interp} of {n_retained} retained points); grey dots indicate "
-        f"observations discarded due to segment length < 3. Horizontal lines "
-        f"connect consecutive quarters within retained segments. Participants "
-        f"are sorted by number of retained points (bottom = fewest). "
-        f"Participants below the dashed line ($N$ = {n_excluded}) were excluded "
-        f"for lacking any segment of three or more consecutive quarters."
+        f"**Figure 1.** Data availability grid (participants $\\times$ "
+        f"quarters). Blue dots indicate observed retained data points; "
+        f"red dots indicate retained points for which scores were "
+        f"interpolated ({n_interp_fmt} of {n_retained_fmt} retained "
+        f"points); grey dots indicate observations discarded due to "
+        f"segment length < 3. Horizontal lines connect consecutive "
+        f"quarters within retained segments. Participants are sorted by "
+        f"number of retained points (bottom = fewest). Participants "
+        f"below the dashed line (N = {n_excluded}) were excluded for "
+        f"lacking any segment of three or more consecutive quarters."
     )
 
     text = (

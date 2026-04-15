@@ -861,23 +861,19 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 ## Results > 3.1 Factor analysis and pain localization contrast
 ### Paragraph 1 (factor analysis)
 
-An exploratory factor analysis using principal axis factoring on the polychoric \
-correlation matrix of the eight pain items was conducted to separate general pain \
-severity from the knee-versus-body pain distribution. The number of factors to retain \
-was evaluated using Horn's parallel analysis (44), comparing observed eigenvalues of \
-the unreduced correlation matrix against the 95th percentile of eigenvalues from \
-1,000 random datasets of the same dimensions. The first factor was dominant \
-(eigenvalue = {eig1}, {pct1}% of variance) and exceeded the 95th-percentile \
-random eigenvalue threshold ({pa1}). The second eigenvalue ({eig2}, {pct2}% of \
-variance) {exceeded_str} the parallel analysis threshold ({pa2}). \
-The retained two-factor solution jointly accounted for {total_pct}% of the variance. \
-The first factor (F1: General Pain) had all eight items loading positively \
-(range: {f1_lo}\u2013{f1_hi}), capturing overall pain severity. The second factor \
-(F2: Contrast) showed positive loadings on knee items ({f2_knee_lo} to {f2_knee_hi}) \
-and negative loadings on body items ({f2_body_lo} to {f2_body_hi}), capturing \
-the relative predominance of knee-specific versus body-wide pain. \
-The two factors were orthogonal ($r = {r_f1f2}$). Single-gap interior interpolation \
-filled {n_interp_cells} factor-score cells across {n_interp_rows} person-quarter rows.
+An exploratory factor analysis was conducted to separate general pain \
+severity from the knee-versus-body pain distribution. The first factor was \
+dominant (eigenvalue = {eig1}, {pct1}% of variance) and exceeded the \
+95th-percentile random eigenvalue threshold ({pa1}). The second eigenvalue \
+({eig2}, {pct2}% of variance) {exceeded_str} the parallel analysis threshold \
+({pa2}). The retained two-factor solution jointly accounted for {total_pct}% \
+of the variance. The first factor (F1: General Pain) had all eight items \
+loading positively (range: {f1_lo}\u2013{f1_hi}), capturing overall pain \
+severity. The second factor (F2: Contrast) showed positive loadings on knee \
+items ({f2_knee_lo} to {f2_knee_hi}) and negative loadings on body items \
+({f2_body_lo} to {f2_body_hi}), capturing the within-person contrast between \
+knee-localized and body-wide pain. The two factors were orthogonal \
+($r = {r_f1f2}$).
 """
 
     with open(OUT_TEXT_MD, "w") as f:

@@ -463,22 +463,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         table5_text = "\n".join(table5_lines)
 
     n_fmri = int(v.get("n_fmri", "174"))
-    table5_note = (
-        f"**Note.** Each ROI was tested in a separate model run. "
-        f"The six Krause et al. (2019) ROIs test the sleep deprivation "
-        f"framework: sleep deprivation decreased NAcc, insula, and thalamus "
-        f"responses while increasing S1 reactivity. S1 and middle insula "
-        f"were extracted from the hemisphere contralateral to the stimulated "
-        f"knee (see Methods). Krause et al. (2019) defined the NAcc "
-        f"bilaterally ($\\pm$9, 2, -7); left and right hemispheres were "
-        f"tested separately. The ACC ROI tests the Sardi et al. (2024) "
-        f"framework: ACC and NAcc as parallel D2-gated nodes. Both NAcc "
-        f"ROIs used GM-masked contrast images; all other ROIs used unmasked "
-        f"contrasts (see Methods). "
-        f"\\*The lower CrI bound was slightly above zero, though this should "
-        f"be considered a marginal result given potential MCMC sampling "
-        f"fluctuations."
-    )
+    # Table 5 Note is descriptive (ROI definitions, methods cross-refs);
+    # lives only in docs/manuscript_pain.md.
 
     intro_block = f"### Paragraph 0 (moderator motivation)\n\n{p0}\n\n" if p0 else ""
 
@@ -499,8 +485,6 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 ## Table 5. fMRI stimulation BOLD moderators of sleep-to-pain coupling (N = {n_fmri})
 
 {table5_text}
-
-{table5_note}
 """
 
     with open(OUT_TEXT_MD, "w") as f:

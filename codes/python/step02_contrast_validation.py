@@ -466,28 +466,39 @@ def generate_text_paragraphs(verbose=True):
         return f"$p$ {pstr}" if pstr.startswith("<") else f"$p$ = {pstr}"
 
     para2 = (
-        f"To validate the contrast factor against an independent pain-location "
-        f"measure, participants were classified into three groups based on their "
-        f"baseline PHQ pain-area endorsements: knee-only ($N$ = {n_ko}), "
-        f"knee-plus-other-sites ($N$ = {n_kp}), and no-knee ($N$ = {n_nk}). "
-        f"A one-way ANOVA on person-mean contrast ($\\bar{{K}}_i$) showed a "
-        f"significant group effect ($F${anova_df} = {f_val}, {_pfmt(anova_p)}). "
-        f"The knee-only group had the highest contrast "
-        f"($M$ = {m_ko}, $SD$ = {sd_ko}), followed by knee-plus-other "
-        f"($M$ = {m_kp}, $SD$ = {sd_kp}), and no-knee "
-        f"($M$ = {m_nk}, $SD$ = {sd_nk}). "
-        f"Tukey HSD post-hoc tests confirmed that knee-only vs. no-knee "
-        f"({_pfmt(tukey_ko_nk)}) and knee-plus vs. no-knee "
-        f"({_pfmt(tukey_kp_nk)}) differed significantly, while knee-only vs. "
-        f"knee-plus was marginal ({_pfmt(tukey_ko_kp)}). "
-        f"Point-biserial correlations between $\\bar{{K}}_i$ and each of the 13 "
-        f"PHQ body-area endorsements showed that knee endorsement was positively "
-        f"associated ($r_{{pb}}$ = {rpb_knees_r}, $p_{{FDR}}$ {rpb_knees_fdr}), "
-        f"while upper back ($r_{{pb}}$ = {rpb_upper_back_r}, "
-        f"$p_{{FDR}}$ = {rpb_upper_back_fdr}) and lower back "
-        f"($r_{{pb}}$ = {rpb_lower_back_r}, $p_{{FDR}}$ = {rpb_lower_back_fdr}) "
-        f"were negatively associated; only the knee association survived "
-        f"FDR correction."
+        f"We provided external validation for the contrast factor. Each "
+        f"participant's mean contrast score across all available quarters "
+        f"($\\overline{{K}}$) was compared against the baseline pain area "
+        f"endorsements and clinical measures. Because the PHQ body map "
+        f"allows endorsement of multiple pain areas simultaneously "
+        f"(mean = 3.2 areas, SD = 2.5), participants were classified "
+        f"into three pain distribution groups: knee pain only "
+        f"(N = {n_ko}), knee pain plus at least one other area "
+        f"(N = {n_kp}), and no knee pain (N = {n_nk}). A one-way ANOVA "
+        f"revealed significant differences in $\\overline{{K}}$ across "
+        f"groups ($F{anova_df} = {f_val}$, {_pfmt(anova_p)}). "
+        f"Tukey post-hoc comparisons confirmed that all three groups "
+        f"differed from each other: knee-only participants had the "
+        f"highest average and positive contrast scores "
+        f"($\\overline{{K}} = {m_ko}$, SD = {sd_ko}), followed by "
+        f"knee-plus-others ($\\overline{{K}} = {m_kp}$, SD = {sd_kp}; "
+        f"{_pfmt(tukey_ko_kp)} vs knee-only), and no-knee "
+        f"participants had negative contrast scores "
+        f"($\\overline{{K}} = {m_nk}$, SD = {sd_nk}; "
+        f"{_pfmt(tukey_ko_nk)} vs knee-only and {_pfmt(tukey_kp_nk)} "
+        f"vs knee-plus-others). Complementarily, point-biserial "
+        f"correlations between each of the 13 individual pain area "
+        f"endorsements and $\\overline{{K}}$ confirmed a clear pattern: "
+        f"knee endorsement was positively associated with the contrast "
+        f"($r_{{pb}} = {rpb_knees_r}$, $p_{{FDR}}$ {rpb_knees_fdr}), "
+        f"while all 12 non-knee areas showed negative or near-zero "
+        f"associations, with upper back ($r_{{pb}} = {rpb_upper_back_r}$, "
+        f"$p_{{FDR}} = {rpb_upper_back_fdr}$) and lower back "
+        f"($r_{{pb}} = {rpb_lower_back_r}$, "
+        f"$p_{{FDR}} = {rpb_lower_back_fdr}$) showing the strongest "
+        f"negative effects; however, only knee endorsement survived "
+        f"FDR correction across the 13 tests. These results are "
+        f"illustrated in **Figure S1**."
     )
 
     # --- Paragraph 3: Clinical correlations ---
@@ -521,6 +532,13 @@ def generate_text_paragraphs(verbose=True):
             f"({_pfmt(p_kl)}, $N$ = {n_kl})."
         )
 
+    if rho_kl is not None and p_kl is not None:
+        kl_clause = (
+            f", and radiographic OA severity (Kellgren-Lawrence grade of the "
+            f"index knee; Spearman $\\rho = {rho_kl}$, {_pfmt(p_kl)})"
+        )
+    else:
+        kl_clause = ""
     para3 = (
         f"Other baseline clinical measures further confirmed this pattern. "
         f"The person-mean contrast correlated positively with all "
@@ -532,10 +550,8 @@ def generate_text_paragraphs(verbose=True):
         f"WOMAC Total ($r = {r_wtotal}$, {_pfmt(p_wtotal)}), "
         f"WOMAC Physical Function ($r = {r_wfunc}$, {_pfmt(p_wfunc)}), "
         f"WOMAC Stiffness ($r = {r_wstiff}$, {_pfmt(p_wstiff)}), "
-        f"knee pain rating ($r = {r_kpr}$, {_pfmt(p_kpr)}), "
-        f"and radiographic OA severity (Kellgren-Lawrence grade of the "
-        f"index knee; Spearman $\\rho = {rho_kl if rho_kl else 'N/A'}$, "
-        f"{_pfmt(p_kl) if p_kl is not None else 'N/A'}). "
+        f"and knee pain rating ($r = {r_kpr}$, {_pfmt(p_kpr)})"
+        f"{kl_clause}. "
         f"Scatter plots for all measures are shown in **Figure S2**."
     )
 
@@ -555,28 +571,18 @@ def generate_text_paragraphs(verbose=True):
         f"$F${anova_df} = {f_val}, {_pfmt(anova_p)}."
     )
 
-    fig_s2_caption = (
-        "**Figure S2.** Convergent validity of the pain localization "
-        "contrast factor. Scatter plots showing the relationship between "
-        "each participant's mean contrast score across all available "
-        "quarters ($\\bar{K}$) and baseline clinical measures of knee pain "
-        "not used in the factor analysis. Pearson correlations are shown "
-        "for continuous measures; Spearman $\\rho$ for the ordinal "
-        "Kellgren-Lawrence grade. All knee-specific measures correlate "
-        "positively with the contrast factor, confirming that higher "
-        "contrast scores reflect greater predominance of knee-localized "
-        "relative to body-wide pain."
-    )
+    # Figure S2 caption lives in docs/supplementary_materials.md (not code-generated).
+    fig_s2_caption = ""
 
+    # Keep Figure S1 caption since its numbers come from the ANOVA/point-biserial fits.
     text = (
         "## Results > 3.1 Factor analysis and pain localization contrast\n"
         "### Paragraph 2 (validation against PHQ endorsement)\n\n"
         f"{para2}\n\n"
         "### Paragraph 3 (clinical correlations)\n\n"
         f"{para3}\n\n"
-        "## Figure Captions\n\n"
-        f"{fig_s1_caption}\n\n"
-        f"{fig_s2_caption}\n"
+        "### Figure S1 caption\n\n"
+        f"{fig_s1_caption}\n"
     )
 
     with open(OUT_TEXT_MD, "w") as f:

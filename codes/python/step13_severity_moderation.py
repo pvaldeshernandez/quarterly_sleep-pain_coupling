@@ -507,7 +507,35 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
     table_s2_md = "\n".join(table_s2_lines)
 
+    # Discussion/Limitations paragraph that references Table S2.
+    # Appears in manuscript Limitations; cites the six moderation parameters.
+    n_sp = (table["Direction"] == "SP").sum()
+    n_ps = (table["Direction"] == "PS").sum()
+    total = n_sp + n_ps
+    count_word = {
+        4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight",
+    }.get(int(total), str(total))
+    limitations_intro = (
+        "The within-person centering also removes overall severity from "
+        "the model: a person fluctuating around 8/10 pain contributes "
+        "identically to the coupling estimate as one fluctuating around "
+        "3/10, because both are modeled in deviations from their "
+        "respective baselines. This raises the question of whether "
+        "coupling strength depends on a person's overall severity level. "
+        "To test whether coupling strength depends on overall severity, "
+        "we entered person-mean pain severity and person-mean sleep "
+        "quality as between-person moderators of both coupling directions, "
+        "individually and simultaneously (**Table S2**). None of the "
+        f"{count_word} moderation parameters were credibly different "
+        "from zero, indicating that the within-person coupling process "
+        "operates comparably regardless of baseline severity."
+    )
+
     text = f"""\
+## Discussion/Limitations intro to Table S2
+
+{limitations_intro}
+
 **Table S2.** Person-mean severity moderation of coupling.
 
 {table_s2_md}

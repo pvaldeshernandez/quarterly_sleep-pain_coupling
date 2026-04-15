@@ -760,25 +760,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     )
 
     # ----- Figure captions -----
-    fig2_caption = (
-        "Person-specific Pain-to-Sleep coupling estimates. "
-        "(A) Posterior means of person-specific coupling slopes. Each dot "
-        "represents one participant; the gray diamond indicates the "
-        "population mean; the dashed line marks zero. "
-        "(B) Posterior mean \u00b1 95% CrI, sorted by magnitude. Blue "
-        "segments indicate negative coupling; red segments indicate "
-        "positive coupling. The dashed gray line marks the population mean."
-    )
-
-    fig3_caption = (
-        "Person-specific Sleep-to-Pain coupling estimates. "
-        "(A) Posterior means of person-specific coupling slopes. Each dot "
-        "represents one participant; the gray diamond indicates the "
-        "population mean; the dashed line marks zero. "
-        "(B) Posterior mean \u00b1 95% CrI, sorted by magnitude. Blue "
-        "segments indicate negative coupling; red segments indicate "
-        "positive coupling. The dashed gray line marks the population mean."
-    )
+    # Figures 2 and 3 captions are purely descriptive (no computed numbers)
+    # and therefore live only in docs/manuscript_pain.md.
 
     # ----- Table 4 Note -----
     # Round rhat_max up to 2 decimals for reporting.
@@ -795,6 +778,26 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         f"$P(<0)$ is the one-sided posterior probability that the parameter "
         f"is negative. Rows in **bold** correspond coefficients credibly "
         f"different from zero."
+    )
+
+    # ----- Discussion paragraph citing innovation correlation -----
+    # Appears in manuscript Discussion under "Pain-to-sleep coupling
+    # dominates at the quarterly timescale".
+    theoretical_framework = (
+        f"A theoretical framework (64) supports the notion that quarterly "
+        f"coupling reflects processes distinct from\u2014and potentially "
+        f"unrelated to\u2014accumulated daily effects. Daily cross-lagged "
+        f"effects propagate only through autoregressive persistence; at "
+        f"the values typically reported (0.2\u20130.4) (7, 18), there is "
+        f"no path for daily sleep-to-pain effects to reach the next "
+        f"quarterly measurement. The negative innovation correlation "
+        f"($\\widehat{{\\rho}}$ = {rho_mean:.3f}) suggests that some "
+        f"coupling also occurs within the quarter\u2014for example, a "
+        f"pain flare disrupting sleep over ensuing weeks\u2014but because "
+        f"these changes unfold between consecutive assessments, they "
+        f"appear as co-occurring residuals rather than lagged effects, "
+        f"potentially underestimating coupling strength relative to "
+        f"daily designs."
     )
 
     text = f"""\
@@ -819,15 +822,9 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
 {para4}
 
-## Figure Captions
+### Discussion paragraph (theoretical framework)
 
-### Figure 2
-
-{fig2_caption}
-
-### Figure 3
-
-{fig3_caption}
+{theoretical_framework}
 """
 
     with open(OUT_TEXT_MD, "w") as f:

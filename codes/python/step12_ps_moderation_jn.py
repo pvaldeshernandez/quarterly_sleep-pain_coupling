@@ -526,40 +526,12 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     else:
         vbm_rois = ""
 
-    fig_s7_caption = (
-        "**Figure S7.** Johnson-Neyman analyses of fMRI BOLD moderation of "
-        "pain-to-sleep coupling ($\\gamma_{ps}$) for five pain-arousal relay "
-        "ROIs. **(A)** Parabrachial Nucleus (PBN). "
-        "**(B)** Substantia Innominata / Basal Forebrain (SI-BF/Ch4). "
-        "**(C)** Central Nucleus of the Amygdala (CeA). "
-        "**(D)** Bed Nucleus of the Stria Terminalis (BNST). "
-        "**(E)** Lateral Hypothalamus (LH). "
-        "For each panel, the blue line shows the posterior mean coupling "
-        "slope as a continuous function of ROI activation (z-scored), "
-        "dashed lines show the 95% credible interval. Vertical markers "
-        "show simple slopes at low (Q1 - $1.5 \\times \\mathrm{IQR}$), "
-        "median, and high (Q3 + $1.5 \\times \\mathrm{IQR}$) levels with "
-        f"95% CrI error bars. Blue dots show person-level fitted coupling "
-        f"values (population-level slope + random effect). N = {n_fmri}."
-    )
-
-    fig_s8_caption = (
-        "**Figure S8.** Johnson-Neyman analyses of grey matter volume "
-        "moderation of pain-to-sleep coupling ($\\gamma_{ps}$) for five "
-        "pain-arousal relay ROIs. **(A)** Parabrachial Nucleus (PBN). "
-        "**(B)** Substantia Innominata / Basal Forebrain (SI-BF/Ch4). "
-        "**(C)** Central Nucleus of the Amygdala (CeA). "
-        "**(D)** Bed Nucleus of the Stria Terminalis (BNST). "
-        "**(E)** Lateral Hypothalamus (LH). Format as in Figure S7 but "
-        "using probability-weighted GM integral (mm\u00b3) from published "
-        f"atlases at 1.5 mm VBM resolution. N = {n_vbm}."
-    )
-
+    # Figure S7 and S8 captions are descriptive only (static N values,
+    # no computed results). They live only in docs/supplementary_materials.md.
     text = (
         "## Step 12 — PS arousal moderation Johnson-Neyman analysis\n\n"
-        "## Figure Captions\n\n"
-        f"{fig_s7_caption}\n\n"
-        f"{fig_s8_caption}\n"
+        "Figure captions S7 and S8 are descriptive only (no computed\n"
+        "numbers) and therefore live only in docs/supplementary_materials.md.\n"
     )
 
     with open(OUT_TEXT_MD, "w") as f:

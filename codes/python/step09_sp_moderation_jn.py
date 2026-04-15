@@ -579,21 +579,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
     # --- Figure captions ---
 
-    # Figure 5: Left NAcc — match manuscript wording exactly.
-    fig5_caption = (
-        "**Figure 5.** Johnson-Neyman analysis of left NAcc BOLD "
-        "moderation of sleep-to-pain coupling. The blue line shows the "
-        "posterior mean coupling slope as a continuous function of left "
-        "NAcc activation (mean contrast value within a 6 mm sphere at "
-        "MNI -9, 2, -7; GM-masked), dashed lines show the 95% credible "
-        "interval, and green shading indicates the region where the CrI "
-        "excludes zero. The dotted vertical line marks the JN boundary. "
-        "Vertical markers show simple slopes at low (Q1 - 1.5$\\times$IQR), "
-        "median, and high (Q3 + 1.5$\\times$IQR) left NAcc levels with "
-        "95% CrI error bars. Blue dots show fitted coupling values "
-        "(person-level). Rug plots show the distribution of individual "
-        "left NAcc values."
-    )
+    # Figure 5 caption is purely descriptive (no computed numbers);
+    # lives only in docs/manuscript_pain.md. Not code-generated.
 
     # Figure 6: ACC JN — load gamma values from Table 5 (no p-values per CrI-only convention)
     table5 = pd.read_csv(IN_TABLE5_CSV)
@@ -628,25 +615,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     else:
         fig6_caption = "**Figure 6.** (ACC moderation — data unavailable)"
 
-    # Figure S5: four non-credible Krause ROIs in a 2x2 grid with panel labels
-    fig_s5_caption = (
-        "**Figure S5.** Johnson-Neyman analyses of non-credible Krause ROI "
-        "moderation of sleep-to-pain coupling ($\\gamma_{sp}$). "
-        "**(A)** Contralateral Somatosensory Cortex (S1). "
-        "**(B)** Contralateral Middle Insula. "
-        "**(C)** Left Thalamus. "
-        "**(D)** Left Anterior Insula. "
-        "For each panel, the blue line shows the posterior mean coupling "
-        "slope as a continuous function of ROI activation (z-scored), "
-        "dashed lines show the 95% credible interval. Vertical markers "
-        "show simple slopes at low (Q1 - $1.5 \\times \\mathrm{IQR}$), "
-        "median, and high (Q3 + $1.5 \\times \\mathrm{IQR}$) levels with "
-        "95% CrI error bars. Blue dots show person-level fitted coupling "
-        "values (population-level slope + random effect). N = 173 for "
-        "contralateral S1 and contralateral middle insula (one participant "
-        "missing stimulation site); N = 174 for thalamus and anterior "
-        "insula."
-    )
+    # Figure S5 caption only cites static sample sizes (N=173/174);
+    # no computed results. Not code-generated.
 
     text = f"""\
 ## Step 09 — Johnson-Neyman analysis: SP moderation
@@ -657,13 +627,9 @@ the credible interval excludes zero.
 
 {chr(10).join(sections)}
 
-## Figure Captions
-
-{fig5_caption}
+### Figure 6 caption
 
 {fig6_caption}
-
-{fig_s5_caption}
 """
 
     with open(OUT_TEXT_MD, "w") as f:

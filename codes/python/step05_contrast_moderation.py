@@ -555,46 +555,14 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     para1 = p1_lead + p1_jn + p1_sp
     para2 = ""  # deprecated; combined into para1
 
-    # ----- Figure captions -----
-    fig4_caption = (
-        "Johnson-Neyman analysis of pain localization moderation of "
-        "pain-to-sleep coupling. The blue line shows the posterior mean "
-        "coupling slope as a continuous function of within-person pain "
-        "localization ($K^{w}$), dashed lines show the 95% credible "
-        "interval, and green shading indicates the region where the CrI "
-        "excludes zero. The dotted vertical line marks the JN boundary. "
-        "Vertical markers show simple slopes at body-dominant (-2 SD), "
-        "balanced (0), and knee-dominant (+2 SD) localization levels with "
-        "95% CrI error bars. Blue dots show fitted coupling values "
-        "(observation-level)."
-    )
-
-    fig_s3_caption = (
-        "Johnson-Neyman analysis of pain localization moderation of "
-        "sleep-to-pain coupling. The blue line shows the posterior mean "
-        "coupling slope as a continuous function of within-person pain "
-        "localization ($K^{w}$), dashed lines show the 95% credible "
-        "interval, and grey shading indicates that the CrI includes zero "
-        "across the entire observed range (no JN boundary). Vertical "
-        "markers show simple slopes at body-dominant (-2 SD), balanced (0), "
-        "and knee-dominant (+2 SD) localization levels with 95% CrI error "
-        "bars. Blue dots show fitted coupling values (observation-level)."
-    )
+    # Figure 4 and Figure S3 captions are purely descriptive (no computed
+    # numbers) and therefore live only in docs/manuscript_pain.md and
+    # docs/supplementary_materials.md.
 
     text = f"""\
 ## Results > 3.3 Moderation of pain location
 
 {para1}
-
-## Figure Captions
-
-### Figure 4
-
-{fig4_caption}
-
-### Figure S3
-
-{fig_s3_caption}
 """
 
     with open(OUT_TEXT_MD, "w") as f:
