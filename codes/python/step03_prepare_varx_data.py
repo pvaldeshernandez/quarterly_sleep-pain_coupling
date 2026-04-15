@@ -663,7 +663,7 @@ def run_step03(verbose: bool = True, refit: bool = False):
         {"metric": "min_lags_per_person", "value": int(per_person.min())},
         {"metric": "max_lags_per_person", "value": int(per_person.max())},
     ])
-    OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step03_text_numbers.csv")
+    OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step03_text_numbers.csv")
     text_numbers.to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved: {OUT_TEXT_CSV}")
@@ -684,7 +684,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     the Figure 1 caption.
     """
     OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step03_text.md")
-    IN_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step03_text_numbers.csv")
+    IN_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step03_text_numbers.csv")
 
     if not os.path.exists(IN_TEXT_CSV):
         if verbose:

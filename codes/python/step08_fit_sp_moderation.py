@@ -49,8 +49,8 @@ IN_ROI_CSV = os.path.join(DERIV_DIR, "step07_sp_roi_values", "step07_sp_roi_valu
 
 OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step08_sp_posterior_draws.npz")
 OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step08_table5_sp_moderation.csv")
-OUT_SIGN_CSV = os.path.join(STEP_RESULTS_DIR, "step08_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step08_text_numbers.csv")
+OUT_SIGN_CSV = os.path.join(STEP_DERIV_DIR, "step08_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step08_text_numbers.csv")
 
 # ROIs included in the Krause sign-concordance test (ACC excluded)
 KRAUSE_ROIS = [
@@ -308,7 +308,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     # Also pull tau_sp and lambda_sp from step04 outputs to build the intro
     # paragraph that motivates the moderator search.
     step04_tn_path = os.path.join(
-        RESULTS_DIR, "step04_coupling_model", "step04_text_numbers.csv"
+        DERIV_DIR, "step04_coupling_model", "step04_text_numbers.csv"
     )
     tau_sp = None
     lambda_sp = None
@@ -357,7 +357,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     )
 
     # JN info from step09 if available; otherwise from text_numbers
-    jn_text_csv = os.path.join(RESULTS_DIR, "step09_sp_jn", "step09_text_numbers.csv")
+    jn_text_csv = os.path.join(DERIV_DIR, "step09_sp_jn", "step09_text_numbers.csv")
     if os.path.exists(jn_text_csv):
         jn_tn = pd.read_csv(jn_text_csv)
         jv = dict(zip(jn_tn["metric"], jn_tn["value"]))

@@ -54,7 +54,8 @@ CODE_TEXT_FILES = [
     ),
 ]
 
-REPORT = os.path.join(RESULTS, "verify_docs_report.md")
+# Internal-use report; lives under derivatives/, not user-facing results.
+REPORT = os.path.join(ROOT, "derivatives", "verify_docs_report.md")
 
 # A paragraph is "code-owned" only if it cites a COMPUTED model output.
 # Strong signals of computed results (vs. method parameters).

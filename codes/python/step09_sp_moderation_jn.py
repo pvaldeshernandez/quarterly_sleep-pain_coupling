@@ -48,7 +48,7 @@ OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step09_figure6_jn_acc.png")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FIG_S5 = os.path.join(SUPP_DIR, "figure_s5_krause_jn.png")
-OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step09_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step09_text_numbers.csv")
 
 # ROI for Figure 5 (single panel)
 FIG5_ROI = "Left_NAcc"

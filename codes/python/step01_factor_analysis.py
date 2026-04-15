@@ -755,7 +755,7 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
     # loadings table (Table 1) and PA thresholds.
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
-    OUT_RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step01_factor_results.csv")
+    OUT_RESULTS_CSV = os.path.join(STEP_DERIV_DIR, "step01_factor_results.csv")
 
     result_rows = []
 
@@ -816,7 +816,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     fully formatted markdown paragraph into the results directory.
     """
     OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step01_text.md")
-    RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step01_factor_results.csv")
+    RESULTS_CSV = os.path.join(STEP_DERIV_DIR, "step01_factor_results.csv")
 
     if not os.path.exists(RESULTS_CSV):
         if verbose:

@@ -60,8 +60,9 @@ OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step04_person_coupling.csv")
 
 # Results
 OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step04_table4_coupling.csv")
-OUT_LOO_CSV = os.path.join(STEP_RESULTS_DIR, "step04_loo_comparison.csv")
-OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step04_text_numbers.csv")
+# Intermediate CSVs (inputs to text rendering) live under derivatives/.
+OUT_LOO_CSV = os.path.join(STEP_DERIV_DIR, "step04_loo_comparison.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step04_text_numbers.csv")
 OUT_FIG2 = os.path.join(STEP_RESULTS_DIR, "step04_figure2_ps_coupling.png")
 OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step04_figure3_sp_coupling.png")
 

@@ -49,7 +49,7 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 
 OUT_FIG_S1 = os.path.join(SUPP_DIR, "figure_s1_endorsement.png")
 OUT_FIG_S2 = os.path.join(SUPP_DIR, "figure_s2_convergent.png")
-OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step02_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step02_text_numbers.csv")
 
 AREA_LABELS = [
     "Hands", "Arms", "Shoulders", "Neck", "Head/Face/Jaw",
