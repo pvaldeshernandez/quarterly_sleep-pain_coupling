@@ -390,7 +390,8 @@ def generate_text_numbers(verbose=True):
                       f"p={'<0.001' if p<0.001 else f'{p:.3f}'}, N={len(tmp)}")
 
         # Spearman for KL grade (ordinal)
-        kl_col = next((c for c in ["kl_grade__s1", "kl_grade_s1", "klg__s1",
+        kl_col = next((c for c in ["KL_Index__s1", "kl_index__s1",
+                                    "kl_grade__s1", "kl_grade_s1", "klg__s1",
                                     "KL_grade__s1", "kellgren_lawrence__s1"]
                        if c in df_clin.columns), None)
         if kl_col:
@@ -532,26 +533,35 @@ def generate_text_paragraphs(verbose=True):
             f"({_pfmt(p_kl)}, $N$ = {n_kl})."
         )
 
+    # Build the clinical-measure list, with KL inserted as the final item
+    # when available (so the "and" conjunction lands naturally).
+    measures = [
+        ("PHQ knee pain days per week", r_days, p_days),
+        ("PHQ percent of waking day in knee pain", r_pct, p_pct),
+        ("WOMAC Pain", r_wpain, p_wpain),
+        ("WOMAC Total", r_wtotal, p_wtotal),
+        ("WOMAC Physical Function", r_wfunc, p_wfunc),
+        ("WOMAC Stiffness", r_wstiff, p_wstiff),
+        ("knee pain rating", r_kpr, p_kpr),
+    ]
+    measure_strs = [f"{label} ($r = {r}$, {_pfmt(p)})"
+                    for label, r, p in measures]
     if rho_kl is not None and p_kl is not None:
-        kl_clause = (
-            f", and radiographic OA severity (Kellgren-Lawrence grade of the "
+        kl_str = (
+            f"radiographic OA severity (Kellgren-Lawrence grade of the "
             f"index knee; Spearman $\\rho = {rho_kl}$, {_pfmt(p_kl)})"
         )
+        measures_text = ", ".join(measure_strs) + ", and " + kl_str
     else:
-        kl_clause = ""
+        # Drop the last comma so the prose reads "..., A, B, and C."
+        measures_text = (
+            ", ".join(measure_strs[:-1]) + ", and " + measure_strs[-1]
+        )
+
     para3 = (
         f"Other baseline clinical measures further confirmed this pattern. "
         f"The person-mean contrast correlated positively with all "
-        f"knee-specific continuous measures: PHQ knee pain days per week "
-        f"($r = {r_days}$, {_pfmt(p_days)}), "
-        f"PHQ percent of waking day in knee pain "
-        f"($r = {r_pct}$, {_pfmt(p_pct)}), "
-        f"WOMAC Pain ($r = {r_wpain}$, {_pfmt(p_wpain)}), "
-        f"WOMAC Total ($r = {r_wtotal}$, {_pfmt(p_wtotal)}), "
-        f"WOMAC Physical Function ($r = {r_wfunc}$, {_pfmt(p_wfunc)}), "
-        f"WOMAC Stiffness ($r = {r_wstiff}$, {_pfmt(p_wstiff)}), "
-        f"and knee pain rating ($r = {r_kpr}$, {_pfmt(p_kpr)})"
-        f"{kl_clause}. "
+        f"knee-specific continuous measures: {measures_text}. "
         f"Scatter plots for all measures are shown in **Figure S2**."
     )
 
