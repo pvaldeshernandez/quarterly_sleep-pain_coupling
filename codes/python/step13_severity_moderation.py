@@ -223,6 +223,13 @@ def run_step13(verbose=True, refit=False):
             "Moderator": label, "Model": mod_label, "Direction": "SP",
             "gamma": sp_mean, "CrI_lo": sp_lo, "CrI_hi": sp_hi, "p": sp_p,
         })
+        if mod_label == "Alone":
+            # Also record the PS direction for Alone models (both directions
+            # share the single moderator; Joint model only records SP pair).
+            table_rows.append({
+                "Moderator": label, "Model": mod_label, "Direction": "PS",
+                "gamma": ps_mean, "CrI_lo": ps_lo, "CrI_hi": ps_hi, "p": ps_p,
+            })
 
         _t(f"{mod_name}_gamma_sp", f"{sp_mean:+.4f}")
         _t(f"{mod_name}_gamma_sp_ci", f"[{sp_lo:+.4f}, {sp_hi:+.4f}]")
@@ -429,9 +436,13 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     else:
         v = {}
 
-    # Count models
-    models = table["Model"].unique()
-    n_models = len(models)
+    # Count distinct model runs: pain-alone + sleep-alone + joint = 3.
+    # In the CSV: Alone rows cover two separate runs (one per moderator);
+    # Joint rows cover a single joint run. So n_models = 2 + 1 = 3.
+    alone_mods = table[table["Model"] == "Alone"]["Moderator"].unique()
+    has_joint = (table["Model"] == "Joint").any()
+    n_models = len(alone_mods) + (1 if has_joint else 0)
+    n_models_str = {1: "One", 2: "Two", 3: "Three", 4: "Four"}.get(n_models, str(n_models))
 
     # Get N and obs from the text numbers or table
     # N and obs are the same across all models (same dataset)
@@ -460,9 +471,9 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         p_threshold += 0.05
 
     paragraph = (
-        f"Each moderator was z-scored. {n_models} models were run: "
+        f"Each moderator was z-scored. {n_models_str} models were run: "
         f"person-mean pain severity alone, person-mean sleep quality alone, "
-        f"and both jointly. "
+        f"and both simultaneously (joint). "
         f"N = {n_participants}; {n_obs} observations. "
     )
 
@@ -481,27 +492,27 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     # ----- Table S2 markdown -----
     table_s2_lines = []
     table_s2_lines.append(
-        "| Moderator | Model | Direction | $\\hat{\\gamma}$ | 95% CrI |"
+        "| Moderator          | Model | Direction | $\\gamma$ | 95% CrI          |"
     )
-    table_s2_lines.append("|-----------|-------|-----------|----------|---------|")
+    table_s2_lines.append(
+        "| :----------------- | :---- | :-------: | ---------: | :--------------- |"
+    )
 
     for _, row in table.iterrows():
         table_s2_lines.append(
             f"| {row['Moderator']} | {row['Model']} | {row['Direction']} "
-            f"| {row['gamma']:.3f} "
-            f"| [{row['CrI_lo']:.3f}, {row['CrI_hi']:.3f}] |"
+            f"| {row['gamma']:+.3f} "
+            f"| [{row['CrI_lo']:+.3f}, {row['CrI_hi']:+.3f}] |"
         )
 
     table_s2_md = "\n".join(table_s2_lines)
 
     text = f"""\
-## Supplementary Table S2
+**Table S2.** Person-mean severity moderation of coupling.
 
 {table_s2_md}
 
-## Supplementary Table S2 note
-
-{paragraph}
+**Note.** {paragraph}
 """
 
     with open(OUT_TEXT_MD, "w") as f:

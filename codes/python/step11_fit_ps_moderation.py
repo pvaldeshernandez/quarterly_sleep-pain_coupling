@@ -367,8 +367,8 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     # ----- Table S1 markdown -----
     # Interleave fMRI and VBM rows per ROI
     table_s1_lines = []
-    table_s1_lines.append("| ROI | Modality | $\\hat{\\gamma}_{ps}$ | 95% CrI |")
-    table_s1_lines.append("|-----|----------|-----------|---------|")
+    table_s1_lines.append("| ROI | Modality | $\\gamma_{ps}$ | 95% CrI |")
+    table_s1_lines.append("| :-------- | :------------ | --------------: | :--------------- |")
 
     # Determine ROI ordering from fMRI table (preserves original order)
     if fmri_table is not None:
@@ -387,28 +387,43 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         for _, row in vbm_table.iterrows():
             vbm_dict[row["ROI"]] = row
 
+    # ROI short-label map (match manuscript supplementary table)
+    short_label_map = {
+        "PBN": "PBN",
+        "SI-BF/Ch4": "SI-BF/Ch4",
+        "CeA": "CeA",
+        "BNST": "BNST",
+        "LH": "LH",
+    }
     for roi in roi_order:
+        short = short_label_map.get(roi, roi)
+        # First row for ROI: include ROI label + fMRI response
         if roi in fmri_dict:
             r = fmri_dict[roi]
             table_s1_lines.append(
-                f"| {r['Label']} | fMRI BOLD | {r['gamma_ps']:.3f} "
-                f"| [{r['gamma_ps_ci_lo']:.3f}, {r['gamma_ps_ci_hi']:.3f}] |"
+                f"| {short} | fMRI response | {r['gamma_ps']:+.3f} "
+                f"| [{r['gamma_ps_ci_lo']:+.3f}, {r['gamma_ps_ci_hi']:+.3f}] |"
             )
+        # Second row for ROI: blank ROI cell + GM volume
         if roi in vbm_dict:
             r = vbm_dict[roi]
             table_s1_lines.append(
-                f"| {r['Label']} | VBM GM vol. | {r['gamma_ps']:.3f} "
-                f"| [{r['gamma_ps_ci_lo']:.3f}, {r['gamma_ps_ci_hi']:.3f}] |"
+                f"|  | GM volume | {r['gamma_ps']:+.3f} "
+                f"| [{r['gamma_ps_ci_lo']:+.3f}, {r['gamma_ps_ci_hi']:+.3f}] |"
             )
 
     table_s1_md = "\n".join(table_s1_lines)
 
     # ----- Table S1 note -----
     table_s1_note = (
-        f"*Note.* fMRI models: N = {n_fmri}; VBM models: N = {n_vbm}. "
-        f"Each ROI was tested separately as a moderator of pain-to-sleep "
-        f"coupling ($\\hat{{\\gamma}}_{{ps}}$). Moderator values were "
-        f"z-scored. No individual effect was credibly different from zero."
+        f"**Note.** Each ROI was tested in a separate model run. "
+        f"fMRI response: N = {n_fmri}; unmasked contrast images were used "
+        f"for PBN, SI-BF/Ch4, CeA, and BNST; GM-masked contrasts for LH "
+        f"(see Methods). GM volume: N = {n_vbm}. Johnson-Neyman analyses "
+        f"for each ROI are shown in Figures S7 (fMRI BOLD) and S8 "
+        f"(GM volume). Sleep-to-pain moderation results for all six "
+        f"spherical ROIs (including ACC) are reported in Table 5 of the "
+        f"main text."
     )
 
     text = f"""\
@@ -416,7 +431,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
 {paragraph}
 
-## Supplementary Table S1
+**Table S1.** Pain-arousal relay moderation of pain-to-sleep coupling (atlas-defined ROIs).
 
 {table_s1_md}
 
