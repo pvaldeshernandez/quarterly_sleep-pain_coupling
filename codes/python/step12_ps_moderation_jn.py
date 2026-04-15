@@ -527,24 +527,32 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         vbm_rois = ""
 
     fig_s7_caption = (
-        f"**Figure S7.** Johnson-Neyman analysis of pain-to-sleep coupling "
-        f"moderated by fMRI BOLD activation in five arousal relay ROIs "
-        f"($N$ = {n_fmri}): {fmri_rois}. "
-        f"Each panel shows the posterior mean of the conditional coupling "
-        f"coefficient $\\lambda_{{ps}}$ as a function of the ROI's BOLD "
-        f"activation (raw units). Green shading marks regions where the 95% "
-        f"credible interval excludes zero; grey shading marks non-credible "
-        f"regions. Blue dots show person-level fitted coupling values. "
-        f"Black error bars show simple slopes at three reference points "
-        f"with 95% CrI. Same conventions as Figure 5."
+        "**Figure S7.** Johnson-Neyman analyses of fMRI BOLD moderation of "
+        "pain-to-sleep coupling ($\\gamma_{ps}$) for five pain-arousal relay "
+        "ROIs. **(A)** Parabrachial Nucleus (PBN). "
+        "**(B)** Substantia Innominata / Basal Forebrain (SI-BF/Ch4). "
+        "**(C)** Central Nucleus of the Amygdala (CeA). "
+        "**(D)** Bed Nucleus of the Stria Terminalis (BNST). "
+        "**(E)** Lateral Hypothalamus (LH). "
+        "For each panel, the blue line shows the posterior mean coupling "
+        "slope as a continuous function of ROI activation (z-scored), "
+        "dashed lines show the 95% credible interval. Vertical markers "
+        "show simple slopes at low (Q1 - $1.5 \\times \\mathrm{IQR}$), "
+        "median, and high (Q3 + $1.5 \\times \\mathrm{IQR}$) levels with "
+        f"95% CrI error bars. Blue dots show person-level fitted coupling "
+        f"values (population-level slope + random effect). N = {n_fmri}."
     )
 
     fig_s8_caption = (
-        f"**Figure S8.** Johnson-Neyman analysis of pain-to-sleep coupling "
-        f"moderated by grey matter volume in five arousal relay ROIs "
-        f"($N$ = {n_vbm}): {vbm_rois}. "
-        f"Same conventions as Figure S7, with GM volume (probability-weighted "
-        f"integral, mm$^3$) on the x-axis."
+        "**Figure S8.** Johnson-Neyman analyses of grey matter volume "
+        "moderation of pain-to-sleep coupling ($\\gamma_{ps}$) for five "
+        "pain-arousal relay ROIs. **(A)** Parabrachial Nucleus (PBN). "
+        "**(B)** Substantia Innominata / Basal Forebrain (SI-BF/Ch4). "
+        "**(C)** Central Nucleus of the Amygdala (CeA). "
+        "**(D)** Bed Nucleus of the Stria Terminalis (BNST). "
+        "**(E)** Lateral Hypothalamus (LH). Format as in Figure S7 but "
+        "using probability-weighted GM integral (mm\u00b3) from published "
+        f"atlases at 1.5 mm VBM resolution. N = {n_vbm}."
     )
 
     text = (

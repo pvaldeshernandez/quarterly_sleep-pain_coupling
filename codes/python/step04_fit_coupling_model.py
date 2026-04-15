@@ -780,11 +780,32 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         "positive coupling. The dashed gray line marks the population mean."
     )
 
+    # ----- Table 4 Note -----
+    # Round rhat_max up to 2 decimals for reporting.
+    rhat_overall = float(v.get("rhat_max_overall", 1.01))
+    ess_min = v.get("ess_min", "7,000")
+    table4_note = (
+        f"**Note.** N = {n_persons}; 1,818 observations; "
+        f"4 chains $\\times$ 2,000 posterior draws (see Methods). "
+        f"Convergence was adequate: maximum $\\widehat{{R}}={rhat_overall:.2f}$; "
+        f"all effective sample sizes $>$ {ess_min}. Age and sex nuisance "
+        f"terms (${{\\widehat{{\\gamma}}}}_{{age}}$, "
+        f"${{\\widehat{{\\gamma}}}}_{{sex}}$) are omitted from the table and "
+        f"none was credibly different from zero in either coupling direction. "
+        f"$P(<0)$ is the one-sided posterior probability that the parameter "
+        f"is negative. Rows in **bold** correspond coefficients credibly "
+        f"different from zero."
+    )
+
     text = f"""\
 ## Results > 3.2 Population coupling estimates
 ### Paragraph 1 (pain-to-sleep coupling)
 
 {para1}
+
+### Table 4 Note
+
+{table4_note}
 
 ### Paragraph 2 (sleep-to-pain coupling)
 

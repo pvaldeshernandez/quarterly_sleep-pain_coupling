@@ -522,19 +522,21 @@ def generate_text_paragraphs(verbose=True):
         )
 
     para3 = (
-        f"Person-mean contrast was positively correlated with baseline "
-        f"knee-specific clinical measures: PHQ knee pain days per week "
-        f"($r$ = {r_days}, {_pfmt(p_days)}, $N$ = {n_days}), "
+        f"Other baseline clinical measures further confirmed this pattern. "
+        f"The person-mean contrast correlated positively with all "
+        f"knee-specific continuous measures: PHQ knee pain days per week "
+        f"($r = {r_days}$, {_pfmt(p_days)}), "
         f"PHQ percent of waking day in knee pain "
-        f"($r$ = {r_pct}, {_pfmt(p_pct)}, $N$ = {n_pct}), "
-        f"WOMAC Pain ($r$ = {r_wpain}, {_pfmt(p_wpain)}), "
-        f"WOMAC Total ($r$ = {r_wtotal}, {_pfmt(p_wtotal)}), "
-        f"WOMAC Physical Function ($r$ = {r_wfunc}, {_pfmt(p_wfunc)}), "
-        f"WOMAC Stiffness ($r$ = {r_wstiff}, {_pfmt(p_wstiff)}), "
-        f"and knee pain rating ($r$ = {r_kpr}, {_pfmt(p_kpr)}). "
-        f"All Pearson correlations were significant and positive, confirming "
-        f"that higher contrast (more knee-predominant pain) tracked greater "
-        f"knee-specific clinical burden.{kl_sentence}"
+        f"($r = {r_pct}$, {_pfmt(p_pct)}), "
+        f"WOMAC Pain ($r = {r_wpain}$, {_pfmt(p_wpain)}), "
+        f"WOMAC Total ($r = {r_wtotal}$, {_pfmt(p_wtotal)}), "
+        f"WOMAC Physical Function ($r = {r_wfunc}$, {_pfmt(p_wfunc)}), "
+        f"WOMAC Stiffness ($r = {r_wstiff}$, {_pfmt(p_wstiff)}), "
+        f"knee pain rating ($r = {r_kpr}$, {_pfmt(p_kpr)}), "
+        f"and radiographic OA severity (Kellgren-Lawrence grade of the "
+        f"index knee; Spearman $\\rho = {rho_kl if rho_kl else 'N/A'}$, "
+        f"{_pfmt(p_kl) if p_kl is not None else 'N/A'}). "
+        f"Scatter plots for all measures are shown in **Figure S2**."
     )
 
     # --- Figure captions ---
@@ -554,12 +556,16 @@ def generate_text_paragraphs(verbose=True):
     )
 
     fig_s2_caption = (
-        f"**Figure S2.** Convergent validity: scatter plots of person-mean "
-        f"contrast ($\\bar{{K}}$) against seven baseline clinical measures. "
-        f"Each panel shows the Pearson correlation ($r$), $p$-value, and "
-        f"sample size ($N$). Red lines are least-squares fits. "
-        f"All correlations are positive, confirming that higher contrast "
-        f"tracks greater knee-specific clinical burden."
+        "**Figure S2.** Convergent validity of the pain localization "
+        "contrast factor. Scatter plots showing the relationship between "
+        "each participant's mean contrast score across all available "
+        "quarters ($\\bar{K}$) and baseline clinical measures of knee pain "
+        "not used in the factor analysis. Pearson correlations are shown "
+        "for continuous measures; Spearman $\\rho$ for the ordinal "
+        "Kellgren-Lawrence grade. All knee-specific measures correlate "
+        "positively with the contrast factor, confirming that higher "
+        "contrast scores reflect greater predominance of knee-localized "
+        "relative to body-wide pain."
     )
 
     text = (

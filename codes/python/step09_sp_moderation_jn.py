@@ -579,57 +579,73 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
 
     # --- Figure captions ---
 
-    # Figure 5: Left NAcc (no computed numbers needed, just template)
+    # Figure 5: Left NAcc — match manuscript wording exactly.
     fig5_caption = (
-        "**Figure 5.** Johnson-Neyman analysis of sleep-to-pain coupling "
-        "moderated by left nucleus accumbens (NAcc) fMRI BOLD activation. "
-        "The solid blue line shows the posterior mean of the conditional "
-        "coupling coefficient $\\lambda_{sp}$ as a function of left NAcc "
-        "activation (raw units). Dashed lines indicate 95% credible "
-        "intervals (CrI). Green shading marks the region where the CrI "
-        "excludes zero (credible effect); grey shading marks the "
-        "non-credible region. Blue dots show person-level fitted coupling "
-        "values. Black error bars show simple slopes at three reference "
-        "points (Q1 $-$ 1.5 $\\times$ IQR, median, Q3 + 1.5 $\\times$ IQR) "
-        "with 95% CrI. The vertical dotted line marks the Johnson-Neyman "
-        "boundary. Tick marks along the bottom show the observed "
-        "distribution of left NAcc values."
+        "**Figure 5.** Johnson-Neyman analysis of left NAcc BOLD "
+        "moderation of sleep-to-pain coupling. The blue line shows the "
+        "posterior mean coupling slope as a continuous function of left "
+        "NAcc activation (mean contrast value within a 6 mm sphere at "
+        "MNI -9, 2, -7; GM-masked), dashed lines show the 95% credible "
+        "interval, and green shading indicates the region where the CrI "
+        "excludes zero. The dotted vertical line marks the JN boundary. "
+        "Vertical markers show simple slopes at low (Q1 - 1.5$\\times$IQR), "
+        "median, and high (Q3 + 1.5$\\times$IQR) left NAcc levels with "
+        "95% CrI error bars. Blue dots show fitted coupling values "
+        "(person-level). Rug plots show the distribution of individual "
+        "left NAcc values."
     )
 
-    # Figure 6: ACC JN — load gamma/p from Table 5
+    # Figure 6: ACC JN — load gamma values from Table 5 (no p-values per CrI-only convention)
     table5 = pd.read_csv(IN_TABLE5_CSV)
     t5 = dict(zip(table5["ROI"], table5.itertuples(index=False)))
 
-    acc_parts = []
-    for panel_letter, acc_key, acc_label in [
-        ("A", "Right_dACC_MCC", "right dACC/MCC"),
-        ("B", "Left_dACC_MCC", "left dACC/MCC"),
-    ]:
-        row = t5.get(acc_key)
-        if row is not None:
-            gamma = f"{row.gamma_sp:.3f}"
-            p_val = f"{row.gamma_sp_p:.3f}" if row.gamma_sp_p >= 0.001 else "<0.001"
-            acc_parts.append(
-                f"**({panel_letter})** {acc_label} "
-                f"($\\gamma_{{sp}}$ = {gamma}, $p$ = {p_val})"
-            )
+    def _fmt_gamma(row):
+        return f"{row.gamma_sp:+.3f}"
 
-    n_fmri = int(t5[list(t5.keys())[0]].N) if t5 else "?"
-    fig6_caption = (
-        f"**Figure 6.** Johnson-Neyman analysis of sleep-to-pain coupling "
-        f"moderated by dorsal anterior cingulate / midcingulate cortex "
-        f"(dACC/MCC) fMRI BOLD activation ($N$ = {n_fmri}). "
-        + " ".join(acc_parts)
-        + " Same conventions as Figure 5."
-    )
+    def _fmt_ci(row):
+        return f"[{row.gamma_sp_ci_lo:+.3f}, {row.gamma_sp_ci_hi:+.3f}]"
 
-    # Figure S5: non-significant Krause ROIs
+    r_acc = t5.get("Right_dACC_MCC")
+    l_acc = t5.get("Left_dACC_MCC")
+    if r_acc is not None and l_acc is not None:
+        fig6_caption = (
+            "**Figure 6.** Johnson-Neyman analyses of bilateral dACC/MCC "
+            "BOLD moderation of sleep-to-pain coupling. Top panel: right "
+            "dACC/MCC (MNI 6, 12, 38; 6 mm sphere; unmasked contrasts; "
+            f"$\\hat{{\\gamma}}_{{sp}}={_fmt_gamma(r_acc)}$, "
+            f"95% CrI {_fmt_ci(r_acc)}). Bottom panel: left dACC/MCC "
+            f"(MNI -6, 12, 38; 6 mm sphere; unmasked contrasts; "
+            f"$\\hat{{\\gamma}}_{{sp}}={_fmt_gamma(l_acc)}$, "
+            f"95% CrI {_fmt_ci(l_acc)}). In each panel, the blue line "
+            "shows the posterior mean conditional coupling slope as a "
+            "function of ACC activation (z-scored), dashed lines show "
+            "the 95% credible interval, and green shading indicates the "
+            "region where the CrI excludes zero. The dotted vertical "
+            "line marks the JN boundary. Vertical markers show simple "
+            "slopes at $z=-2$, $z=0$, and $z=+2$ with 95% CrI error "
+            "bars. N = 174."
+        )
+    else:
+        fig6_caption = "**Figure 6.** (ACC moderation — data unavailable)"
+
+    # Figure S5: four non-credible Krause ROIs in a 2x2 grid with panel labels
     fig_s5_caption = (
         "**Figure S5.** Johnson-Neyman analyses of non-credible Krause ROI "
-        "moderation of sleep-to-pain coupling: right somatosensory cortex "
-        "(S1), right middle insula, left thalamus, and left anterior insula. "
-        "Same conventions as Figure 5. "
-        "None of these ROIs showed a credible moderation effect."
+        "moderation of sleep-to-pain coupling ($\\gamma_{sp}$). "
+        "**(A)** Contralateral Somatosensory Cortex (S1). "
+        "**(B)** Contralateral Middle Insula. "
+        "**(C)** Left Thalamus. "
+        "**(D)** Left Anterior Insula. "
+        "For each panel, the blue line shows the posterior mean coupling "
+        "slope as a continuous function of ROI activation (z-scored), "
+        "dashed lines show the 95% credible interval. Vertical markers "
+        "show simple slopes at low (Q1 - $1.5 \\times \\mathrm{IQR}$), "
+        "median, and high (Q3 + $1.5 \\times \\mathrm{IQR}$) levels with "
+        "95% CrI error bars. Blue dots show person-level fitted coupling "
+        "values (population-level slope + random effect). N = 173 for "
+        "contralateral S1 and contralateral middle insula (one participant "
+        "missing stimulation site); N = 174 for thalamus and anterior "
+        "insula."
     )
 
     text = f"""\

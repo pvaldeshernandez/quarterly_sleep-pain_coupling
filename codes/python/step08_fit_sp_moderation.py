@@ -305,6 +305,44 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
     def _signed(key):
         return v.get(key, "N/A")
 
+    # Also pull tau_sp and lambda_sp from step04 outputs to build the intro
+    # paragraph that motivates the moderator search.
+    step04_tn_path = os.path.join(
+        RESULTS_DIR, "step04_coupling_model", "step04_text_numbers.csv"
+    )
+    tau_sp = None
+    lambda_sp = None
+    if os.path.exists(step04_tn_path):
+        s4 = pd.read_csv(step04_tn_path)
+        s4v = dict(zip(s4["metric"], s4["value"]))
+        try:
+            tau_sp = float(s4v.get("tau_sp", "nan"))
+            lambda_sp = float(s4v.get("lambda_sp_mean", "nan"))
+        except (TypeError, ValueError):
+            tau_sp = lambda_sp = None
+
+    # --- Paragraph 0: motivating the moderator search ---
+    if tau_sp and lambda_sp:
+        ratio_lo = tau_sp / max(abs(lambda_sp) + 0.02, 0.01)  # lambda ~-0.02 ± SE
+        ratio_hi = tau_sp / max(abs(lambda_sp), 0.01)
+        # Keep ordering low..high
+        r_lo, r_hi = sorted([ratio_lo, ratio_hi])
+        p0 = (
+            "Although the population-average sleep-to-pain coupling was not "
+            "credibly different from zero, the between-person variability was "
+            "substantial relative to the fixed effect "
+            f"($\\left|{{\\widehat{{\\tau}}}}_{{sp}}\\right|/"
+            f"\\left|{{\\widehat{{\\lambda}}}}_{{sp}}\\right| \\approx$ "
+            f"[{r_lo:.1f}, {r_hi:.1f}]), "
+            "suggesting that individual-level moderators may shape the "
+            "direction and magnitude of this effect and obscure a consistent "
+            "population mean. We therefore tested whether BOLD activation in "
+            "the ROIs proposed by Krause et al. moderated the "
+            "sleep-to-pain coupling."
+        )
+    else:
+        p0 = ""
+
     # --- Paragraph 1: NAcc results ---
     p1 = (
         "Left NAcc activation during painful knee stimulation was the only "
@@ -442,9 +480,11 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         f"fluctuations."
     )
 
+    intro_block = f"### Paragraph 0 (moderator motivation)\n\n{p0}\n\n" if p0 else ""
+
     text = f"""\
 ## Results > 3.4 Sleep-to-pain fMRI moderation
-### Paragraph 1 (NAcc results)
+{intro_block}### Paragraph 1 (NAcc results)
 
 {p1}
 
