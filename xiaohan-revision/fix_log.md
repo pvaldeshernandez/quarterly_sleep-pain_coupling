@@ -35,32 +35,24 @@ refit; the code-side of each issue is either resolved or N/A.
   (e.g., varimax) would mix severity into both axes.
 
 ## M2. Update fMRI cohort N and side counts (D2b)
-- Status: `[ ]`
+- Status: `[x]` in `manuscript_pain.md`; Pedro will port to the docx.
 - Location: `docs/manuscript_pain.md` line 107.
-- Current text: "A subset of 188 participants completed task-based
-  fMRI … (right in 125 participants, left in 96)."
-- Edit: report the analytic fMRI cohort used by steps 07–09 and 11–12.
-  - N = **182** (scanned ∩ step00 long frame; 6 baseline-only IDs
-    dropped: 1011, 1014, 2095-2, 2102-2, 836-24, 836-395).
-  - Side: **98 right-knee stimulated, 84 left-knee stimulated**
-    (s1 with s2 fallback; 836-163 rescued by s2).
-  - If 188 is kept as enrollment context, phrase it as "188 scanned,
-    of whom 182 contributed to the coupling analysis after excluding
-    baseline-only participants."
-  - Downstream N = 174 (SP moderation) is unchanged and already
-    correct in the manuscript.
-- Check Table and Figure captions for any other references to N=188
-  or 125/96.
+- Previous text: "A subset of 188 participants ... right in 125,
+  left in 96."
+- Applied edit: **N = 182; right in 98, left in 84.** The 6 baseline-
+  only subjects (1011, 1014, 2095-2, 2102-2, 836-24, 836-395) are
+  excluded because they have no quarterly data. Side from s1 with s2
+  fallback (rescues 836-163).
+- Downstream N = 174 (SP moderation) and 189 (VBM) are already
+  correct elsewhere in the manuscript.
 
 ## M3. Rename S1 and Middle Insula to "Contralateral" (D2)
-- Status: `[ ]`
-- Locations: Table 5 rows, Results §3.5 narrative, Figure 6 caption
-  or labels, any in-text mention.
-- Current: "Right_S1", "Right Middle Insula".
-- Edit: "Contralateral S1", "Contralateral Middle Insula". The
-  contralateralization is now implemented per-subject in step 07 (via
-  x-coordinate mirroring based on `img_test_site__s1` / `__s2`), so
-  the manuscript label should reflect what the code actually does.
+- Status: `[-]` — not needed. Manuscript already labels the two ROIs
+  as "Contralateral S1" and "Contralateral Middle Insula" in Table 5
+  (md lines 328–329) and in the Methods narrative. The previous
+  mismatch was purely code-side (dict keys `Right_S1` /
+  `Right_Middle_Insula`), and has been resolved by renaming the code
+  keys to `Contra_S1` / `Contra_Middle_Insula` in step 07/08/09.
 
 ## M4. Revise ACC narrative: right-lateralized → bilateral (D2 + D5)
 - Status: `[ ]`
