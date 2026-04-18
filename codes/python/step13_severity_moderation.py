@@ -49,27 +49,9 @@ OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "text_numbers_severity.csv")
 
 
 def load_data(csv_path):
-    """Age z-scoring and Sex centering at the person level (not
-    observation-weighted)."""
-    df = pd.read_csv(csv_path)
-    person_demo = df.groupby("ID").first()[["Age", "Sex"]].reset_index()
-    age_mean = person_demo["Age"].mean()
-    age_sd = person_demo["Age"].std()
-    person_demo["Age_z"] = (person_demo["Age"] - age_mean) / age_sd
-    person_demo["Sex_coded"] = (person_demo["Sex"] == 2).astype(float)
-    sex_mean = person_demo["Sex_coded"].mean()
-    person_demo["Sex_c"] = person_demo["Sex_coded"] - sex_mean
-    df = df.drop(columns=[c for c in ("Age_z", "Sex_coded", "Sex_c")
-                          if c in df.columns])
-    df = df.merge(
-        person_demo[["ID", "Age_z", "Sex_coded", "Sex_c"]],
-        on="ID", how="left",
-    )
-    unique_ids = sorted(df["ID"].unique())
-    id_map = {sid: i for i, sid in enumerate(unique_ids)}
-    df["pid_idx"] = df["ID"].map(id_map)
-    model_df = df.dropna(subset=["pain_within_lag1", "sleep_within_lag1"]).copy()
-    return df, model_df, unique_ids, id_map
+    """Thin wrapper around lib.coupling_model.load_varx_frame."""
+    from coupling_model import load_varx_frame
+    return load_varx_frame(csv_path, verbose=False)
 
 
 MODELS = [
@@ -209,18 +191,17 @@ def run_step13(verbose=True, refit=False):
             progressbar=True,
         )
 
+        from coupling_model import two_tail_p
         results = extract_results(idata, moderator_name=col)
         sp_mean = results.get("gamma_sp_mean", np.nan)
         sp_lo = results.get("gamma_sp_ci_lo", np.nan)
         sp_hi = results.get("gamma_sp_ci_hi", np.nan)
-        sp_pneg = results.get("gamma_sp_prob_neg", np.nan)
-        sp_p = 2 * min(sp_pneg, 1 - sp_pneg) if np.isfinite(sp_pneg) else np.nan
+        sp_p = two_tail_p(results.get("gamma_sp_prob_neg", np.nan))
 
         ps_mean = results.get("gamma_ps_mean", np.nan)
         ps_lo = results.get("gamma_ps_ci_lo", np.nan)
         ps_hi = results.get("gamma_ps_ci_hi", np.nan)
-        ps_pneg = results.get("gamma_ps_prob_neg", np.nan)
-        ps_p = 2 * min(ps_pneg, 1 - ps_pneg) if np.isfinite(ps_pneg) else np.nan
+        ps_p = two_tail_p(results.get("gamma_ps_prob_neg", np.nan))
 
         rhat = results.get("rhat_max", np.nan)
 
@@ -275,6 +256,7 @@ def _fit_joint_model(model_df, unique_ids, id_map,
     """Fit a 2-moderator VARX(1) model with both pain and sleep severity."""
     import pymc as pm
     import arviz as az
+    from coupling_model import add_bivariate_innovations_likelihood
 
     # Build data arrays
     sub_df = model_df.dropna(subset=["pain_within_lag1", "sleep_within_lag1"]).copy()
@@ -349,14 +331,6 @@ def _fit_joint_model(model_df, unique_ids, id_map,
         u_sp = pm.Normal("u_sp", 0, tau_sp, shape=N)
         u_ps = pm.Normal("u_ps", 0, tau_ps, shape=N)
 
-        # Residual SDs
-        sigma_p = pm.HalfCauchy("sigma_p", 2)
-        sigma_s = pm.HalfCauchy("sigma_s", 2)
-
-        # Correlation via Beta(2,2) -> [-1,1]
-        rho_raw = pm.Beta("rho_raw", 2, 2)
-        rho = pm.Deterministic("rho", 2 * rho_raw - 1)
-
         # SP coupling (sleep -> pain)
         lambda_sp = (a2
                      + g_sp_age * age_z
@@ -376,16 +350,13 @@ def _fit_joint_model(model_df, unique_ids, id_map,
         mu_p = a0 + a1 * pain_lag + lambda_sp * sleep_lag + a3 * contrast_lag + a4 * sleep_x_contrast
         mu_s = b0 + lambda_ps * pain_lag + b2 * sleep_lag + b3 * contrast_lag + b4 * pain_x_contrast
 
-        # Cholesky for correlated innovations
-        L = pm.math.stack([
-            [sigma_p, 0],
-            [rho * sigma_s, sigma_s * pm.math.sqrt(1 - rho ** 2)],
-        ])
-
-        obs_stack = pm.math.stack([pain_w, sleep_w], axis=0)
-        mu_stack = pm.math.stack([mu_p, mu_s], axis=0)
-
-        pm.MvNormal("likelihood", mu=mu_stack.T, chol=L, observed=obs_stack.T)
+        # Correlated innovations — shared helper from lib/coupling_model.py.
+        # Declares sigma_pain, sigma_sleep, rho_raw, rho_innov and attaches
+        # y_pain / y_sleep observation nodes via sequential conditioning.
+        add_bivariate_innovations_likelihood(
+            mu_pain=mu_p, mu_sleep=mu_s,
+            y_pain=pain_w, y_sleep=sleep_w,
+        )
 
         idata = pm.sample(2000, tune=2000, chains=4, cores=4,
                           target_accept=0.95, progressbar=True,
@@ -393,12 +364,12 @@ def _fit_joint_model(model_df, unique_ids, id_map,
 
     # Extract results
     def _summarize(var_name):
+        from coupling_model import two_tail_p
         draws = idata.posterior[var_name].values.flatten()
         mean = float(np.mean(draws))
         lo, hi = float(np.percentile(draws, 2.5)), float(np.percentile(draws, 97.5))
         pneg = float(np.mean(draws < 0))
-        p = 2 * min(pneg, 1 - pneg)
-        return mean, lo, hi, p
+        return mean, lo, hi, two_tail_p(pneg)
 
     rhat_vals = az.rhat(idata)
     rhat_max = float(max(rhat_vals[v].values.max() for v in rhat_vals

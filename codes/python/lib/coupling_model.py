@@ -300,6 +300,191 @@ def load_data(data_dir, synthetic=False):
 
 
 # ===================================================================
+# Small shared helpers
+# ===================================================================
+
+def two_tail_p(prob_neg):
+    """Two-tailed Bayesian posterior "p-value" from P(parameter < 0).
+
+        p = 2 * min(P(<0), 1 - P(<0))
+
+    Returns NaN for NaN input. Shared by all step-* scripts that
+    summarize γ posteriors.
+    """
+    if prob_neg is None or not np.isfinite(prob_neg):
+        return np.nan
+    return 2.0 * min(prob_neg, 1.0 - prob_neg)
+
+
+def sign_concordance_p(n_concordant, n_tested):
+    """Upper-tail binomial p-value for observing ``n_concordant`` out
+    of ``n_tested`` expected-sign matches under a fair-coin null:
+
+        p = P(X >= n_concordant | X ~ Binomial(n_tested, 0.5))
+
+    Used by step08 (Krause 6-ROI sign test) and step11 (Lynch 5-ROI
+    sign tests, fMRI and VBM).
+    """
+    from math import comb
+    if n_tested == 0:
+        return np.nan
+    return sum(
+        comb(n_tested, k) * 0.5 ** n_tested
+        for k in range(n_concordant, n_tested + 1)
+    )
+
+
+# ===================================================================
+# Shared dataframe loader for step04 / step08 / step11 / step13
+# ===================================================================
+
+def load_varx_frame(csv_path, verbose=False):
+    """Load the VARX-ready long dataframe and prepare it for any
+    ``fit_bayesian_varx1`` / step13 call.
+
+    Centralizes four previously-duplicated loader functions
+    (``step04.load_data``, ``step08.load_step02_data``,
+    ``step11.load_step02_data``, ``step13.load_data``). Performs:
+
+      1. Read ``csv_path``.
+      2. Compute Age_z and Sex_c at the PERSON level (one row per
+         subject; D4 fix — not observation-weighted).
+      3. Merge Age_z / Sex_coded / Sex_c back onto the long frame.
+      4. Build ``pid_idx`` column from ``sorted(unique(ID))``.
+      5. Drop rows with NaN in the lag columns to produce
+         ``model_df`` suitable for fitting.
+
+    Returns
+    -------
+    df : DataFrame
+        Full long frame (all rows) with Age_z, Sex_coded, Sex_c,
+        pid_idx columns added.
+    model_df : DataFrame
+        ``df`` minus rows with NaN in ``pain_within_lag1`` or
+        ``sleep_within_lag1``.
+    unique_ids : list
+        Sorted subject IDs.
+    id_map : dict
+        Mapping {subject_ID: integer_index}.
+    """
+    df = pd.read_csv(csv_path)
+
+    person_demo = (
+        df.groupby("ID").first()[["Age", "Sex"]].reset_index()
+    )
+    age_mean = person_demo["Age"].mean()
+    age_sd = person_demo["Age"].std()
+    person_demo["Age_z"] = (person_demo["Age"] - age_mean) / age_sd
+    person_demo["Sex_coded"] = (person_demo["Sex"] == 2).astype(float)
+    sex_mean = person_demo["Sex_coded"].mean()
+    person_demo["Sex_c"] = person_demo["Sex_coded"] - sex_mean
+
+    df = df.drop(
+        columns=[c for c in ("Age_z", "Sex_coded", "Sex_c")
+                 if c in df.columns]
+    )
+    df = df.merge(
+        person_demo[["ID", "Age_z", "Sex_coded", "Sex_c"]],
+        on="ID", how="left",
+    )
+
+    unique_ids = sorted(df["ID"].unique())
+    id_map = {sid: i for i, sid in enumerate(unique_ids)}
+    df["pid_idx"] = df["ID"].map(id_map)
+
+    model_df = df.dropna(
+        subset=["pain_within_lag1", "sleep_within_lag1"]
+    ).copy()
+
+    if verbose:
+        n_female = int((person_demo["Sex_coded"] == 1).sum())
+        n_male = int((person_demo["Sex_coded"] == 0).sum())
+        print(
+            f"  Loaded: {len(unique_ids)} subjects, "
+            f"{len(model_df)} observations"
+        )
+        print(f"  Age (person-level): mean={age_mean:.1f}, SD={age_sd:.1f}")
+        print(f"  Sex: {n_female} female, {n_male} male")
+        print(
+            f"  Sex centering (person-level): "
+            f"mean(Sex_coded)={sex_mean:.4f}"
+        )
+
+    return df, model_df, unique_ids, id_map
+
+
+# ===================================================================
+# Correlated-innovations likelihood (shared helper)
+# ===================================================================
+
+def add_bivariate_innovations_likelihood(
+    mu_pain, mu_sleep, y_pain, y_sleep, name_suffix=""
+):
+    """Attach the bivariate-normal innovations likelihood to the current
+    PyMC model via the sequential-conditioning Cholesky trick.
+
+    Factoring the bivariate normal as ``p(pain) * p(sleep | pain)``
+    avoids the O(n^3) per-evaluation cost of ``pm.MvNormal`` and
+    samples ~100x faster while being mathematically identical (see the
+    module docstring). Both the main VARX fit (``fit_bayesian_varx1``)
+    and the severity-joint model (``step13``) attach their likelihood
+    through this helper so the speed and priors stay in sync.
+
+    Priors (declared here and returned as Deterministics/RVs):
+
+      sigma_pain, sigma_sleep ~ HalfCauchy(2)
+      rho_raw                 ~ Beta(2, 2)
+      rho_innov = 2 * rho_raw - 1  on [-1, 1]
+
+    Parameters
+    ----------
+    mu_pain, mu_sleep : tensors
+        Observation-level predicted means for pain and sleep.
+    y_pain, y_sleep : arrays
+        Observation-level observed values.
+    name_suffix : str, optional
+        Appended to the two observation-node names (``y_pain`` and
+        ``y_sleep``) so multiple likelihoods can coexist in one model
+        if ever needed. Default empty.
+
+    Returns
+    -------
+    dict : keys ``sigma_pain``, ``sigma_sleep``, ``rho_innov``
+        The prior RVs, so the caller can reuse them in deterministics
+        or posterior extraction.
+    """
+    sigma_pain = pm.HalfCauchy(f"sigma_pain{name_suffix}", beta=2)
+    sigma_sleep = pm.HalfCauchy(f"sigma_sleep{name_suffix}", beta=2)
+    rho_raw = pm.Beta(f"rho_raw{name_suffix}", alpha=2, beta=2)
+    rho_innov = pm.Deterministic(
+        f"rho_innov{name_suffix}", 2 * rho_raw - 1
+    )
+
+    # Step 1: pain innovation (marginal).
+    pm.Normal(
+        f"y_pain{name_suffix}",
+        mu=mu_pain, sigma=sigma_pain, observed=y_pain,
+    )
+
+    # Step 2: sleep innovation conditioned on pain residual.
+    eps_pain = y_pain - mu_pain
+    mu_sleep_cond = (
+        mu_sleep + rho_innov * (sigma_sleep / sigma_pain) * eps_pain
+    )
+    sigma_sleep_cond = sigma_sleep * pt.sqrt(1 - rho_innov ** 2)
+    pm.Normal(
+        f"y_sleep{name_suffix}",
+        mu=mu_sleep_cond, sigma=sigma_sleep_cond, observed=y_sleep,
+    )
+
+    return {
+        "sigma_pain": sigma_pain,
+        "sigma_sleep": sigma_sleep,
+        "rho_innov": rho_innov,
+    }
+
+
+# ===================================================================
 # Model Fitting
 # ===================================================================
 
@@ -517,28 +702,9 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             mu_sleep = mu_sleep + b1_i * pain_lag + b4 * pain_x_contrast
 
         # --- Correlated innovations via Cholesky trick ---
-        # See module docstring for why this is ~100x faster than MvNormal.
-        sigma_pain = pm.HalfCauchy("sigma_pain", beta=2)
-        sigma_sleep = pm.HalfCauchy("sigma_sleep", beta=2)
-
-        # rho_raw ~ Beta(2,2) on [0,1], rescaled to rho on [-1,1]
-        rho_raw = pm.Beta("rho_raw", alpha=2, beta=2)
-        rho_innov = pm.Deterministic("rho_innov", 2 * rho_raw - 1)
-
-        # Step 01: pain innovation (marginal)
-        pm.Normal("y_pain", mu=mu_pain, sigma=sigma_pain, observed=y_pain)
-
-        # Step 02: sleep innovation conditioned on pain residual
-        eps_pain = y_pain - mu_pain
-        mu_sleep_cond = (
-            mu_sleep + rho_innov * (sigma_sleep / sigma_pain) * eps_pain
-        )
-        sigma_sleep_cond = sigma_sleep * pt.sqrt(1 - rho_innov**2)
-        pm.Normal(
-            "y_sleep",
-            mu=mu_sleep_cond,
-            sigma=sigma_sleep_cond,
-            observed=y_sleep,
+        add_bivariate_innovations_likelihood(
+            mu_pain=mu_pain, mu_sleep=mu_sleep,
+            y_pain=y_pain, y_sleep=y_sleep,
         )
 
         # --- MCMC sampling ---
@@ -974,13 +1140,15 @@ def extract_results(trace, moderator_name=None):
 
     # Compute two-tailed posterior p-values for coupling parameters
     for var in ["a2", "b1"]:
-        p_neg = results.get(f"{var}_prob_neg", 0.5)
-        results[f"{var}_p_twotail"] = 2 * min(p_neg, 1 - p_neg)
+        results[f"{var}_p_twotail"] = two_tail_p(
+            results.get(f"{var}_prob_neg", 0.5)
+        )
 
     for var in ("gamma_sp", "gamma_ps"):
         if var in scalar_vars:
-            p_neg = results.get(f"{var}_prob_neg", 0.5)
-            results[f"{var}_p_twotail"] = 2 * min(p_neg, 1 - p_neg)
+            results[f"{var}_p_twotail"] = two_tail_p(
+                results.get(f"{var}_prob_neg", 0.5)
+            )
 
     if moderator_name is not None:
         results["moderator_name"] = moderator_name

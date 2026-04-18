@@ -70,31 +70,9 @@ EXPECTED_SIGNS = {
 
 
 def load_step02_data(csv_path):
-    """Load Step 03 output and prepare for fitting.
-
-    Age z-scoring and Sex centering are done at the person level (one
-    row per subject) so the mean/SD are not weighted by the number of
-    quarters each subject contributes.
-    """
-    df = pd.read_csv(csv_path)
-    person_demo = df.groupby("ID").first()[["Age", "Sex"]].reset_index()
-    age_mean = person_demo["Age"].mean()
-    age_sd = person_demo["Age"].std()
-    person_demo["Age_z"] = (person_demo["Age"] - age_mean) / age_sd
-    person_demo["Sex_coded"] = (person_demo["Sex"] == 2).astype(float)
-    sex_mean = person_demo["Sex_coded"].mean()
-    person_demo["Sex_c"] = person_demo["Sex_coded"] - sex_mean
-    df = df.drop(columns=[c for c in ("Age_z", "Sex_coded", "Sex_c")
-                          if c in df.columns])
-    df = df.merge(
-        person_demo[["ID", "Age_z", "Sex_coded", "Sex_c"]],
-        on="ID", how="left",
-    )
-    unique_ids = sorted(df["ID"].unique())
-    id_map = {sid: i for i, sid in enumerate(unique_ids)}
-    df["pid_idx"] = df["ID"].map(id_map)
-    model_df = df.dropna(subset=["pain_within_lag1", "sleep_within_lag1"]).copy()
-    return df, model_df, unique_ids, id_map
+    """Thin wrapper around lib.coupling_model.load_varx_frame."""
+    from coupling_model import load_varx_frame
+    return load_varx_frame(csv_path, verbose=False)
 
 
 def run_step08(verbose=True, refit=False):
@@ -167,20 +145,18 @@ def run_step08(verbose=True, refit=False):
             n_obs = len(sub_df)
             results = extract_results(idata, moderator_name=roi_name)
 
+            from coupling_model import two_tail_p
             sp_mean = results.get("gamma_sp_mean", np.nan)
             sp_lo = results.get("gamma_sp_ci_lo", np.nan)
             sp_hi = results.get("gamma_sp_ci_hi", np.nan)
-            sp_prob_neg = results.get("gamma_sp_prob_neg", np.nan)
-            sp_p = 2 * min(sp_prob_neg, 1 - sp_prob_neg) if np.isfinite(sp_prob_neg) else np.nan
+            sp_p = two_tail_p(results.get("gamma_sp_prob_neg", np.nan))
 
             # With moderator_direction="sp" the PS slope has no gamma_ps
             # term, so its posterior is absent. Record NaN.
             ps_mean = results.get("gamma_ps_mean", np.nan)
             ps_lo = results.get("gamma_ps_ci_lo", np.nan)
             ps_hi = results.get("gamma_ps_ci_hi", np.nan)
-            ps_prob_neg = results.get("gamma_ps_prob_neg", np.nan)
-            ps_p = (2 * min(ps_prob_neg, 1 - ps_prob_neg)
-                    if np.isfinite(ps_prob_neg) else np.nan)
+            ps_p = two_tail_p(results.get("gamma_ps_prob_neg", np.nan))
 
             rhat_max = results.get("rhat_max", np.nan)
 
@@ -248,8 +224,8 @@ def run_step08(verbose=True, refit=False):
             "match": match,
         })
 
-    sign_p = sum(comb(n_tested, k) * 0.5 ** n_tested
-                 for k in range(n_concordant, n_tested + 1))
+    from coupling_model import sign_concordance_p
+    sign_p = sign_concordance_p(n_concordant, n_tested)
 
     sign_df = pd.DataFrame(sign_rows)
     sign_df.to_csv(OUT_SIGN_CSV, index=False)
