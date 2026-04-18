@@ -24,7 +24,7 @@
 
 ![](../results/supplementary_materials/figure_s5_krause_jn.png)
 
-**Figure S5.** Johnson-Neyman analyses of non-credible Krause ROI moderation of sleep-to-pain coupling ($\gamma_{sp}$). **(A)** Contralateral Somatosensory Cortex (S1). **(B)** Contralateral Middle Insula. **(C)** Left Thalamus. **(D)** Left Anterior Insula. For each panel, the blue line shows the posterior mean coupling slope as a continuous function of ROI activation (z-scored), dashed lines show the 95% credible interval. Vertical markers show simple slopes at low (Q1 - $1.5 \times \mathrm{IQR}$), median, and high (Q3 + $1.5 \times \mathrm{IQR}$) levels with 95% CrI error bars. Blue dots show person-level fitted coupling values (population-level slope + random effect). N = 173 for contralateral S1 and contralateral middle insula (one participant missing stimulation site); N = 174 for thalamus and anterior insula.
+**Figure S5.** Johnson-Neyman analyses of non-credible Krause ROI moderation of sleep-to-pain coupling ($\gamma_{sp}$). **(A)** Contralateral Somatosensory Cortex (S1). **(B)** Contralateral Middle Insula. **(C)** Left Thalamus. **(D)** Left Anterior Insula. For each panel, the blue line shows the posterior mean coupling slope as a continuous function of ROI activation (z-scored), dashed lines show the 95% credible interval. Vertical markers show simple slopes at low (Q1 - $1.5 \times \mathrm{IQR}$), median, and high (Q3 + $1.5 \times \mathrm{IQR}$) levels with 95% CrI error bars. Blue dots show person-level fitted coupling values (population-level slope + random effect). N = 174.
 
 ## Pain-to-sleep arousal relay moderation
 
@@ -36,16 +36,16 @@
 
 | ROI       | Modality      | $\gamma_{ps}$ | 95% CrI          |
 | :-------- | :------------ | --------------: | :--------------- |
-| PBN       | fMRI response |          -0.075 | [-0.175, +0.025] |
-|           | GM volume     |          -0.062 | [-0.173, +0.046] |
-| BNST      | fMRI response |          -0.077 | [-0.191, +0.031] |
-|           | GM volume     |          -0.039 | [-0.145, +0.067] |
-| CeA       | fMRI response |          +0.073 | [-0.044, +0.189] |
-|           | GM volume     |          -0.050 | [-0.167, +0.064] |
-| SI-BF/Ch4 | fMRI response |          +0.022 | [-0.078, +0.117] |
-|           | GM volume     |          -0.018 | [-0.132, +0.095] |
-| LH        | fMRI response |          -0.022 | [-0.124, +0.078] |
-|           | GM volume     |          -0.014 | [-0.120, +0.090] |
+| PBN       | fMRI response |          +0.027 | [-0.074, +0.129] |
+|           | GM volume     |          -0.065 | [-0.174, +0.050] |
+| BNST      | fMRI response |          -0.072 | [-0.181, +0.033] |
+|           | GM volume     |          -0.040 | [-0.148, +0.062] |
+| CeA       | fMRI response |          +0.073 | [-0.041, +0.185] |
+|           | GM volume     |          -0.055 | [-0.175, +0.061] |
+| SI-BF/Ch4 | fMRI response |          +0.019 | [-0.076, +0.113] |
+|           | GM volume     |          -0.021 | [-0.137, +0.094] |
+| LH        | fMRI response |          -0.006 | [-0.107, +0.096] |
+|           | GM volume     |          -0.016 | [-0.126, +0.091] |
 
 **Note.** Each ROI was tested in a separate model run. fMRI response: N = 174; unmasked contrast images were used for PBN, SI-BF/Ch4, CeA, and BNST; GM-masked contrasts for LH (see Methods). GM volume: N = 189. Johnson-Neyman analyses for each ROI are shown in Figures S7 (fMRI BOLD) and S8 (GM volume). Sleep-to-pain moderation results for all six spherical ROIs (including ACC) are reported in Table 5 of the main text.
 
@@ -63,12 +63,12 @@
 
 | Moderator          | Model | Direction | $\gamma$ | 95% CrI          |
 | :----------------- | :---- | :-------: | ---------: | :--------------- |
-| Mean Pain Severity | Alone |    SP    |     -0.009 | [-0.047, +0.028] |
-| Mean Pain Severity | Alone |    PS    |     -0.053 | [-0.164, +0.060] |
-| Mean Sleep Quality | Alone |    SP    |     +0.024 | [-0.017, +0.064] |
-| Mean Sleep Quality | Alone |    PS    |     +0.051 | [-0.046, +0.148] |
-| Mean Pain Severity | Joint |    SP    |     -0.002 | [-0.041, +0.036] |
-| Mean Sleep Quality | Joint |    SP    |     +0.023 | [-0.021, +0.065] |
+| Mean Pain Severity | Alone |    SP    |     -0.010 | [-0.049, +0.028] |
+| Mean Pain Severity | Alone |    PS    |     -0.050 | [-0.163, +0.063] |
+| Mean Sleep Quality | Alone |    SP    |     +0.023 | [-0.018, +0.064] |
+| Mean Sleep Quality | Alone |    PS    |     +0.050 | [-0.050, +0.148] |
+| Mean Pain Severity | Joint |    SP    |     -0.003 | [-0.043, +0.036] |
+| Mean Sleep Quality | Joint |    SP    |     +0.021 | [-0.023, +0.065] |
 
 **Note.** Each moderator was z-scored. Three models were run: person-mean pain severity alone, person-mean sleep quality alone, and both simultaneously (joint). N = 229; 1,818 observations. None of the moderation parameters were credibly different from zero (all 95% CrIs comfortably included zero), indicating that within-person coupling operates comparably regardless of baseline severity.
 
