@@ -70,23 +70,19 @@ refit; the code-side of each issue is either resolved or N/A.
     (2024), which did not claim lateralization).
 
 ## M5. Retract "10 models (hemisphere-split)" sensitivity claim (D3)
-- Status: `[ ]`
-- Location: `docs/manuscript_pain.md` Results §3.5 (lines ~1129–1132).
-- Current text: "Moderation was not credible for any ROI in either
-  modality (Table S1) — a sensitivity analysis testing each
-  hemisphere separately (10 models) confirmed that bilateral
-  averaging did not mask lateralized effects."
-- Edit: delete the hemisphere-sensitivity clause. Rephrase so the
-  "10 models" refers only to the 5 fMRI + 5 VBM modality split that
-  the code actually runs. Rationale for not implementing hemisphere
-  splits: the Lynch ROIs are defined as bilateral atlases because
-  the theoretical framework specifies bilateral projections (line
-  151 already states this); the PBN at 3 mm fMRI resolution is only
-  3 voxels and is unviable as a hemisphere-split ROI.
-- Note: the same claim appears in the step-11 text generator. After
-  regenerating text via the updated code (paragraph will need an
-  edit there too), this manuscript edit should match the new
-  generated paragraph.
+- Status: `[x]` in `manuscript_pain.md`; Pedro will port to the docx.
+- Location: `docs/manuscript_pain.md` line 348 (Results §3.5).
+- Previous text: "Moderation was not credible for any ROI in either
+  modality (Table S1)—a sensitivity analysis testing each hemisphere
+  separately (10 models) confirmed that bilateral averaging did not
+  mask lateralized effects."
+- Applied edit: deleted the hemisphere-sensitivity clause. Kept the
+  not-credible statement.
+- Step 11 text generator (`codes/python/step11_fit_ps_moderation.py`)
+  updated to emit the shorter paragraph; next --refit will produce
+  text that matches the manuscript.
+- Supplementary materials do not contain this claim; no supp edit
+  needed.
 
 ## M6. Update Table 5 numbers after refit
 - Status: `[ ]`

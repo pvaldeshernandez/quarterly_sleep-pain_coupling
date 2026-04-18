@@ -351,9 +351,7 @@ def generate_text_paragraphs(verbose: bool = True) -> None:
         f"pain-evoked fMRI response (N = {n_fmri}) and grey matter volume "
         f"from atlas-defined probabilistic ROIs (N = {n_vbm}). "
         "Moderation was not credible for any ROI in either modality "
-        "(**Table S1**)\u2014a sensitivity analysis testing each hemisphere "
-        "separately (10 models) confirmed that bilateral averaging did not "
-        "mask lateralized effects. "
+        "(**Table S1**). "
         + fmri_desc
         + vbm_desc
         + "Johnson-Neyman analyses for each ROI are shown in **Figures S7-S8**."
