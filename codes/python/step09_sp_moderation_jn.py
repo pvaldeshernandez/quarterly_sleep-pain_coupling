@@ -295,6 +295,13 @@ def run_step09(verbose=True, refit=False):
         raw_mean = float(d[mean_key][0])
         raw_sd = float(d[sd_key][0])
 
+        # clip_pct=(1, 99): trim the outer 1% of the moderator distribution
+        # on each side to avoid extrapolating the JN band into sparse tails
+        # where the credible-region boundaries are unstable. Deliberate
+        # choice for the neuroimaging moderators (Krause / ACC ROI BOLD);
+        # the contrast-factor JN (step 05) uses (0, 100) because that
+        # moderator is already z-scored and tightly bounded. Not mentioned
+        # in the manuscript.
         jn = compute_jn_curve(a2_draws, gamma_sp_draws, X_vals,
                               raw_mean=raw_mean, raw_sd=raw_sd,
                               clip_pct=(1, 99))

@@ -151,15 +151,13 @@ refit; the code-side of each issue is either resolved or N/A.
   or clarify in each caption that person dots display the
   age/sex-zero-centered fitted slope.
 
-## M10. Widen JN grid to 0–100% (D8)
-- Status: `[ ]` (cosmetic)
-- Location: Figures 5, 6, S7, S8.
-- Step 05 (contrast JN) uses `clip_pct=(0, 100)` and matches the
-  manuscript claim ("spans the observed moderator range"). Steps 09
-  and 12 (neuroimaging JN) use `clip_pct=(1, 99)`, trimming outer 1%.
-- Fix in `step09_sp_moderation_jn.py` and `step12_ps_moderation_jn.py`
-  (one-line change to the `compute_jn_curve` call) and regenerate
-  figures.
+## M10. JN clip_pct=(1,99) for neuroimaging moderators (D8)
+- Status: `[-]` — wontfix. The (1, 99) clip on neuroimaging JN plots
+  (steps 09 and 12) is deliberate: the outer 1% of each tail is
+  sparse and the credible-region boundaries become unstable there.
+  The manuscript does not mention the clip; no text edit needed.
+- Code updated to document the rationale in a comment next to the
+  `compute_jn_curve` call in both step09 and step12.
 
 ---
 
