@@ -76,11 +76,11 @@
 
 The small proportion of individually credible coupling estimates reflects the partial pooling inherent in hierarchical Bayesian estimation rather than an absence of true individual differences. With a median of 9 quarterly observations per participant, individual-level data are necessarily noisy, and the hierarchical model concentrates inferential power at the population level—where the pooled data across 229 participants and 1,818 transitions enable reliable estimation of mean coupling, heterogeneity, and moderating effects. The individual random effects $u_{i}$ serve primarily to partition variance and improve population-level estimates rather than to provide precise person-level inference.
 
-Relatedly, although the pain-to-sleep coupling ($|\hat{\lambda}_{ps}| = 0.140$) qualifies as a large cross-lagged effect by the benchmarks of Orth et al. (2024) (small = 0.03, medium = 0.07, large = 0.12), its absolute magnitude is modest in the context of noisy quarterly within-person deviations, and the large between-person heterogeneity ($\hat{\tau}_{ps} = 0.362$) indicates that the population mean reflects a meaningful but noisy signal, consistent with the expectation that quarterly assessments introduce variability from sources unrelated to the sleep-pain dynamic.
+Relatedly, although the pain-to-sleep coupling ($|\hat{\lambda}_{ps}| = 0.136$) qualifies as a large cross-lagged effect by the benchmarks of Orth et al. (2024) (small = 0.03, medium = 0.07, large = 0.12), its absolute magnitude is modest in the context of noisy quarterly within-person deviations, and the large between-person heterogeneity ($\hat{\tau}_{ps} = 0.361$) indicates that the population mean reflects a meaningful but noisy signal, consistent with the expectation that quarterly assessments introduce variability from sources unrelated to the sleep-pain dynamic.
 
-The autoregressive coefficients were notably small ($\hat{\phi}_{p} = 0.106$, $\hat{\phi}_{s} = 0.004$). Among the 16 daily studies reviewed, only Edwards et al. (2008) includes explicit autoregressive terms as fixed-effect predictors (pain AR = 0.18, sleep AR = 0.15); a few others handle serial dependence through residual covariance structures (6, 7, 11), and the majority omit autoregressive control entirely. While retaining them is more principled—omitting the lagged dependent variable can inflate cross-lagged estimates when the outcome is autocorrelated (63)—the negligible magnitudes observed here suggest that simpler models without autoregressive terms may yield equivalent coupling estimates in quarterly designs, where the long interval between assessments attenuates day-to-day persistence.
+The autoregressive coefficients were notably small ($\hat{\phi}_{p} = 0.104$, $\hat{\phi}_{s} = 0.005$). Among the 16 daily studies reviewed, only Edwards et al. (2008) includes explicit autoregressive terms as fixed-effect predictors (pain AR = 0.18, sleep AR = 0.15); a few others handle serial dependence through residual covariance structures (6, 7, 11), and the majority omit autoregressive control entirely. While retaining them is more principled—omitting the lagged dependent variable can inflate cross-lagged estimates when the outcome is autocorrelated (63)—the negligible magnitudes observed here suggest that simpler models without autoregressive terms may yield equivalent coupling estimates in quarterly designs, where the long interval between assessments attenuates day-to-day persistence.
 
-Relatedly, the quarterly temporal resolution may be suboptimal for the coupling process we are detecting. The Dormann and Griffin (2015) framework provides a principled approach to optimal measurement interval: the eigenvalues of the bivariate transition matrix yield timescale-invariant continuous-time drift parameters (**Supplementary Note S2**). The dominant eigenvalue ($\lambda_{1} \approx 0.130$) exceeds the larger autoregression ($\hat{\phi}_{p} = 0.106$), confirming that reciprocal coupling stabilizes the system. However, because the product of the cross-lagged coefficients exceeds the product of the autoregressions ($\hat{\lambda}_{sp}\hat{\lambda}_{ps} = 0.00294 > \hat{\phi}_{s}\hat{\phi}_{p} = 0.000424$), the minor eigenvalue is negative ($\lambda_{2} \approx -0.020$), placing the system in an oscillatory regime where the closed-form optimal lag is undefined (63). A unidirectional reference calculation (setting $\lambda_{ps} = 0$) yields an optimal lag of approximately 0.275 quarters ($\approx 25$ days), with quarterly measurement capturing roughly 32% of the peak unidirectional cross-lagged signal (**Supplementary Note S2**). Weekly or biweekly measurements would substantially increase sensitivity to these coupling processes while restoring the monotonic regime in which the reciprocal optimal-lag formula applies. The coupling patterns observed here reflect cumulative quarterly processes and should not be directly compared with daily diary findings.
+Relatedly, the quarterly temporal resolution may be suboptimal for the coupling process we are detecting. The Dormann and Griffin (2015) framework provides a principled approach to optimal measurement interval: the eigenvalues of the bivariate transition matrix yield timescale-invariant continuous-time drift parameters (**Supplementary Note S2**). The dominant eigenvalue ($\lambda_{1} \approx 0.128$) exceeds the larger autoregression ($\hat{\phi}_{p} = 0.104$), confirming that reciprocal coupling stabilizes the system. However, because the product of the cross-lagged coefficients exceeds the product of the autoregressions ($\hat{\lambda}_{sp}\hat{\lambda}_{ps} = 0.00300 > \hat{\phi}_{s}\hat{\phi}_{p} = 0.000470$), the minor eigenvalue is negative ($\lambda_{2} \approx -0.020$), placing the system in an oscillatory regime where the closed-form optimal lag is undefined (63). A unidirectional reference calculation (setting $\lambda_{ps} = 0$) yields an optimal lag of approximately 0.277 quarters ($\approx 25$ days), with quarterly measurement capturing roughly 32% of the peak unidirectional cross-lagged signal (**Supplementary Note S2**). Weekly or biweekly measurements would substantially increase sensitivity to these coupling processes while restoring the monotonic regime in which the reciprocal optimal-lag formula applies. The coupling patterns observed here reflect cumulative quarterly processes and should not be directly compared with daily diary findings.
 
 ## Supplementary Note S2: Optimal Time Lags in the Bivariate Sleep-Pain System
 
@@ -162,41 +162,41 @@ These are timescale-invariant: the effective stability at any alternative lag $\
 
 ### Application
 
-**1. Eigenvalues.** From Table 3: $\hat{\phi}_{p} = 0.106$, $\hat{\phi}_{s} = 0.004$, $\hat{\lambda}_{sp} = -0.021$, $\hat{\lambda}_{ps} = -0.140$. Then
+**1. Eigenvalues.** From Table 3: $\hat{\phi}_{p} = 0.104$, $\hat{\phi}_{s} = 0.005$, $\hat{\lambda}_{sp} = -0.022$, $\hat{\lambda}_{ps} = -0.136$. Then
 
 $$
-\Delta = \sqrt{(0.106 - 0.004)^{2} + 4(-0.021)(-0.140)} = \sqrt{0.02216} \approx 0.149,
+\Delta = \sqrt{(0.104 - 0.005)^{2} + 4(-0.022)(-0.136)} = \sqrt{0.02193} \approx 0.148,
 $$
 
 $$
-\lambda_{1} \approx 0.130, \qquad \lambda_{2} \approx -0.020.
+\lambda_{1} \approx 0.128, \qquad \lambda_{2} \approx -0.020.
 $$
 
-The dominant eigenvalue exceeds $\hat{\phi}_{p}$ by 22%, confirming stabilization through reciprocal coupling ($\hat{\lambda}_{sp}\hat{\lambda}_{ps} = 0.00294 > 0$).
+The dominant eigenvalue exceeds $\hat{\phi}_{p}$ by 23%, confirming stabilization through reciprocal coupling ($\hat{\lambda}_{sp}\hat{\lambda}_{ps} = 0.00300 > 0$).
 
 **2. Continuous-time drift.** For the dominant mode,
 
 $$
-\alpha_{1} = \frac{\ln(0.130)}{1\;\mathrm{quarter}} \approx -2.04\;\mathrm{quarter}^{-1} \approx -0.022\;\mathrm{day}^{-1}.
+\alpha_{1} = \frac{\ln(0.128)}{1\;\mathrm{quarter}} \approx -2.05\;\mathrm{quarter}^{-1} \approx -0.023\;\mathrm{day}^{-1}.
 $$
 
-The dominant-mode stability at alternative lags is weekly $e^{-2.04/13} \approx 0.85$ and monthly $e^{-2.04/3} \approx 0.51$.
+The dominant-mode stability at alternative lags is weekly $e^{-2.05/13} \approx 0.85$ and monthly $e^{-2.05/3} \approx 0.50$.
 
-**3. Oscillatory regime.** The minor eigenvalue is negative ($\lambda_{2} \approx -0.020$) because the product of the cross-lagged coefficients exceeds the product of the autoregressions: $\hat{\lambda}_{sp}\hat{\lambda}_{ps} = 0.00294 > \hat{\phi}_{s}\hat{\phi}_{p} = 0.000424$. Equivalently, $\Delta > \hat{\phi}_{s} + \hat{\phi}_{p}$, which drives $\lambda_{2}$ below zero. This produces oscillatory dynamics in $\beta(\omega)$—the term $\lambda_{2}^{\omega}$ alternates sign at successive integer lags—and renders the reciprocal optimal lag (Eq. S2) undefined because $\ln \lambda_{2}$ is complex. Shorter measurement intervals (weekly or biweekly) would likely restore $\lambda_{sp}\lambda_{ps} < \phi_{s}\phi_{p}$, making the reciprocal formula applicable.
+**3. Oscillatory regime.** The minor eigenvalue is negative ($\lambda_{2} \approx -0.020$) because the product of the cross-lagged coefficients exceeds the product of the autoregressions: $\hat{\lambda}_{sp}\hat{\lambda}_{ps} = 0.00300 > \hat{\phi}_{s}\hat{\phi}_{p} = 0.000470$. Equivalently, $\Delta > \hat{\phi}_{s} + \hat{\phi}_{p}$, which drives $\lambda_{2}$ below zero. This produces oscillatory dynamics in $\beta(\omega)$—the term $\lambda_{2}^{\omega}$ alternates sign at successive integer lags—and renders the reciprocal optimal lag (Eq. S2) undefined because $\ln \lambda_{2}$ is complex. Shorter measurement intervals (weekly or biweekly) would likely restore $\lambda_{sp}\lambda_{ps} < \phi_{s}\phi_{p}$, making the reciprocal formula applicable.
 
 **4. Unidirectional approximation and signal attenuation.** Applying Eq. S3,
 
 $$
-\omega_{\mathrm{opt}}^{\,\mathrm{unidir}} = -\frac{\ln\!\left(\dfrac{\ln(0.106)}{\ln(0.004)}\right)}{\ln(0.106) - \ln(0.004)} = -\frac{\ln(0.406)}{3.277} \approx 0.275\;\mathrm{quarters} \approx 25\;\mathrm{days}.
+\omega_{\mathrm{opt}}^{\,\mathrm{unidir}} = -\frac{\ln\!\left(\dfrac{\ln(0.104)}{\ln(0.005)}\right)}{\ln(0.104) - \ln(0.005)} = -\frac{\ln(0.428)}{3.035} \approx 0.277\;\mathrm{quarters} \approx 25\;\mathrm{days}.
 $$
 
-Applying Eq. S4 at $\omega = 1$ (one quarter) versus $\omega_{\mathrm{opt}} = 0.275$,
+Applying Eq. S4 at $\omega = 1$ (one quarter) versus $\omega_{\mathrm{opt}} = 0.277$,
 
 $$
-f(1) = \frac{0.106 - 0.004}{0.102} = 1.00, \qquad f(0.275) = \frac{0.106^{0.275} - 0.004^{0.275}}{0.102} \approx 3.14.
+f(1) = \frac{0.104 - 0.005}{0.099} = 1.00, \qquad f(0.277) = \frac{0.104^{0.277} - 0.005^{0.277}}{0.099} \approx 3.12.
 $$
 
-The quarterly measurement therefore captures approximately $1.00 / 3.14 \approx 32\%$ of the peak unidirectional cross-lagged signal. Weekly or biweekly intervals would recover a substantially larger fraction.
+The quarterly measurement therefore captures approximately $1.00 / 3.12 \approx 32\%$ of the peak unidirectional cross-lagged signal. Weekly or biweekly intervals would recover a substantially larger fraction.
 
 ## References
 
