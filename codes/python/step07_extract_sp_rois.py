@@ -57,19 +57,28 @@ OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_s4_stim_rois.png")
 FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step06_fmri_contrasts_masked")
 FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step06_fmri_contrasts_unmasked")
 
+# Stimulation-side inputs (for contralateralized ROIs: S1, Middle Insula)
+DATA_DIR = os.path.join(ROOT, "data")
+WIDE_XLSX = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
+LONG_CSV  = os.path.join(DATA_DIR, "step00_extracted_long.csv")
+
 # ROI definitions for extraction
 SP_ROIS = {
-    "Right_S1": {
-        "label": "Right Somatosensory Cortex (S1)",
+    "Contra_S1": {
+        "label": "Contralateral Somatosensory Cortex (S1)",
         "framework": "Krause",
         "mni": (36, -45, 59), "radius_mm": 8,
+        "mni_mirror": (-36, -45, 59),
+        "contralateralize": True,
         "expected_sign_sp": "-",
         "mask": "unmasked",
     },
-    "Right_Middle_Insula": {
-        "label": "Right Middle Insula",
+    "Contra_Middle_Insula": {
+        "label": "Contralateral Middle Insula",
         "framework": "Krause",
         "mni": (32, 4, 11), "radius_mm": 8,
+        "mni_mirror": (-32, 4, 11),
+        "contralateralize": True,
         "expected_sign_sp": "+",
         "mask": "unmasked",
     },
@@ -185,8 +194,57 @@ def build_spherical_mask(mni_center, radius_mm, affine, shape):
     return mask, int(mask.sum())
 
 
+def load_stim_side_map(verbose=True):
+    """Return {ID -> 'left' or 'right'} with the hemisphere CONTRALATERAL to
+    the stimulated knee, restricted to the analytic cohort.
+
+    - Analytic cohort = IDs present in step00_extracted_long.csv. This
+      drops baseline-only subjects (6) who cannot contribute to any
+      coupling analysis.
+    - Stimulated side from img_test_site__s1; fall back to
+      img_test_site__s2 for subjects missing s1.
+    - Values in the source file: 1 = Right knee stimulated
+      (contralateral = LEFT hemisphere), 2 = Left knee stimulated
+      (contralateral = RIGHT hemisphere).
+    """
+    long_df = pd.read_csv(LONG_CSV)
+    long_df["ID"] = long_df["ID"].astype(str)
+    analytic_ids = set(long_df["ID"].unique())
+
+    wide = pd.read_excel(WIDE_XLSX)
+    wide["ID"] = wide["ID"].astype(str)
+    wide_idx = wide.set_index("ID")
+
+    contra = {}
+    n_s1 = n_s2 = n_missing = 0
+    for sid in analytic_ids:
+        if sid not in wide_idx.index:
+            n_missing += 1
+            continue
+        s1 = wide_idx.loc[sid, "img_test_site__s1"]
+        s2 = wide_idx.loc[sid, "img_test_site__s2"]
+        if pd.notna(s1):
+            ts = int(s1); n_s1 += 1
+        elif pd.notna(s2):
+            ts = int(s2); n_s2 += 1
+        else:
+            n_missing += 1
+            continue
+        contra[sid] = "left" if ts == 1 else "right"
+    if verbose:
+        print(f"  Stimulation-side lookup: {len(contra)} subjects "
+              f"(s1: {n_s1}, s2 fallback: {n_s2}, missing: {n_missing})")
+    return contra
+
+
 def extract_rois(verbose=True):
-    """Extract fMRI BOLD in all SP ROIs and save to CSV."""
+    """Extract fMRI BOLD in all SP ROIs and save to CSV.
+
+    For ROIs with ``contralateralize=True``, the ROI sphere is placed on
+    the hemisphere contralateral to the stimulated knee for each
+    subject (x-coordinate mirroring, not image flipping). For all
+    other ROIs the fixed atlas coordinate is used.
+    """
     import nibabel as nib
 
     if verbose:
@@ -200,20 +258,35 @@ def extract_rois(verbose=True):
     affine = ref_img.affine
     shape = ref_img.shape[:3]
 
+    # Build per-ROI mask(s). Contralateralized ROIs carry both
+    # hemispheres so we can pick per subject.
     roi_masks = {}
     for roi_name, cfg in SP_ROIS.items():
-        mask, n_vox = build_spherical_mask(
+        right_mask, n_right = build_spherical_mask(
             cfg["mni"], cfg["radius_mm"], affine, shape
         )
-        roi_masks[roi_name] = mask
-        if verbose:
-            print(f"    {cfg['label']}: MNI={cfg['mni']}, "
-                  f"r={cfg['radius_mm']}mm, {n_vox} voxels")
+        if cfg.get("contralateralize", False):
+            left_mask, n_left = build_spherical_mask(
+                cfg["mni_mirror"], cfg["radius_mm"], affine, shape
+            )
+            roi_masks[roi_name] = {"right": right_mask, "left": left_mask}
+            if verbose:
+                print(f"    {cfg['label']}: right={cfg['mni']} "
+                      f"({n_right} vox), left={cfg['mni_mirror']} "
+                      f"({n_left} vox)")
+        else:
+            roi_masks[roi_name] = right_mask
+            if verbose:
+                print(f"    {cfg['label']}: MNI={cfg['mni']}, "
+                      f"r={cfg['radius_mm']}mm, {n_right} voxels")
+
+    # Stim-side lookup (only needed for contralateralized ROIs).
+    side_map = load_stim_side_map(verbose=verbose)
 
     all_rows = []
     for roi_name, cfg in SP_ROIS.items():
         src_dir = FMRI_MASKED_DIR if cfg["mask"] == "gm_masked" else FMRI_UNMASKED_DIR
-        mask = roi_masks[roi_name]
+        is_contra = cfg.get("contralateralize", False)
 
         values = {}
         for subj_id in sorted(os.listdir(src_dir)):
@@ -221,7 +294,15 @@ def extract_rois(verbose=True):
             if not os.path.isfile(con_path):
                 continue
             data = nib.load(con_path).get_fdata()
-            values[subj_id] = float(np.nanmean(data[mask]))
+            if is_contra:
+                contra_side = side_map.get(subj_id)
+                if contra_side is None:
+                    # No side info -> cannot contralateralize; skip.
+                    continue
+                m = roi_masks[roi_name][contra_side]
+            else:
+                m = roi_masks[roi_name]
+            values[subj_id] = float(np.nanmean(data[m]))
 
         clean = {k: v for k, v in values.items() if np.isfinite(v)}
         vals = np.array(list(clean.values()))

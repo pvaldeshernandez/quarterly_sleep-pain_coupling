@@ -306,6 +306,7 @@ def load_data(data_dir, synthetic=False):
 def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        X_person=None, include_agesex=True,
                        include_sp=True, include_ps=True,
+                       moderator_direction="both",
                        idata_kwargs=None,
                        cores=None,
                        progressbar=True):
@@ -344,6 +345,16 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         coupling path. Setting both to False gives the null model with
         only autoregressions, intercepts, contrast direct effects, and
         correlated innovations.
+    moderator_direction : {"both", "sp", "ps", "none"}, default "both"
+        Which coupling slope(s) the external moderator X_person is
+        attached to. Independent of ``include_sp`` / ``include_ps``,
+        which control whether each coupling direction exists at all.
+        Use "sp" for Krause/ACC-style hypotheses (X moderates only
+        sleep->pain), "ps" for Lynch-style hypotheses (X moderates
+        only pain->sleep), "both" to attach X to both slopes (legacy
+        behavior), and "none" to ignore X entirely. Requires
+        ``include_sp=True`` when "sp" or "both"; ``include_ps=True``
+        when "ps" or "both". Has no effect when ``X_person is None``.
     idata_kwargs : dict, optional
         Extra keyword arguments forwarded to ``pm.sample`` via its
         ``idata_kwargs``. Use ``{"log_likelihood": True}`` to compute
@@ -364,6 +375,25 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
     valid_ids : list
         Subject IDs included in this particular fit.
     """
+    # ------------------------------------------------------------------
+    # Validate moderator_direction against include_sp / include_ps.
+    # ------------------------------------------------------------------
+    if moderator_direction not in ("both", "sp", "ps", "none"):
+        raise ValueError(
+            f"moderator_direction must be one of 'both','sp','ps','none'; "
+            f"got {moderator_direction!r}"
+        )
+    if X_person is not None and moderator_direction in ("sp", "both") \
+            and not include_sp:
+        raise ValueError(
+            "moderator_direction='sp' (or 'both') requires include_sp=True"
+        )
+    if X_person is not None and moderator_direction in ("ps", "both") \
+            and not include_ps:
+        raise ValueError(
+            "moderator_direction='ps' (or 'both') requires include_ps=True"
+        )
+
     # ------------------------------------------------------------------
     # Filter to subjects with external moderator data (Aim 2 only)
     # ------------------------------------------------------------------
@@ -440,10 +470,13 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             g_ps_sex = pm.Normal("g_ps_sex", mu=0, sigma=1)
 
         # --- External moderator (Aim 2 analyses only) ---
-        # Also tied to whichever coupling direction is present.
-        if has_moderator and include_sp:
+        # Attached only to the direction(s) specified by
+        # moderator_direction, independent of include_sp/include_ps.
+        attach_sp = has_moderator and moderator_direction in ("sp", "both")
+        attach_ps = has_moderator and moderator_direction in ("ps", "both")
+        if attach_sp:
             gamma_sp = pm.Normal("gamma_sp", mu=0, sigma=1)
-        if has_moderator and include_ps:
+        if attach_ps:
             gamma_ps = pm.Normal("gamma_ps", mu=0, sigma=1)
 
         # --- Person-specific random coupling slopes ---
@@ -465,13 +498,13 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             a2_i = a2 + u_sp[idx]
             if include_agesex:
                 a2_i = a2_i + g_sp_age * age_z + g_sp_sex * sex_c
-            if has_moderator:
+            if attach_sp:
                 a2_i = a2_i + gamma_sp * X_obs
         if include_ps:
             b1_i = b1 + u_ps[idx]
             if include_agesex:
                 b1_i = b1_i + g_ps_age * age_z + g_ps_sex * sex_c
-            if has_moderator:
+            if attach_ps:
                 b1_i = b1_i + gamma_ps * X_obs
 
         # --- Linear predictors ---
@@ -912,9 +945,13 @@ def extract_results(trace, moderator_name=None):
     if has_agesex:
         scalar_vars.extend(["g_sp_age", "g_sp_sex", "g_ps_age", "g_ps_sex"])
 
-    has_moderator = "gamma_sp" in trace.posterior
-    if has_moderator:
-        scalar_vars.extend(["gamma_sp", "gamma_ps"])
+    has_gamma_sp = "gamma_sp" in trace.posterior
+    has_gamma_ps = "gamma_ps" in trace.posterior
+    has_moderator = has_gamma_sp or has_gamma_ps
+    if has_gamma_sp:
+        scalar_vars.append("gamma_sp")
+    if has_gamma_ps:
+        scalar_vars.append("gamma_ps")
 
     # ArviZ summary gives mean, sd, hdi, r_hat, ess
     summary = az.summary(trace, var_names=scalar_vars)
@@ -940,8 +977,8 @@ def extract_results(trace, moderator_name=None):
         p_neg = results.get(f"{var}_prob_neg", 0.5)
         results[f"{var}_p_twotail"] = 2 * min(p_neg, 1 - p_neg)
 
-    if has_moderator:
-        for var in ["gamma_sp", "gamma_ps"]:
+    for var in ("gamma_sp", "gamma_ps"):
+        if var in scalar_vars:
             p_neg = results.get(f"{var}_prob_neg", 0.5)
             results[f"{var}_p_twotail"] = 2 * min(p_neg, 1 - p_neg)
 

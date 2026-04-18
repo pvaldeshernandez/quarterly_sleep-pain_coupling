@@ -49,10 +49,22 @@ OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "text_numbers_severity.csv")
 
 
 def load_data(csv_path):
+    """Age z-scoring and Sex centering at the person level (not
+    observation-weighted)."""
     df = pd.read_csv(csv_path)
-    df["Age_z"] = (df["Age"] - df["Age"].mean()) / df["Age"].std()
-    df["Sex_coded"] = (df["Sex"] == 2).astype(float)
-    df["Sex_c"] = df["Sex_coded"] - df["Sex_coded"].mean()
+    person_demo = df.groupby("ID").first()[["Age", "Sex"]].reset_index()
+    age_mean = person_demo["Age"].mean()
+    age_sd = person_demo["Age"].std()
+    person_demo["Age_z"] = (person_demo["Age"] - age_mean) / age_sd
+    person_demo["Sex_coded"] = (person_demo["Sex"] == 2).astype(float)
+    sex_mean = person_demo["Sex_coded"].mean()
+    person_demo["Sex_c"] = person_demo["Sex_coded"] - sex_mean
+    df = df.drop(columns=[c for c in ("Age_z", "Sex_coded", "Sex_c")
+                          if c in df.columns])
+    df = df.merge(
+        person_demo[["ID", "Age_z", "Sex_coded", "Sex_c"]],
+        on="ID", how="left",
+    )
     unique_ids = sorted(df["ID"].unique())
     id_map = {sid: i for i, sid in enumerate(unique_ids)}
     df["pid_idx"] = df["ID"].map(id_map)
@@ -323,11 +335,13 @@ def _fit_joint_model(model_df, unique_ids, id_map,
         g_ps_age = pm.Normal("g_ps_age", 0, 1)
         g_ps_sex = pm.Normal("g_ps_sex", 0, 1)
 
-        # Severity moderation (2 moderators for each direction)
+        # Severity moderation: both moderators enter the SP slope only,
+        # matching the manuscript's accounting of "six moderation
+        # parameters" (individual-pain SP + PS, individual-sleep SP + PS,
+        # joint-model pain SP + sleep SP = 6). The PS slope is left as
+        # baseline + random effects + Age/Sex only in the joint model.
         gamma_sp_pain = pm.Normal("gamma_sp_pain", 0, 1)
         gamma_sp_sleep = pm.Normal("gamma_sp_sleep", 0, 1)
-        gamma_ps_pain = pm.Normal("gamma_ps_pain", 0, 1)
-        gamma_ps_sleep = pm.Normal("gamma_ps_sleep", 0, 1)
 
         # Random effects
         tau_sp = pm.HalfCauchy("tau_sp", 1)
@@ -351,12 +365,11 @@ def _fit_joint_model(model_df, unique_ids, id_map,
                      + gamma_sp_sleep * x_sleep_obs
                      + u_sp[pid])
 
-        # PS coupling (pain -> sleep)
+        # PS coupling (pain -> sleep): severity moderators not attached
+        # (see "Severity moderation" comment above).
         lambda_ps = (b1
                      + g_ps_age * age_z
                      + g_ps_sex * sex_c
-                     + gamma_ps_pain * x_pain_obs
-                     + gamma_ps_sleep * x_sleep_obs
                      + u_ps[pid])
 
         # Means

@@ -79,11 +79,25 @@ def load_data(csv_path: str):
     """
     df = pd.read_csv(csv_path)
 
-    # Age z-score, Sex center
-    df["Age_z"] = (df["Age"] - df["Age"].mean()) / df["Age"].std()
-    df["Sex_coded"] = (df["Sex"] == 2).astype(float)
-    sex_mean = df["Sex_coded"].mean()
-    df["Sex_c"] = df["Sex_coded"] - sex_mean
+    # Age z-score and Sex centering: computed at the PERSON level
+    # (one row per subject) so the mean is not weighted by the number
+    # of quarters each subject contributes.
+    person_demo = (
+        df.groupby("ID").first()[["Age", "Sex"]].reset_index()
+    )
+    age_mean = person_demo["Age"].mean()
+    age_sd = person_demo["Age"].std()
+    person_demo["Age_z"] = (person_demo["Age"] - age_mean) / age_sd
+    person_demo["Sex_coded"] = (person_demo["Sex"] == 2).astype(float)
+    sex_mean = person_demo["Sex_coded"].mean()
+    person_demo["Sex_c"] = person_demo["Sex_coded"] - sex_mean
+
+    df = df.drop(columns=[c for c in ("Age_z", "Sex_coded", "Sex_c")
+                          if c in df.columns])
+    df = df.merge(
+        person_demo[["ID", "Age_z", "Sex_coded", "Sex_c"]],
+        on="ID", how="left",
+    )
 
     unique_ids = sorted(df["ID"].unique())
     id_map = {sid: i for i, sid in enumerate(unique_ids)}
@@ -94,10 +108,10 @@ def load_data(csv_path: str):
     ).copy()
 
     print(f"  Loaded: {len(unique_ids)} subjects, {len(model_df)} observations")
-    print(f"  Age: mean={df['Age'].mean():.1f}, SD={df['Age'].std():.1f}")
-    print(f"  Sex: {int((df['Sex']==2).sum())} female, "
-          f"{int((df['Sex']==1).sum())} male")
-    print(f"  Sex centering: mean(Sex_coded)={sex_mean:.4f}")
+    print(f"  Age (person-level): mean={age_mean:.1f}, SD={age_sd:.1f}")
+    print(f"  Sex: {int((person_demo['Sex_coded']==1).sum())} female, "
+          f"{int((person_demo['Sex_coded']==0).sum())} male")
+    print(f"  Sex centering (person-level): mean(Sex_coded)={sex_mean:.4f}")
 
     return df, model_df, unique_ids, id_map
 

@@ -54,14 +54,14 @@ OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step08_text_numbers.csv")
 
 # ROIs included in the Krause sign-concordance test (ACC excluded)
 KRAUSE_ROIS = [
-    "Right_S1", "Right_Middle_Insula", "Left_Thalamus",
+    "Contra_S1", "Contra_Middle_Insula", "Left_Thalamus",
     "Left_Anterior_Insula", "Left_NAcc", "Right_NAcc",
 ]
 
 # Expected signs for the sign test
 EXPECTED_SIGNS = {
-    "Right_S1": "-",
-    "Right_Middle_Insula": "+",
+    "Contra_S1": "-",
+    "Contra_Middle_Insula": "+",
     "Left_Thalamus": "+",
     "Left_Anterior_Insula": "+",
     "Left_NAcc": "+",
@@ -70,11 +70,26 @@ EXPECTED_SIGNS = {
 
 
 def load_step02_data(csv_path):
-    """Load Step 03 output and prepare for fitting."""
+    """Load Step 03 output and prepare for fitting.
+
+    Age z-scoring and Sex centering are done at the person level (one
+    row per subject) so the mean/SD are not weighted by the number of
+    quarters each subject contributes.
+    """
     df = pd.read_csv(csv_path)
-    df["Age_z"] = (df["Age"] - df["Age"].mean()) / df["Age"].std()
-    df["Sex_coded"] = (df["Sex"] == 2).astype(float)
-    df["Sex_c"] = df["Sex_coded"] - df["Sex_coded"].mean()
+    person_demo = df.groupby("ID").first()[["Age", "Sex"]].reset_index()
+    age_mean = person_demo["Age"].mean()
+    age_sd = person_demo["Age"].std()
+    person_demo["Age_z"] = (person_demo["Age"] - age_mean) / age_sd
+    person_demo["Sex_coded"] = (person_demo["Sex"] == 2).astype(float)
+    sex_mean = person_demo["Sex_coded"].mean()
+    person_demo["Sex_c"] = person_demo["Sex_coded"] - sex_mean
+    df = df.drop(columns=[c for c in ("Age_z", "Sex_coded", "Sex_c")
+                          if c in df.columns])
+    df = df.merge(
+        person_demo[["ID", "Age_z", "Sex_coded", "Sex_c"]],
+        on="ID", how="left",
+    )
     unique_ids = sorted(df["ID"].unique())
     id_map = {sid: i for i, sid in enumerate(unique_ids)}
     df["pid_idx"] = df["ID"].map(id_map)
@@ -144,6 +159,7 @@ def run_step08(verbose=True, refit=False):
                 model_df, unique_ids, id_map,
                 X_person=X_person,
                 include_agesex=True,
+                moderator_direction="sp",
                 progressbar=True,
             )
 
@@ -157,18 +173,21 @@ def run_step08(verbose=True, refit=False):
             sp_prob_neg = results.get("gamma_sp_prob_neg", np.nan)
             sp_p = 2 * min(sp_prob_neg, 1 - sp_prob_neg) if np.isfinite(sp_prob_neg) else np.nan
 
+            # With moderator_direction="sp" the PS slope has no gamma_ps
+            # term, so its posterior is absent. Record NaN.
             ps_mean = results.get("gamma_ps_mean", np.nan)
             ps_lo = results.get("gamma_ps_ci_lo", np.nan)
             ps_hi = results.get("gamma_ps_ci_hi", np.nan)
             ps_prob_neg = results.get("gamma_ps_prob_neg", np.nan)
-            ps_p = 2 * min(ps_prob_neg, 1 - ps_prob_neg) if np.isfinite(ps_prob_neg) else np.nan
+            ps_p = (2 * min(ps_prob_neg, 1 - ps_prob_neg)
+                    if np.isfinite(ps_prob_neg) else np.nan)
 
             rhat_max = results.get("rhat_max", np.nan)
 
             if verbose:
                 print(f"    N={n_valid}, obs={n_obs}")
-                print(f"    gamma_sp = {sp_mean:+.4f} [{sp_lo:+.4f}, {sp_hi:+.4f}], p={sp_p:.4f}")
-                print(f"    gamma_ps = {ps_mean:+.4f} [{ps_lo:+.4f}, {ps_hi:+.4f}], p={ps_p:.4f}")
+                print(f"    gamma_sp = {sp_mean:+.4f} "
+                      f"[{sp_lo:+.4f}, {sp_hi:+.4f}], p={sp_p:.4f}")
                 print(f"    R-hat max: {rhat_max:.3f}")
 
             table_rows.append({

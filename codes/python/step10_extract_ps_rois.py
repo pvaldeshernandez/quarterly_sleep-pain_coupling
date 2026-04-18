@@ -178,13 +178,18 @@ def extract_fmri_arousal(verbose=True):
             continue
         roi_weights[roi_name] = weights
 
+    # Per-ROI source directory: GM-masked for ROIs tagged "gm_masked"
+    # (e.g. LH), unmasked otherwise.
     all_rows = []
-    for subj_id in sorted(os.listdir(default_fmri_dir)):
-        con_path = os.path.join(default_fmri_dir, subj_id, "con_0001.nii")
-        if not os.path.isfile(con_path):
-            continue
-        data = nib.load(con_path).get_fdata()
-        for roi_name, weights in roi_weights.items():
+    for roi_name, weights in roi_weights.items():
+        src_dir = (FMRI_MASKED_DIR
+                   if AROUSAL_ROIS[roi_name].get("fmri_mask") == "gm_masked"
+                   else FMRI_UNMASKED_DIR)
+        for subj_id in sorted(os.listdir(src_dir)):
+            con_path = os.path.join(src_dir, subj_id, "con_0001.nii")
+            if not os.path.isfile(con_path):
+                continue
+            data = nib.load(con_path).get_fdata()
             valid = np.isfinite(data)
             w = weights * valid
             wsum = w.sum()

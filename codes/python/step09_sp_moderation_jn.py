@@ -55,7 +55,7 @@ FIG5_ROI = "Left_NAcc"
 # ROIs for Figure 6 (two panels stacked: Right ACC on top, Left ACC below)
 FIG6_ROIS = ["Right_dACC_MCC", "Left_dACC_MCC"]
 # Non-credible Krause ROIs for the S5 2x2 merge
-S5_ROIS = ["Right_S1", "Right_Middle_Insula", "Left_Thalamus", "Left_Anterior_Insula"]
+S5_ROIS = ["Contra_S1", "Contra_Middle_Insula", "Left_Thalamus", "Left_Anterior_Insula"]
 
 
 # =====================================================================
