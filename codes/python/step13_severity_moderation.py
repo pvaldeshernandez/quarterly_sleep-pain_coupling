@@ -360,7 +360,9 @@ def _fit_joint_model(model_df, unique_ids, id_map,
 
         idata = pm.sample(2000, tune=2000, chains=4, cores=4,
                           target_accept=0.95, progressbar=True,
-                          return_inferencedata=True)
+                          return_inferencedata=True,
+                          random_seed=42,
+                          compute_convergence_checks=False)
 
     # Extract results
     def _summarize(var_name):
