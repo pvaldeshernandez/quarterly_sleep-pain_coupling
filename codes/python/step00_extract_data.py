@@ -102,7 +102,7 @@ OUT_DICT_XLSX = os.path.join(DATA_DIR, "step00_extracted_dictionary.xlsx")
 # Reference map — where each variable is used in the paper:
 #   age__s1                      : Table 2, VARX covariate
 #   gender__s1                   : Table 2, VARX covariate
-#   Race__s1                     : Table 2
+#   Race__s1                     : Table 2 (1=NHB, 2=NHW; = Race_Group)
 #   pe_bmi__s1                   : Table 2
 #   womac_pain__s1               : Table 2, Figure S2 convergent validity
 #   womac_stiffness__s1          : Table 2, Figure S2
@@ -112,6 +112,8 @@ OUT_DICT_XLSX = os.path.join(DATA_DIR, "step00_extracted_dictionary.xlsx")
 #   phq_knee_pain_days__s1       : Table 2, Figure S2
 #   phq_percent_pain__s1         : Table 2, Figure S2
 #   qst_knee_pain_rating__s1     : Table 2, Figure S2
+#   gcps_pain_intensity__s1      : GCPS characteristic pain intensity (0-100)
+#   gcps_interference__s1        : GCPS pain interference (0-100)
 #   img_test_site__s1            : fMRI ROI contralateralization for
 #                                  contralateral S1 and Middle Insula
 #   phq_pain_areas___{1..13}__s1 : Factor analysis validation
@@ -119,7 +121,7 @@ OUT_DICT_XLSX = os.path.join(DATA_DIR, "step00_extracted_dictionary.xlsx")
 #                                  correlations of contrast scores
 #                                  against 13 body-map endorsements)
 #
-# 26 variables in total (plus ID).
+# 28 variables in total (plus ID).
 
 BASELINE_VARS = [
     # Demographics (Table 2 + VARX covariates)
@@ -127,17 +129,10 @@ BASELINE_VARS = [
     "gender__s1",
     "pe_bmi__s1",
 
-    # Race/ethnicity (Table 2) — multi-select checkbox indicators
-    # from the bedside experimenter form. Each is binary (0/1).
-    # The manuscript collapses these into 4 groups: Black (___2),
-    # White (___white), Hispanic (___5), Other (___1 + ___3 + ___4 + ___88).
-    "qst_bedside_race_ethno___1__s1",     # Asian or Asian American
-    "qst_bedside_race_ethno___2__s1",     # Black or African American
-    "qst_bedside_race_ethno___white__s1", # White, Caucasian, or European
-    "qst_bedside_race_ethno___3__s1",     # American Indian/Alaska Native
-    "qst_bedside_race_ethno___4__s1",     # Native Hawaiian/Pacific Islander
-    "qst_bedside_race_ethno___5__s1",     # Hispanic
-    "qst_bedside_race_ethno___88__s1",    # Other
+    # Race group (Table 2) — single screening-form variable, 1=NHB, 2=NHW.
+    # In the wide xlsx this is the export of Race_Group from the screening
+    # REDCap form (data dictionary entry #1806).
+    "Race__s1",
 
     # WOMAC (Table 2 + Figure S2)
     "womac_pain__s1",
@@ -154,6 +149,10 @@ BASELINE_VARS = [
 
     # QST knee pain rating (Table 2 + Figure S2)
     "qst_knee_pain_rating__s1",
+
+    # GCPS — Graded Chronic Pain Scale (baseline, scaled 0-100)
+    "gcps_pain_intensity__s1",
+    "gcps_interference__s1",
 
     # fMRI stimulation side (for contralateralized S1 / Mid Insula)
     "img_test_site__s1",

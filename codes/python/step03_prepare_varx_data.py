@@ -358,31 +358,15 @@ def compute_table3(
     _add("Female sex, N (%)", "", f"{n_female} ({100*n_female/n:.1f})")
     _add("Male sex, N (%)", "", f"{n_male} ({100*n_male/n:.1f})")
 
-    # Race/ethnicity — from multi-select checkbox indicators
-    race_map = [
-        ("qst_bedside_race_ethno___2__s1", "Black/African American"),
-        ("qst_bedside_race_ethno___white__s1", "White/Caucasian"),
-        ("qst_bedside_race_ethno___5__s1", "Hispanic/Latino"),
-    ]
-    other_cols = [
-        "qst_bedside_race_ethno___1__s1",
-        "qst_bedside_race_ethno___3__s1",
-        "qst_bedside_race_ethno___4__s1",
-        "qst_bedside_race_ethno___88__s1",
-    ]
-    for col, label in race_map:
-        if col in baseline.columns:
-            count = int(baseline[col].fillna(0).astype(int).sum())
-            _add("Race/ethnicity, N (%)", label,
-                 f"{count} ({100*count/n:.1f})")
-    # "Other" = anyone who checked any of the remaining categories
-    # and none of the three main ones
-    if all(c in baseline.columns for c in other_cols):
-        main_any = baseline[[c for c, _ in race_map]].fillna(0).max(axis=1)
-        other_any = baseline[other_cols].fillna(0).max(axis=1)
-        n_other = int(((other_any == 1) & (main_any == 0)).sum())
-        _add("Race/ethnicity, N (%)", "Other",
-             f"{n_other} ({100*n_other/n:.1f})")
+    # Race group — Race__s1 (= Race_Group from screening form, 1=NHB, 2=NHW)
+    if "Race__s1" in baseline.columns:
+        race = baseline["Race__s1"]
+        n_nhb = int((race == 1).sum())
+        n_nhw = int((race == 2).sum())
+        _add("Race group, N (%)", "Non-Hispanic Black",
+             f"{n_nhb} ({100*n_nhb/n:.1f})")
+        _add("Race group, N (%)", "Non-Hispanic White",
+             f"{n_nhw} ({100*n_nhw/n:.1f})")
 
     # BMI
     bmi = baseline["pe_bmi__s1"].dropna()

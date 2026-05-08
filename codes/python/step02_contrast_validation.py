@@ -183,6 +183,8 @@ def generate_figure_s2(verbose=True):
         ("womac_phys_function__s1", "WOMAC Physical Function"),
         ("womac_stiffness__s1", "WOMAC Stiffness"),
         ("qst_knee_pain_rating__s1", "Knee pain rating"),
+        ("gcps_pain_intensity__s1", "GCPS pain intensity"),
+        ("gcps_interference__s1", "GCPS pain interference"),
     ]
     available_panels = [(c, l) for c, l in panels if c in df.columns]
 
@@ -373,6 +375,8 @@ def generate_text_numbers(verbose=True):
             ("womac_phys_function__s1", "womac_phys_function"),
             ("womac_stiffness__s1", "womac_stiffness"),
             ("qst_knee_pain_rating__s1", "qst_knee_pain_rating"),
+            ("gcps_pain_intensity__s1", "gcps_pain_intensity"),
+            ("gcps_interference__s1", "gcps_interference"),
         ]
 
         for col, key in pearson_panels:
