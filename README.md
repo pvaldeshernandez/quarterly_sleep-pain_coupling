@@ -2,7 +2,7 @@
 
 Reproducible analysis code for:
 
-> Valdes-Hernandez PA, Montesino-Goicolea S, Li X, Fillingim RB, Cruz-Almeida Y. **Quarterly Sleep-Pain Coupling in Knee Pain: Pain-to-Sleep Dominance and NAcc-Gated Sleep-to-Pain.** *[Journal TBD]*, 2026.
+> Valdes-Hernandez PA, Montesino-Goicolea S, Li X, Peraza JA, Weber E, Mickle AM, Staud R, Lai S, Sibille KT, Goodin BR, Fillingim RB, Cruz-Almeida Y. **Quarterly Sleep-Pain Coupling in Knee Pain: Pain-to-Sleep Dominance and NAcc-Gated Sleep-to-Pain Coupling.** *[Journal TBD]*, 2026.
 
 ---
 
