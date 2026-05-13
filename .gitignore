@@ -37,17 +37,7 @@ figures/
 # Archive and non-code docs
 archive/
 literature/
-docs/archive/
-docs/*.docx
-docs/*.json
-docs/~$*
-docs/authors.docx
-docs/docs/
-docs/plans/
-docs/supporting/
-docs/tables/
-docs/manuscript_pain.md
-docs/supplementary_materials.md
+docs/
 MANUSCRIPT_CORRECTIONS.md
 
 # OS
