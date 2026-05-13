@@ -107,7 +107,7 @@ conda env create -f environment.yml
 conda activate sleep-pain-coupling
 ```
 
-Place the data files provided by Pedro into `data/original/` and the neuroimaging directories (`fmri_contrasts/`, `spm_nomask/`, `vbm/`, `atlases/`) into `data/`. Then run the pipeline step by step:
+Place the data files provided by Pedro into `data/original/` and the neuroimaging directories (`fmri_contrasts/`, `spm_nomask/`, `vbm/`) into `data/`. The atlases must be downloaded separately from their original sources — see [Atlases](#atlases) below. Once the atlases are in place under `data/atlases/`, run the pipeline step by step:
 
 ```bash
 cd codes/python
@@ -140,6 +140,43 @@ To re-run a specific step's computation from scratch (e.g., after changing upstr
 ```bash
 python step04_fit_coupling_model.py --refit
 ```
+
+---
+
+## Atlases
+
+Steps 10-12 use five published probabilistic atlases to define the pain-arousal relay ROIs (PBN, SI-BF/Ch4, CeA, BNST, LH). These files are not distributed with this repository and must be downloaded from the original sources, then placed under `data/atlases/` using the exact filenames and subfolder structure shown below.
+
+```
+data/atlases/
+├── atlas_b2_brainstem.nii.gz                                  (PBN)
+├── atlas_b2_brainstem.txt                                     (optional metadata)
+├── atlas_b2_brainstem_roi_numbers.txt                         (optional metadata)
+├── Blackford_BNST_3T.nii.gz                                   (BNST)
+├── CIT168_CeA_prob_bilat_MNI152_1mm.nii.gz                    (CeA; see note)
+├── zaborszky_bf/
+│   └── Ch4_basal_forebrain_prob_MNI152.nii.gz                 (SI-BF/Ch4)
+└── hypothalamus_neudorfer2020/
+    ├── atlas_labels_0.5mm.nii.gz                              (LH)
+    └── Volumes_names-labels.csv
+```
+
+### Sources
+
+| File(s) | Atlas | Source |
+|---|---|---|
+| `atlas_b2_brainstem.nii.gz` | Brainstem Navigator (Bianciardi lab) — labels 19 and 20 = left/right lateral parabrachial nucleus | <https://www.nitrc.org/projects/brainstemnavig/> |
+| `Blackford_BNST_3T.nii.gz` | BNST probabilistic atlas (Theiss et al., *NeuroImage* 2017; Blackford lab) | <https://www.nitrc.org/projects/bnst_atlas/> |
+| `CIT168_CeA_prob_bilat_MNI152_1mm.nii.gz` | Derived from the CIT168 in vivo subcortical atlas (Pauli et al., *Sci Data* 2018). The published atlas provides an extended-amygdala volume combining CeA + BNST; the CeA-specific probabilistic map used here was built from the crowd-sourced individual-observer AMY_CEN labelings in the CIT168 repository, averaged into a probability map and registered to MNI152 1 mm space (see Methods §"Pain-to-sleep ROIs"). | CIT168 atlas: <https://osf.io/jkzwp/> — the bilateral CeA-only file is not distributed by the original atlas; reconstruct it following the Methods, or request it from the corresponding author. |
+| `zaborszky_bf/Ch4_basal_forebrain_prob_MNI152.nii.gz` | Probabilistic basal forebrain cytoarchitectonic atlas, Ch4 cell group (Zaborszky et al., *NeuroImage* 2008) | Distributed with SPM Anatomy Toolbox: <https://www.fz-juelich.de/en/inm/inm-7/resources/jubrain-anatomy-toolbox> (Ch4 map). |
+| `hypothalamus_neudorfer2020/atlas_labels_0.5mm.nii.gz` + `Volumes_names-labels.csv` | Probabilistic hypothalamus atlas (Neudorfer et al., *Sci Data* 2020) — labels 25 and 26 = left/right lateral hypothalamus | <https://www.lead-dbs.org/helpsupport/knowledge-base/atlasesresources/cobralab-hypothalamic-subnuclei-atlas/> (or the publication's supplementary materials) |
+
+### Notes
+
+- File names and subfolder paths must match exactly. The pipeline references them by hard-coded paths in `codes/python/step10_extract_ps_rois.py`.
+- All atlases are expected in MNI152 space. Step 10 will resample to the fMRI resolution (3 mm) for BOLD extraction and to VBM resolution (1.5 mm) for grey-matter volume extraction.
+- The `.txt` files for the brainstem atlas are metadata only and not required by the pipeline.
+- If the corresponding author can share a pre-built bundle of these atlases (subject to redistribution licenses), please request `data/atlases/` directly.
 
 ---
 
@@ -210,16 +247,17 @@ The following data files are needed to run the pipeline:
 | `data/fmri_contrasts/` | GM-masked first-level SPM contrast images (one `con_0001.nii` per subject) | ~41 GB |
 | `data/spm_nomask/` | Unmasked re-estimated contrast images | ~200 MB |
 | `data/vbm/` | Smoothed modulated grey matter images (`smwc1*_ses-01_T1w.nii`) | ~1.7 GB |
-| `data/atlases/` | Probabilistic arousal ROI atlases (PBN, SI-BF, CeA, BNST, LH) | ~330 MB |
+| `data/atlases/` | Probabilistic arousal ROI atlases (PBN, SI-BF, CeA, BNST, LH) — see [Atlases](#atlases) for download instructions | ~330 MB |
 
 ---
 
 ## Citation
 
 ```
-Valdes-Hernandez PA, Montesino-Goicolea S, Li X, Fillingim RB, Cruz-Almeida Y.
-Quarterly Sleep-Pain Coupling in Knee Pain: Pain-to-Sleep Dominance and
-NAcc-Gated Sleep-to-Pain. [Journal TBD], 2026.
+Valdes-Hernandez PA, Montesino-Goicolea S, Li X, Peraza JA, Weber E,
+Mickle AM, Staud R, Lai S, Sibille KT, Goodin BR, Fillingim RB,
+Cruz-Almeida Y. Quarterly Sleep-Pain Coupling in Knee Pain: Pain-to-Sleep
+Dominance and NAcc-Gated Sleep-to-Pain Coupling. [Journal TBD], 2026.
 ```
 
 ---
