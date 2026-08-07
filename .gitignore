@@ -45,3 +45,6 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Revision sandbox (JPAIN resubmission) — exploratory tests, not part of the pipeline
+codes/python/revision/

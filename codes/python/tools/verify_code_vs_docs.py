@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-"""Diff the manuscript/supplement against code-generated text outputs.
+"""Verify code-generated text matches the documents.
 
-Classifies each paragraph in manuscript_pain.md and
-supplementary_materials.md as one of:
+For every paragraph the code emits in step*_text.md, find the closest
+matching paragraph in manuscript_pain.md and supplementary_materials.md
+and classify as:
 
-  MATCH        sim >= 0.92 to some code-generated paragraph
-  CLOSE        0.70 <= sim < 0.92 (code emits similar text but wording drifted)
-  UNMATCHED    sim < 0.70 and paragraph cites numbers -> code should emit
-  NARRATIVE    sim < 0.70 but paragraph does not cite computed numbers ->
-               manually authored, will not be regenerated
-
-Also lists code-generated paragraphs that have no manuscript match
-(ORPHAN-CODE), which means the generator is emitting stale text the
-document no longer uses.
+  MATCH      sim >= 0.92  (identical wording; only numbers may differ)
+  CLOSE      0.70 <= sim < 0.92  (similar wording, drift worth checking)
+  ORPHAN     sim < 0.70  (code emits text that's not in any doc;
+                          either you removed it from the doc, or the
+                          doc edit drifted and the code needs updating)
 
 Usage:
     python verify_code_vs_docs.py [--verbose]
 
-Writes a report to results/verify_docs_report.md.
+Writes a report to derivatives/verify_docs_report.md and exits 0 if
+every code paragraph is MATCH/CLOSE, 1 otherwise.
 """
 from __future__ import annotations
 
@@ -243,112 +241,82 @@ def short(s: str, n: int = 160) -> str:
 
 
 def run_verification(verbose: bool = False) -> int:
-    """Return 0 if no unmatched reportable paragraphs; 1 otherwise."""
-    manuscript = load_paragraphs(MANUSCRIPT)
-    supplement = load_paragraphs(SUPPLEMENT)
+    """One-way check: for every code-generated paragraph, find its closest
+    match in the documents. Return 0 if all are MATCH or CLOSE, 1 otherwise.
+    """
+    # Pool all document paragraphs (manuscript + supplement) as candidates.
+    doc_paras: list[Paragraph] = []
+    for path in (MANUSCRIPT, SUPPLEMENT):
+        doc_paras.extend(load_paragraphs(path))
 
     code_paras: list[Paragraph] = []
     for cf in CODE_TEXT_FILES:
         code_paras.extend(load_paragraphs(cf))
 
-    # For code orphan detection: track which code paragraphs were matched
-    code_used = [False] * len(code_paras)
+    counts = {"MATCH": 0, "CLOSE": 0, "ORPHAN": 0}
+    rows: list[tuple[str, float, Paragraph, Optional[Paragraph]]] = []
 
-    report_lines = ["# Document-vs-code verification report", ""]
+    for cp in code_paras:
+        # Skip headings and structural markers — they're not prose.
+        if cp.kind in ("heading", "figure_link", "table_or_equation"):
+            continue
+        if len(cp.normalized) < 40:
+            continue
+        sim, doc_match = best_match(cp, doc_paras)
+        if sim >= 0.92:
+            counts["MATCH"] += 1
+            rows.append(("MATCH", sim, cp, doc_match))
+        elif sim >= 0.70:
+            counts["CLOSE"] += 1
+            rows.append(("CLOSE", sim, cp, doc_match))
+        else:
+            counts["ORPHAN"] += 1
+            rows.append(("ORPHAN", sim, cp, doc_match))
 
-    def process(label: str, paras: list[Paragraph]) -> dict[str, int]:
-        counts = {"MATCH": 0, "CLOSE": 0, "UNMATCHED": 0, "NARRATIVE": 0}
-        report_lines.append(f"## {label}")
+    report_lines = [
+        "# Code-output verification report",
+        "",
+        "Each code-generated paragraph is matched against the closest "
+        "document paragraph.",
+        "",
+        f"**Totals:** MATCH={counts['MATCH']}, CLOSE={counts['CLOSE']}, "
+        f"ORPHAN={counts['ORPHAN']}",
+        "",
+    ]
+
+    for label in ("ORPHAN", "CLOSE", "MATCH"):
+        items = [r for r in rows if r[0] == label]
+        if not items:
+            continue
+        if label == "MATCH" and not verbose:
+            continue
+        report_lines.append(f"## {label} ({len(items)})")
         report_lines.append("")
-        for p in paras:
-            if p.kind in ("heading", "figure_link", "table_or_equation"):
-                continue
-            if is_narrative_only(p):
-                counts["NARRATIVE"] += 1
-                continue
-            sim, cand = best_match(p, code_paras)
-            if cand is not None:
-                # mark code paragraph as used
-                idx = code_paras.index(cand)
-                code_used[idx] = True
-            if sim >= 0.92:
-                counts["MATCH"] += 1
-                if verbose:
-                    report_lines.append(
-                        f"- MATCH   ({sim:.2f}) {short(p.text)}"
-                    )
-            elif sim >= 0.70:
-                counts["CLOSE"] += 1
+        for _, sim, cp, dm in items:
+            code_src = os.path.relpath(cp.source, ROOT)
+            report_lines.append(f"- sim={sim:.2f}")
+            report_lines.append(
+                f"  - CODE ({code_src}): {short(cp.text)}"
+            )
+            if dm is not None:
+                doc_src = os.path.relpath(dm.source, ROOT)
                 report_lines.append(
-                    f"- CLOSE   ({sim:.2f})"
-                )
-                report_lines.append(f"  - DOC : {short(p.text)}")
-                code_src = os.path.relpath(cand.source, ROOT) if cand else "?"
-                report_lines.append(
-                    f"  - CODE: ({code_src}) "
-                    f"{short(cand.text) if cand else '—'}"
+                    f"  - DOC  ({doc_src}): {short(dm.text)}"
                 )
             else:
-                counts["UNMATCHED"] += 1
-                report_lines.append("- UNMATCHED")
-                report_lines.append(f"  - DOC : {short(p.text)}")
-                if cand:
-                    code_src = os.path.relpath(cand.source, ROOT)
-                    report_lines.append(
-                        f"  - BEST CODE ({sim:.2f}, {code_src}): "
-                        f"{short(cand.text)}"
-                    )
-                else:
-                    report_lines.append("  - BEST CODE: (no candidate)")
+                report_lines.append("  - DOC : (no candidate)")
         report_lines.append("")
-        report_lines.append(
-            f"**Totals:** MATCH={counts['MATCH']}, CLOSE={counts['CLOSE']}, "
-            f"UNMATCHED={counts['UNMATCHED']}, NARRATIVE={counts['NARRATIVE']}"
-        )
-        report_lines.append("")
-        return counts
-
-    ms_counts = process("manuscript_pain.md", manuscript)
-    sp_counts = process("supplementary_materials.md", supplement)
-
-    # Orphan code paragraphs
-    report_lines.append("## Code paragraphs with no document match")
-    report_lines.append("")
-    orphan_count = 0
-    for used, p in zip(code_used, code_paras):
-        if used:
-            continue
-        if p.kind in ("heading", "figure_link", "table_or_equation"):
-            continue
-        if not p.cites_numbers:
-            continue
-        if len(p.normalized) < 60:
-            continue
-        orphan_count += 1
-        src = os.path.relpath(p.source, ROOT)
-        report_lines.append(f"- ORPHAN ({src}): {short(p.text)}")
-    if orphan_count == 0:
-        report_lines.append("*(none)*")
-    report_lines.append("")
-
-    # Summary
-    report_lines.insert(
-        2,
-        f"**Manuscript:** {ms_counts}  \n"
-        f"**Supplement:** {sp_counts}  \n"
-        f"**Orphan code paragraphs:** {orphan_count}\n",
-    )
 
     os.makedirs(os.path.dirname(REPORT), exist_ok=True)
     with open(REPORT, "w") as f:
         f.write("\n".join(report_lines))
 
-    n_unmatched = ms_counts["UNMATCHED"] + sp_counts["UNMATCHED"]
-    print(f"Manuscript: {ms_counts}")
-    print(f"Supplement: {sp_counts}")
-    print(f"Orphan code paragraphs: {orphan_count}")
+    print(
+        f"Code output: MATCH={counts['MATCH']}, "
+        f"CLOSE={counts['CLOSE']}, ORPHAN={counts['ORPHAN']}"
+    )
     print(f"Report: {REPORT}")
-    return 0 if n_unmatched == 0 else 1
+    return 0 if counts["ORPHAN"] == 0 else 1
 
 
 def main() -> None:
