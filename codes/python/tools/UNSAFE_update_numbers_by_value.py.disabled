@@ -1,0 +1,208 @@
+"""DISABLED — DO NOT USE. Matches numbers by VALUE, not by MEANING.
+
+Kept only as a record of an approach that was tried and rejected. Its dry run
+proposed changing 'p = .025' in the sleep-correlates sentence (a sandbox analysis
+that was never refit) and '0.451' in the posterior-predictive-check sentence (whose
+step does not exist yet), because unrelated cells elsewhere happened to hold those
+values. A bare number carries no meaning; pairing by numeric coincidence silently
+rewrites quantities that did not change.
+
+Use tools/update_numbers_curated.py, which maps by parameter name.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import glob
+import os
+import re
+import sys
+from collections import defaultdict
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+CODE = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(CODE))
+sys.path.insert(0, os.path.join(CODE, "revision"))
+
+SUB = os.path.join(ROOT, "docs/manuscript_JPAIN_resubmission")
+DOCS = ["manuscript.docx", "supplementary_materials.docx", "Response.docx",
+        "table1.docx", "table2.docx", "table3.docx", "table4.docx", "table5.docx"]
+
+#: The TRUE pre-refit snapshot, taken before any step was recomputed. The 04:00 backups
+#: are deliberately NOT used as the "old" side: by then steps 01, 04 and 07 had already
+#: been refit, so they hold post-refit values and would pair Table 4 with itself.
+#:
+#: This snapshot also predates the renumbering, so its paths carry the OLD step numbers
+#: and sit at the top level rather than under derivatives/. Both are undone below.
+PREREFIT = os.path.join(os.path.dirname(ROOT), "UPLOAD2_backup_20260808_0130")
+
+#: new step number -> old, to translate a current path into its pre-refit location
+UNRENUMBER = {"03": "02", "04": "03", "07": "04", "11": "05", "12": "06", "13": "07",
+              "14": "08", "16": "09", "18": "10", "19": "11", "20": "12", "21": "13"}
+
+
+def prerefit_path(rel):
+    """Where a current results/ or derivatives/ file lived before the migration."""
+    def back(m):
+        return "step" + UNRENUMBER.get(m.group(1), m.group(1))
+    old = re.sub(r"step(\d{2})", back, rel)
+    if old.startswith("derivatives/"):
+        old = old[len("derivatives/"):]          # top level in that snapshot
+    return os.path.join(PREREFIT, old)
+
+NUM = re.compile(r"(?<![\w.])([+-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?|[+-]?\d*\.\d+)(?![\w])")
+
+
+def distinctive(token: str) -> bool:
+    """True when a bare number is specific enough to be safely identified by value."""
+    if "," in token:                       # 1,818 / 2,056 — a count, not a setting
+        return True
+    if "." in token:
+        return len(token.split(".")[1]) >= 3
+    return False
+
+
+def cells(path):
+    """{(row, col): float} for one CSV."""
+    out = {}
+    try:
+        with open(path, newline="") as fh:
+            for r, row in enumerate(csv.reader(fh)):
+                for c, cell in enumerate(row):
+                    s = cell.strip().replace(",", "")
+                    try:
+                        out[(r, c)] = float(s)
+                    except (TypeError, ValueError):
+                        pass
+    except Exception:
+        pass
+    return out
+
+
+def build_map(verbose=True):
+    """old value -> {new values}, paired cell-for-cell across matching CSVs."""
+    pairs = defaultdict(set)
+    n_files = 0
+    for cur in glob.glob(os.path.join(ROOT, "results", "**", "*.csv"), recursive=True) + \
+               glob.glob(os.path.join(ROOT, "derivatives", "**", "*.csv"), recursive=True):
+        if "revision" in cur:
+            continue
+        rel = os.path.relpath(cur, ROOT)
+        old_path = prerefit_path(rel)
+        if not os.path.exists(old_path):
+            continue
+        a, bb = cells(old_path), cells(cur)
+        if not a or not bb:
+            continue
+        n_files += 1
+        for k, ov in a.items():
+            if k in bb and bb[k] != ov:
+                pairs[round(ov, 10)].add(round(bb[k], 10))
+    if verbose:
+        amb = sum(1 for v in pairs.values() if len(v) > 1)
+        print(f"  paired {n_files} CSV file(s): {len(pairs)} changed value(s), "
+              f"{amb} ambiguous")
+    return pairs
+
+
+def fmt_like(new: float, token: str) -> str:
+    """Render `new` in the same shape the document used for the old value."""
+    if "," in token and "." not in token:
+        return f"{int(round(new)):,}"
+    if "." in token:
+        dec = len(token.split(".")[1])
+        s = f"{new:.{dec}f}"
+        if token[0] == "+" and new >= 0:
+            s = "+" + s
+        return s
+    return str(int(round(new)))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--log", default=os.path.join(ROOT, "docs/plans/number_update_log.txt"))
+    args = ap.parse_args()
+
+    from docx_edit import Doc
+
+    print("building the old -> new value map from paired CSVs")
+    vmap = build_map()
+    resolved = {k: next(iter(v)) for k, v in vmap.items() if len(v) == 1}
+    ambiguous = {k: v for k, v in vmap.items() if len(v) > 1}
+    print(f"  {len(resolved)} unambiguous, {len(ambiguous)} ambiguous (left alone)\n")
+
+    log, total = [], 0
+    for name in DOCS:
+        path = os.path.join(SUB, name)
+        if not os.path.exists(path):
+            continue
+        d = Doc(path)
+        acc = Doc(path)
+        acc.accept_all()
+        ref_start = next((i for i, p in enumerate(acc.paragraphs)
+                          if acc.text_of(p).strip().upper().startswith("REFERENCES")),
+                         len(acc.paragraphs))
+
+        edits, skipped_amb = [], 0
+        for i, p in enumerate(acc.paragraphs):
+            if i >= ref_start or acc.style_of(p) == "Comment":
+                continue
+            text = acc.text_of(p).replace("\xa0", " ")
+            for m in NUM.finditer(text):
+                tok = m.group(1)
+                if not distinctive(tok):
+                    continue
+                try:
+                    val = round(float(tok.replace(",", "")), 10)
+                except ValueError:
+                    continue
+                if val in ambiguous:
+                    skipped_amb += 1
+                    continue
+                if val not in resolved:
+                    continue
+                new_tok = fmt_like(resolved[val], tok)
+                if new_tok == tok:
+                    continue
+                s = max(0, m.start() - 60)
+                e = min(len(text), m.end() + 60)
+                edits.append((i, tok, new_tok, text[s:e].strip()))
+
+        print(f"=== {name} ===")
+        print(f"  {len(edits)} replacement(s), {skipped_amb} skipped as ambiguous")
+        applied = 0
+        for i, old_tok, new_tok, ctx in edits:
+            log.append(f"{name} [{i}] {old_tok} -> {new_tok}\n    …{ctx}…")
+            if args.dry_run:
+                applied += 1
+                continue
+            # Re-locate on the LIVE doc: paragraph indices line up because accept_all
+            # does not add or remove paragraphs.
+            try:
+                if d.replace_text_in_para(d.paragraphs[i], old_tok, new_tok, count=1):
+                    applied += 1
+            except Exception as exc:                       # Mendeley guard, etc.
+                log.append(f"    !! not applied: {type(exc).__name__}: {exc}")
+        total += applied
+        for i, o, n, ctx in edits[:12]:
+            print(f"    [{i:4d}] {o:>10s} -> {n:<10s} …{ctx[:70]}…")
+        if len(edits) > 12:
+            print(f"    … and {len(edits) - 12} more (see the log)")
+        if not args.dry_run and applied:
+            d.save()
+        print()
+
+    os.makedirs(os.path.dirname(args.log), exist_ok=True)
+    with open(args.log, "w") as fh:
+        fh.write("\n".join(log))
+    print(f"{total} number(s) updated; log written to "
+          f"{os.path.relpath(args.log, ROOT)}")
+    if args.dry_run:
+        print("dry run -- nothing written")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
