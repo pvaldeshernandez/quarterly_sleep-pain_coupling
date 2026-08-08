@@ -2,15 +2,15 @@
 Step 04 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 ======================================================================
 
-Input:  derivatives/step03_varx_data/step03_processed_long.csv
+Input:  derivatives/step04_varx_data/step04_processed_long.csv
 Output:
   derivatives/
-    step03_posterior_draws.npz     — raw posterior arrays for downstream steps
-    step03_person_coupling.csv     — per-person lambda_sp / lambda_ps
+    step04_posterior_draws.npz     — raw posterior arrays for downstream steps
+    step04_person_coupling.csv     — per-person lambda_sp / lambda_ps
   results/
-    step03_table4_coupling.csv     — Table 4: population parameters
-    step03_loo_comparison.csv      — LOO-CV pairwise comparisons
-    step03_text_numbers.csv        — every number stated in the text
+    step04_table4_coupling.csv     — Table 4: population parameters
+    step04_loo_comparison.csv      — LOO-CV pairwise comparisons
+    step04_text_numbers.csv        — every number stated in the text
 
 This step fits the bivariate VARX(1) coupling model to the
 within-person deviations produced by Step 02. It then fits three
@@ -43,28 +43,28 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step04_coupling_model")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step07_coupling_model")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step04_coupling_model")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step07_coupling_model")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step03_varx_data", "step03_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data", "step04_processed_long.csv")
 
 # Derivatives
-OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step04_posterior_draws.npz")
-OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step04_person_coupling.csv")
+OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step07_posterior_draws.npz")
+OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step07_person_coupling.csv")
 
 # Results
-OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step04_table4_coupling.csv")
+OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step07_table4_coupling.csv")
 # Intermediate CSVs (inputs to text rendering) live under derivatives/.
-OUT_LOO_CSV = os.path.join(STEP_DERIV_DIR, "step04_loo_comparison.csv")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step04_text_numbers.csv")
-OUT_FIG2 = os.path.join(STEP_RESULTS_DIR, "step04_figure2_ps_coupling.png")
-OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step04_figure3_sp_coupling.png")
+OUT_LOO_CSV = os.path.join(STEP_DERIV_DIR, "step07_loo_comparison.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step07_text_numbers.csv")
+OUT_FIG2 = os.path.join(STEP_RESULTS_DIR, "step07_figure2_ps_coupling.png")
+OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step07_figure3_sp_coupling.png")
 
 
 # =====================================================================
@@ -218,11 +218,12 @@ def _generate_coupling_figure(person_df, pop_mean, pop_ci_lo, pop_ci_hi,
     plt.close(fig)
 
 
-def run_step04(verbose: bool = True, refit: bool = False):
+def run_step07(verbose: bool = True, refit: bool = False):
     """Fit the coupling model and LOO-CV, produce all Step 03 outputs."""
     from coupling_model import (
         fit_bayesian_varx1,
         extract_results,
+        SAMPLER,
     )
     import arviz as az
 
@@ -291,12 +292,17 @@ def run_step04(verbose: bool = True, refit: bool = False):
         if verbose:
             print(f"\n  Fitting full model (include_agesex=True)...")
             print(f"    {n_persons} subjects, {n_obs} observations")
-            print(f"    MCMC: 4 chains x 2000 draws, 2000 tuning")
+            # Read from the shared config, never retyped. A hardcoded sampler
+            # description is what put "4 chains x 2,000 posterior draws" into the
+            # submitted manuscript after the settings had already changed.
+            print(f"    MCMC: {SAMPLER['chains']} chains x {SAMPLER['draws']} draws, "
+                  f"{SAMPLER['tune']} tuning, target_accept={SAMPLER['target_accept']}")
 
         idata, sub_df, valid_ids = fit_bayesian_varx1(
             model_df, unique_ids, id_map,
             include_agesex=True,
             progressbar=True,
+            fit_id="step07_primary", out_dir=STEP_DERIV_DIR,
         )
 
         # ==============================================================
@@ -407,7 +413,7 @@ def run_step04(verbose: bool = True, refit: bool = False):
 
         # The LOO comparison function in coupling_model.py expects a
         # data_dir with a processed CSV. We point it at our derivatives
-        # folder where step02_processed_long.csv lives, but the function
+        # folder where step03_processed_long.csv lives, but the function
         # looks for processed_data_contrast.csv or processed_data.csv.
         # Easiest: symlink or pass the data directly. Instead, we
         # inline the LOO logic here using the same primitives.
@@ -432,6 +438,7 @@ def run_step04(verbose: bool = True, refit: bool = False):
                 idata_kwargs=idata_kwargs,
                 cores=1,
                 progressbar=True,
+                fit_id=f"step07_loo_{name}", out_dir=STEP_DERIV_DIR,
             )
             if verbose:
                 print(f"  Computing LOO for {name}...")
@@ -597,380 +604,6 @@ def run_step04(verbose: bool = True, refit: bool = False):
         print("STEP 03 COMPLETE")
         print("=" * 70)
 
-    generate_text_paragraphs(verbose)
-
-
-def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step04_text.md with the manuscript paragraphs for Results
-    section 3.2 (population coupling estimates), populated from saved CSVs.
-
-    Reads all computed numbers from text_numbers.csv, table4 CSV, LOO CSV,
-    and person_coupling CSV and writes fully formatted markdown paragraphs
-    into the results directory.
-    """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step04_text.md")
-
-    for required in (OUT_TEXT_CSV, OUT_TABLE4_CSV, OUT_LOO_CSV, OUT_PERSON_CSV):
-        if not os.path.exists(required):
-            if verbose:
-                print(f"  SKIP: {os.path.basename(required)} not found — run step04 first")
-            return
-
-    if verbose:
-        print("  Generating step04_text.md ...")
-
-    text_df = pd.read_csv(OUT_TEXT_CSV)
-    v = dict(zip(text_df["metric"], text_df["value"]))
-    table4 = pd.read_csv(OUT_TABLE4_CSV)
-    loo_df = pd.read_csv(OUT_LOO_CSV, keep_default_na=False)
-    person_df = pd.read_csv(OUT_PERSON_CSV)
-
-    # ----- Parse values from text_numbers.csv -----
-    lps_mean = float(v["lambda_ps_mean"])
-    lps_ci = v["lambda_ps_ci"]
-    lps_pneg = float(v["lambda_ps_p_neg"])
-    tau_ps = float(v["tau_ps"])
-    ps_range = v["person_ps_range"]
-    ps_sd = float(v["person_ps_sd"])
-    n_ps_cred = int(v["person_ps_n_credible_neg"])
-
-    lsp_mean = float(v["lambda_sp_mean"])
-    lsp_ci = v["lambda_sp_ci"]
-    lsp_pneg = float(v["lambda_sp_p_neg"])
-    tau_sp = float(v["tau_sp"])
-    sp_range = v["person_sp_range"]
-    sp_sd = float(v["person_sp_sd"])
-    n_sp_cred = int(v["person_sp_n_credible_neg"])
-
-    rho_mean = float(v["rho_innov_mean"])
-    rho_ci = v["rho_innov_ci"]
-    rho_pneg = float(v["rho_innov_p_neg"])
-
-    n_persons = len(person_df)
-
-    # ----- LOO values -----
-    def _loo(model_a, model_b):
-        row = loo_df[(loo_df["model_a"] == model_a) & (loo_df["model_b"] == model_b)]
-        delta = float(row["delta_elpd"].iloc[0])
-        se = float(row["se"].iloc[0])
-        ratio = float(row["delta_over_se"].iloc[0])
-        return delta, se, ratio
-
-    loo_full_noPS_d, loo_full_noPS_se, loo_full_noPS_r = _loo("full", "no_PS")
-    loo_noSP_null_d, loo_noSP_null_se, loo_noSP_null_r = _loo("no_SP", "null")
-    loo_full_noSP_d, loo_full_noSP_se, loo_full_noSP_r = _loo("full", "no_SP")
-    loo_noPS_null_d, loo_noPS_null_se, loo_noPS_null_r = _loo("no_PS", "null")
-
-    khat_max = float(v["pareto_khat_max"])
-    khat_above = int(v["pareto_khat_above_07"])
-    khat_nobs = int(v["pareto_khat_n_obs"])
-    khat_pct = khat_above / khat_nobs * 100
-
-    # ----- Paragraph 1: Pain-to-sleep coupling -----
-    tau_ps_ci = v.get("tau_ps_ci", "N/A")
-    para1 = (
-        f"**Table 4** presents the population parameters from the Bayesian "
-        f"VARX(1) model. The pain-to-sleep pathway was the dominant coupling "
-        f"direction. The population mean "
-        f"($\\hat{{\\lambda}}_{{ps}}={lps_mean:.3f}$, "
-        f"$P(\\hat{{\\lambda}}_{{ps}}<0)={lps_pneg:.3f}$, "
-        f"95% CrI {lps_ci}) "
-        f"indicated that a one-unit within-person increase in general pain "
-        f"predicted a {abs(lps_mean):.3f}-unit decrease in next-quarter sleep "
-        f"quality. The random effect SD was substantial "
-        f"($\\hat{{\\tau}}_{{ps}}={tau_ps:.3f}$, 95% CrI {tau_ps_ci}), "
-        f"reflecting meaningful between-person heterogeneity (**Figure 2**)."
-    )
-
-    # ----- Paragraph 2: Sleep-to-pain coupling -----
-    tau_sp_ci = v.get("tau_sp_ci", "N/A")
-    para2 = (
-        f"The sleep-to-pain pathway did not reach credibility at the "
-        f"population level "
-        f"($\\hat{{\\lambda}}_{{sp}}={lsp_mean:.3f}$, "
-        f"$P(\\hat{{\\lambda}}_{{sp}}<0)={lsp_pneg:.3f}$, "
-        f"95% CrI {lsp_ci}). "
-        f"The random effect SD ($\\hat{{\\tau}}_{{sp}}={tau_sp:.3f}$, "
-        f"95% CrI {tau_sp_ci}) was smaller but non-negligible "
-        f"(**Figure 3**)."
-    )
-
-    # ----- Paragraph 3: Innovation correlation -----
-    para3 = (
-        f"Same-quarter innovations in pain and sleep quality were negatively "
-        f"correlated ($\\hat{{\\rho}}={rho_mean:.3f}$, $P(<0)={rho_pneg:.3f}$, "
-        f"95% CrI {rho_ci}), indicating that within a given quarter, "
-        f"unexplained increases in pain co-occurred with unexplained decreases "
-        f"in sleep quality, or vice versa. Because this is a residual "
-        f"correlation after controlling for all lagged effects, it may reflect "
-        f"within-quarter bidirectional processes, shared contemporaneous "
-        f"perturbations (e.g., a flare event affecting both pain and sleep "
-        f"within the same assessment window), or measurement timing effects."
-    )
-
-    # ----- Paragraph 4: Model comparison -----
-    para4 = (
-        f"The model comparison (see Methods: Model comparison) confirmed the "
-        f"dominance of the pain-to-sleep pathway. Including pain-to-sleep "
-        f"coupling improved predictive accuracy substantially "
-        f"($\\Delta LOO_{{elpd}}$ = {loo_full_noPS_d:+.1f}, "
-        f"SE = {loo_full_noPS_se:.1f}, "
-        f"$\\Delta$/SE = {loo_full_noPS_r:.2f} for full vs. no-PS; "
-        f"$\\Delta LOO_{{elpd}}$ = {loo_noSP_null_d:+.1f}, "
-        f"SE = {loo_noSP_null_se:.1f}, "
-        f"$\\Delta$/SE = {loo_noSP_null_r:.2f} for no-SP vs. null), "
-        f"whereas including sleep-to-pain coupling yielded negligible "
-        f"improvement "
-        f"($\\Delta LOO_{{elpd}}$ = {loo_full_noSP_d:+.1f}, "
-        f"SE = {loo_full_noSP_se:.1f}, "
-        f"$\\Delta$/SE = {loo_full_noSP_r:.2f} for full vs. no-SP; "
-        f"$\\Delta LOO_{{elpd}}$ = {loo_noPS_null_d:+.1f}, "
-        f"SE = {loo_noPS_null_se:.1f}, "
-        f"$\\Delta$/SE = {loo_noPS_null_r:.2f} for no-PS vs. null). "
-        f"Pareto $\\hat{{k}}$ diagnostics confirmed the reliability of the "
-        f"LOO-CV approximation: only {khat_above} of {khat_nobs} observations "
-        f"({khat_pct:.1f}%) exceeded the 0.7 threshold (maximum "
-        f"$\\hat{{k}}$ = {khat_max:.2f}). By the conventional threshold of "
-        f"$|\\Delta/SE|>2$, pain-to-sleep coupling substantially improved "
-        f"prediction while sleep-to-pain coupling did not."
-    )
-
-    # ----- Figure captions -----
-    # Figures 2 and 3 captions are purely descriptive (no computed numbers)
-    # and therefore live only in docs/manuscript_pain.md.
-
-    # ----- Table 4 Note -----
-    # Round rhat_max up to 2 decimals for reporting.
-    rhat_overall = float(v.get("rhat_max_overall", 1.01))
-    ess_min = v.get("ess_min", "7,000")
-    table4_note = (
-        f"**Note.** N = {n_persons}; 1,818 observations; "
-        f"4 chains $\\times$ 2,000 posterior draws (see Methods). "
-        f"Convergence was adequate: maximum $\\widehat{{R}}={rhat_overall:.2f}$; "
-        f"all effective sample sizes $>$ {ess_min}. Age and sex nuisance "
-        f"terms (${{\\widehat{{\\gamma}}}}_{{age}}$, "
-        f"${{\\widehat{{\\gamma}}}}_{{sex}}$) are omitted from the table and "
-        f"none was credibly different from zero in either coupling direction. "
-        f"$P(<0)$ is the one-sided posterior probability that the parameter "
-        f"is negative. Rows in **bold** correspond coefficients credibly "
-        f"different from zero."
-    )
-
-    # ----- Discussion paragraph citing innovation correlation -----
-    # Appears in manuscript Discussion under "Pain-to-sleep coupling
-    # dominates at the quarterly timescale".
-    theoretical_framework = (
-        f"A theoretical framework (64) supports the notion that quarterly "
-        f"coupling reflects processes distinct from\u2014and potentially "
-        f"unrelated to\u2014accumulated daily effects. Daily cross-lagged "
-        f"effects propagate only through autoregressive persistence; at "
-        f"the values typically reported (0.2\u20130.4) (7, 18), there is "
-        f"no path for daily sleep-to-pain effects to reach the next "
-        f"quarterly measurement. The negative innovation correlation "
-        f"($\\widehat{{\\rho}}$ = {rho_mean:.3f}) suggests that some "
-        f"coupling also occurs within the quarter\u2014for example, a "
-        f"pain flare disrupting sleep over ensuing weeks\u2014but because "
-        f"these changes unfold between consecutive assessments, they "
-        f"appear as co-occurring residuals rather than lagged effects, "
-        f"potentially underestimating coupling strength relative to "
-        f"daily designs."
-    )
-
-    text = f"""\
-## Results > 3.2 Population coupling estimates
-### Paragraph 1 (pain-to-sleep coupling)
-
-{para1}
-
-### Table 4 Note
-
-{table4_note}
-
-### Paragraph 2 (sleep-to-pain coupling)
-
-{para2}
-
-### Paragraph 3 (innovation correlation)
-
-{para3}
-
-### Paragraph 4 (model comparison)
-
-{para4}
-
-### Discussion paragraph (theoretical framework)
-
-{theoretical_framework}
-"""
-
-    with open(OUT_TEXT_MD, "w") as f:
-        f.write(text)
-
-    if verbose:
-        print(f"    Saved: {OUT_TEXT_MD}")
-
-    # ----- Supplementary Notes S1 and S2 -----
-    SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
-    os.makedirs(SUPP_DIR, exist_ok=True)
-    OUT_SUPP_MD = os.path.join(SUPP_DIR, "step04_supp_text.md")
-
-    # Get table4 params for Note S1/S2
-    def _t4(param):
-        row = table4[table4["Parameter"] == param]
-        if len(row) == 0:
-            return 0.0
-        return float(row["Estimate"].iloc[0])
-
-    phi_p = _t4("a1")   # pain autoregression
-    phi_s = _t4("b2")   # sleep autoregression
-    lsp = _t4("a2")     # sleep-to-pain coupling
-    lps = _t4("b1")     # pain-to-sleep coupling
-
-    median_obs = int(person_df.shape[0])  # not exactly median; use from text_numbers
-    median_obs_str = v.get("median_obs_per_person", "9")
-
-    # Eigenvalue calculations
-    import math
-    disc_sq = (phi_p - phi_s)**2 + 4 * lsp * lps
-    disc = math.sqrt(abs(disc_sq))
-    if disc_sq >= 0:
-        eig1 = (phi_s + phi_p + disc) / 2
-        eig2 = (phi_s + phi_p - disc) / 2
-    else:
-        eig1 = (phi_s + phi_p) / 2
-        eig2 = (phi_s + phi_p) / 2
-
-    cross_product = lsp * lps
-    ar_product = phi_s * phi_p
-
-    # Continuous-time drift
-    alpha1 = math.log(eig1) if eig1 > 0 else float('nan')
-    weekly_stab = math.exp(alpha1 / 13) if math.isfinite(alpha1) else float('nan')
-    monthly_stab = math.exp(alpha1 / 3) if math.isfinite(alpha1) else float('nan')
-
-    # Unidirectional optimal lag
-    if phi_p > 0 and phi_s > 0 and phi_p != phi_s:
-        ln_ratio = math.log(math.log(phi_p) / math.log(phi_s))
-        omega_opt = -ln_ratio / (math.log(phi_p) - math.log(phi_s))
-        omega_days = omega_opt * 91
-        f_1 = (phi_p - phi_s) / (phi_p - phi_s)  # = 1.0
-        f_opt = (phi_p**omega_opt - phi_s**omega_opt) / (phi_p - phi_s)
-        pct_signal = (1.0 / f_opt) * 100
-    else:
-        omega_opt = float('nan')
-        omega_days = float('nan')
-        pct_signal = float('nan')
-
-    note_s1 = (
-        f"The small proportion of individually credible coupling estimates "
-        f"reflects the partial pooling inherent in hierarchical "
-        f"Bayesian estimation rather than an absence of true individual "
-        f"differences. With a median of {median_obs_str} quarterly observations "
-        f"per participant, individual-level data are necessarily noisy, and the "
-        f"hierarchical model concentrates inferential power at the population "
-        f"level—where the pooled data across {n_persons} participants and "
-        f"1,818 transitions enable reliable estimation of mean coupling, "
-        f"heterogeneity, and moderating effects. The individual random effects "
-        f"$u_{{i}}$ serve primarily to partition variance and improve "
-        f"population-level estimates rather than to provide precise person-level "
-        f"inference.\n\n"
-        f"Relatedly, although the pain-to-sleep coupling "
-        f"($|\\hat{{\\lambda}}_{{ps}}| = {abs(lps_mean):.3f}$) qualifies as a "
-        f"large cross-lagged effect by the benchmarks of Orth et al. (2024) "
-        f"(small = 0.03, medium = 0.07, large = 0.12), its absolute magnitude "
-        f"is modest in the context of noisy quarterly within-person deviations, "
-        f"and the large between-person heterogeneity "
-        f"($\\hat{{\\tau}}_{{ps}} = {tau_ps:.3f}$) indicates that the population "
-        f"mean reflects a meaningful but noisy signal, consistent with the "
-        f"expectation that quarterly assessments introduce variability from "
-        f"sources unrelated to the sleep-pain dynamic.\n\n"
-        f"The autoregressive coefficients were notably small "
-        f"($\\hat{{\\phi}}_{{p}} = {phi_p:.3f}$, "
-        f"$\\hat{{\\phi}}_{{s}} = {phi_s:.3f}$). "
-        f"Among the 16 daily studies reviewed, only Edwards et al. (2008) "
-        f"includes explicit autoregressive terms as fixed-effect predictors "
-        f"(pain AR = 0.18, sleep AR = 0.15); a few others handle serial "
-        f"dependence through residual covariance structures (6, 7, 11), and "
-        f"the majority omit autoregressive control entirely. While retaining "
-        f"them is more principled—omitting the lagged dependent variable can "
-        f"inflate cross-lagged estimates when the outcome is autocorrelated "
-        f"(63)—the negligible magnitudes observed here suggest that simpler "
-        f"models without autoregressive terms may yield equivalent coupling "
-        f"estimates in quarterly designs, where the long interval between "
-        f"assessments attenuates day-to-day persistence.\n\n"
-        f"Relatedly, the quarterly temporal resolution may be suboptimal for "
-        f"the coupling process we are detecting. The Dormann and Griffin (2015) "
-        f"framework provides a principled approach to optimal measurement "
-        f"interval: the eigenvalues of the bivariate transition matrix yield "
-        f"timescale-invariant continuous-time drift parameters "
-        f"(**Supplementary Note S2**). The dominant eigenvalue "
-        f"($\\lambda_{{1}} \\approx {eig1:.3f}$) exceeds the larger "
-        f"autoregression ($\\hat{{\\phi}}_{{p}} = {phi_p:.3f}$), confirming "
-        f"that reciprocal coupling stabilizes the system. However, because the "
-        f"product of the cross-lagged coefficients exceeds the product of the "
-        f"autoregressions ($\\hat{{\\lambda}}_{{sp}}\\hat{{\\lambda}}_{{ps}} "
-        f"= {cross_product:.5f} > \\hat{{\\phi}}_{{s}}\\hat{{\\phi}}_{{p}} "
-        f"= {ar_product:.6f}$), the minor eigenvalue is negative "
-        f"($\\lambda_{{2}} \\approx {eig2:.3f}$), placing the system in an "
-        f"oscillatory regime where the closed-form optimal lag is undefined "
-        f"(63). A unidirectional reference calculation (setting "
-        f"$\\lambda_{{ps}} = 0$) yields an optimal lag of approximately "
-        f"{omega_opt:.3f} quarters ($\\approx {omega_days:.0f}$ days), with "
-        f"quarterly measurement capturing roughly {pct_signal:.0f}% of the "
-        f"peak unidirectional cross-lagged signal (**Supplementary Note S2**)."
-    )
-
-    note_s2_app = (
-        f"**1. Eigenvalues.** From Table 3: $\\hat{{\\phi}}_{{p}} = {phi_p:.3f}$, "
-        f"$\\hat{{\\phi}}_{{s}} = {phi_s:.3f}$, "
-        f"$\\hat{{\\lambda}}_{{sp}} = {lsp:.3f}$, "
-        f"$\\hat{{\\lambda}}_{{ps}} = {lps:.3f}$. Then\n\n"
-        f"$$\\Delta = \\sqrt{{({phi_p:.3f} - {phi_s:.3f})^{{2}} + "
-        f"4({lsp:.3f})({lps:.3f})}} = \\sqrt{{{disc_sq:.5f}}} "
-        f"\\approx {disc:.3f},$$\n\n"
-        f"$$\\lambda_{{1}} \\approx {eig1:.3f}, \\qquad "
-        f"\\lambda_{{2}} \\approx {eig2:.3f}.$$\n\n"
-        f"The dominant eigenvalue exceeds $\\hat{{\\phi}}_{{p}}$ by "
-        f"{(eig1/phi_p - 1)*100:.0f}%, confirming stabilization through "
-        f"reciprocal coupling ($\\hat{{\\lambda}}_{{sp}}"
-        f"\\hat{{\\lambda}}_{{ps}} = {cross_product:.5f} > 0$).\n\n"
-        f"**2. Continuous-time drift.** For the dominant mode,\n\n"
-        f"$$\\alpha_{{1}} = \\frac{{\\ln({eig1:.3f})}}{{1\\;\\mathrm{{quarter}}}} "
-        f"\\approx {alpha1:.2f}\\;\\mathrm{{quarter}}^{{-1}} "
-        f"\\approx {alpha1/91:.3f}\\;\\mathrm{{day}}^{{-1}}.$$\n\n"
-        f"The dominant-mode stability at alternative lags is weekly "
-        f"$e^{{{alpha1:.2f}/13}} \\approx {weekly_stab:.2f}$ and monthly "
-        f"$e^{{{alpha1:.2f}/3}} \\approx {monthly_stab:.2f}$.\n\n"
-        f"**3. Oscillatory regime.** The minor eigenvalue is negative "
-        f"($\\lambda_{{2}} \\approx {eig2:.3f}$) because the product of the "
-        f"cross-lagged coefficients exceeds the product of the autoregressions: "
-        f"$\\hat{{\\lambda}}_{{sp}}\\hat{{\\lambda}}_{{ps}} = {cross_product:.5f} "
-        f"> \\hat{{\\phi}}_{{s}}\\hat{{\\phi}}_{{p}} = {ar_product:.6f}$.\n\n"
-        f"**4. Unidirectional approximation and signal attenuation.** "
-        f"Applying Eq. S3,\n\n"
-        f"$$\\omega_{{\\mathrm{{opt}}}}^{{\\,\\mathrm{{unidir}}}} \\approx "
-        f"{omega_opt:.3f}\\;\\mathrm{{quarters}} \\approx "
-        f"{omega_days:.0f}\\;\\mathrm{{days}}.$$\n\n"
-        f"The quarterly measurement therefore captures approximately "
-        f"${pct_signal:.0f}\\%$ of the peak unidirectional cross-lagged signal."
-    )
-
-    supp_text = f"""\
-## Supplementary Note S1: Additional Methodological Considerations
-
-{note_s1}
-
-## Supplementary Note S2: Optimal Time Lags — Application
-
-{note_s2_app}
-"""
-
-    with open(OUT_SUPP_MD, "w") as f:
-        f.write(supp_text)
-
-    if verbose:
-        print(f"    Saved: {OUT_SUPP_MD}")
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -985,7 +618,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step04(verbose=not args.quiet, refit=args.refit)
+    run_step07(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

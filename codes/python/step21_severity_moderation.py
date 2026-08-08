@@ -8,11 +8,11 @@ the coupling parameters. Three models:
   2. Mean sleep quality alone
   3. Both jointly
 
-Input:  derivatives/step03_varx_data/step03_processed_long.csv
+Input:  derivatives/step04_varx_data/step04_processed_long.csv
 Output:
-  results/step13_severity_moderation/
-    step13_table_s2_severity.csv   — Table S2
-    step13_text_numbers.csv        — estimates for manuscript text
+  results/step21_severity_moderation/
+    step21_table_s2_severity.csv   — Table S2
+    step21_text_numbers.csv        — estimates for manuscript text
 
 Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
 """
@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step13_severity_moderation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step21_severity_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
@@ -41,8 +41,8 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step03_varx_data",
-                                "step03_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
+                                "step04_processed_long.csv")
 
 OUT_TABLE_CSV = os.path.join(SUPP_DIR, "table_s2_severity.csv")
 OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "text_numbers_severity.csv")
@@ -76,7 +76,7 @@ MODELS = [
 ]
 
 
-def run_step13(verbose=True, refit=False):
+def run_step21(verbose=True, refit=False):
     from coupling_model import fit_bayesian_varx1, extract_results
 
     if verbose:
@@ -98,7 +98,6 @@ def run_step13(verbose=True, refit=False):
             print("  If you have changed upstream data or code, re-run with --refit.")
             print(f"\n  Loaded Table S2: {OUT_TABLE_CSV}")
             print(f"  Loaded text numbers: {OUT_TEXT_CSV}")
-        generate_text_paragraphs(verbose)
         if verbose:
             print("=" * 70)
         return
@@ -163,7 +162,8 @@ def run_step13(verbose=True, refit=False):
             # Fit a 2-moderator model by extending the PyMC model directly
             _fit_joint_model(model_df, unique_ids, id_map,
                              pain_mean, pain_sd, sleep_mean, sleep_sd,
-                             table_rows, text_rows, verbose)
+                             table_rows, text_rows, verbose,
+                             out_dir=STEP_DERIV_DIR)
             continue
 
         # Single moderator
@@ -189,6 +189,7 @@ def run_step13(verbose=True, refit=False):
             X_person=X_person,
             include_agesex=True,
             progressbar=True,
+            fit_id=f"step21_severity_{mod_name}", out_dir=STEP_DERIV_DIR,
         )
 
         from coupling_model import two_tail_p
@@ -244,7 +245,6 @@ def run_step13(verbose=True, refit=False):
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
 
-    generate_text_paragraphs(verbose)
 
     if verbose:
         print("=" * 70)
@@ -252,11 +252,12 @@ def run_step13(verbose=True, refit=False):
 
 def _fit_joint_model(model_df, unique_ids, id_map,
                      pain_mean, pain_sd, sleep_mean, sleep_sd,
-                     table_rows, text_rows, verbose=True):
+                     table_rows, text_rows, verbose=True,
+                     fit_id="step21_severity_joint", out_dir=None):
     """Fit a 2-moderator VARX(1) model with both pain and sleep severity."""
     import pymc as pm
     import arviz as az
-    from coupling_model import add_bivariate_innovations_likelihood
+    from coupling_model import add_bivariate_innovations_likelihood, run_fit
 
     # Build data arrays
     sub_df = model_df.dropna(subset=["pain_within_lag1", "sleep_within_lag1"]).copy()
@@ -358,11 +359,10 @@ def _fit_joint_model(model_df, unique_ids, id_map,
             y_pain=pain_w, y_sleep=sleep_w,
         )
 
-        idata = pm.sample(2000, tune=2000, chains=4, cores=4,
-                          target_accept=0.95, progressbar=True,
-                          return_inferencedata=True,
-                          random_seed=42,
-                          compute_convergence_checks=False)
+    # Sampling goes through the library's single entry point. This block used to
+    # call pm.sample directly with its own 2000/2000/0.95, so severity moderation
+    # sampled at settings the Methods did not describe and produced no diagnostics.
+    idata = run_fit(model, fit_id=fit_id, out_dir=out_dir, cores=4)
 
     # Extract results
     def _summarize(var_name):
@@ -397,145 +397,6 @@ def _fit_joint_model(model_df, unique_ids, id_map,
     text_rows.append({"metric": "joint_rhat_max", "value": f"{rhat_max:.3f}", "note": ""})
 
 
-def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step13_text.md with the Table S2 note paragraph for the
-    supplementary materials, populated from table_s2_severity.csv and
-    text_numbers_severity.csv.
-    """
-    OUT_TEXT_MD = os.path.join(SUPP_DIR, "step13_text.md")
-
-    if not os.path.exists(OUT_TABLE_CSV):
-        if verbose:
-            print("  SKIP: table_s2_severity.csv not found — run step13 first "
-                  "(or wait for MCMC to finish)")
-        return
-
-    if verbose:
-        print("  Generating step13_text.md ...")
-
-    table = pd.read_csv(OUT_TABLE_CSV)
-
-    # Load text numbers if available
-    if os.path.exists(OUT_TEXT_CSV):
-        tn = pd.read_csv(OUT_TEXT_CSV)
-        v = dict(zip(tn["metric"], tn["value"]))
-    else:
-        v = {}
-
-    # Count distinct model runs: pain-alone + sleep-alone + joint = 3.
-    # In the CSV: Alone rows cover two separate runs (one per moderator);
-    # Joint rows cover a single joint run. So n_models = 2 + 1 = 3.
-    alone_mods = table[table["Model"] == "Alone"]["Moderator"].unique()
-    has_joint = (table["Model"] == "Joint").any()
-    n_models = len(alone_mods) + (1 if has_joint else 0)
-    n_models_str = {1: "One", 2: "Two", 3: "Three", 4: "Four"}.get(n_models, str(n_models))
-
-    # Get N and obs from the text numbers or table
-    # N and obs are the same across all models (same dataset)
-    # Try to get from first model's results
-    n_participants = "229"  # full sample
-    n_obs = "1,818"
-
-    # Check if all p > threshold
-    all_p = table["p"].values
-    min_p = float(np.min(all_p))
-    max_p = float(np.max(all_p))
-
-    # Check if all CrIs include zero
-    all_include_zero = True
-    for _, row in table.iterrows():
-        lo = row["CrI_lo"]
-        hi = row["CrI_hi"]
-        if lo > 0 or hi < 0:
-            all_include_zero = False
-            break
-
-    # Find the min p threshold (round up to nearest 0.05 increment)
-    p_threshold = math.ceil(min_p / 0.05) * 0.05
-    # Make sure it's above the actual min
-    if p_threshold <= min_p:
-        p_threshold += 0.05
-
-    paragraph = (
-        f"Each moderator was z-scored. {n_models_str} models were run: "
-        f"person-mean pain severity alone, person-mean sleep quality alone, "
-        f"and both simultaneously (joint). "
-        f"N = {n_participants}; {n_obs} observations. "
-    )
-
-    if all_include_zero:
-        paragraph += (
-            f"None of the moderation parameters were credibly different from "
-            f"zero (all 95% CrIs comfortably included zero), indicating that "
-            f"within-person coupling operates comparably regardless of "
-            f"baseline severity."
-        )
-    else:
-        paragraph += (
-            f"At least one moderation parameter had a 95% CrI excluding zero."
-        )
-
-    # ----- Table S2 markdown -----
-    table_s2_lines = []
-    table_s2_lines.append(
-        "| Moderator          | Model | Direction | $\\gamma$ | 95% CrI          |"
-    )
-    table_s2_lines.append(
-        "| :----------------- | :---- | :-------: | ---------: | :--------------- |"
-    )
-
-    for _, row in table.iterrows():
-        table_s2_lines.append(
-            f"| {row['Moderator']} | {row['Model']} | {row['Direction']} "
-            f"| {row['gamma']:+.3f} "
-            f"| [{row['CrI_lo']:+.3f}, {row['CrI_hi']:+.3f}] |"
-        )
-
-    table_s2_md = "\n".join(table_s2_lines)
-
-    # Discussion/Limitations paragraph that references Table S2.
-    # Appears in manuscript Limitations; cites the six moderation parameters.
-    n_sp = (table["Direction"] == "SP").sum()
-    n_ps = (table["Direction"] == "PS").sum()
-    total = n_sp + n_ps
-    count_word = {
-        4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight",
-    }.get(int(total), str(total))
-    limitations_intro = (
-        "The within-person centering also removes overall severity from "
-        "the model: a person fluctuating around 8/10 pain contributes "
-        "identically to the coupling estimate as one fluctuating around "
-        "3/10, because both are modeled in deviations from their "
-        "respective baselines. This raises the question of whether "
-        "coupling strength depends on a person's overall severity level. "
-        "To test whether coupling strength depends on overall severity, "
-        "we entered person-mean pain severity and person-mean sleep "
-        "quality as between-person moderators of both coupling directions, "
-        "individually and simultaneously (**Table S2**). None of the "
-        f"{count_word} moderation parameters were credibly different "
-        "from zero, indicating that the within-person coupling process "
-        "operates comparably regardless of baseline severity."
-    )
-
-    text = f"""\
-## Discussion/Limitations intro to Table S2
-
-{limitations_intro}
-
-**Table S2.** Person-mean severity moderation of coupling.
-
-{table_s2_md}
-
-**Note.** {paragraph}
-"""
-
-    with open(OUT_TEXT_MD, "w") as f:
-        f.write(text)
-
-    if verbose:
-        print(f"    Saved: {OUT_TEXT_MD}")
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Step 13 — Person-mean severity moderation (Table S2)."
@@ -544,7 +405,7 @@ def main():
     parser.add_argument("--refit", action="store_true",
                         help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step13(verbose=not args.quiet, refit=args.refit)
+    run_step21(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

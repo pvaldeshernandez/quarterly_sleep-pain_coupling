@@ -13,10 +13,10 @@ Inputs:
       Smoothed, normalised 4D functional time series.
 
 Outputs (per subject, per variant):
-  derivatives/step05_fmri_contrasts_masked/<subj>/
+  derivatives/step11_fmri_contrasts_masked/<subj>/
       con_0001.nii   — contrast image (stimulation > baseline), GM-masked
       beta_*.nii     — beta images, GM-masked
-  derivatives/step05_fmri_contrasts_unmasked/<subj>/
+  derivatives/step11_fmri_contrasts_unmasked/<subj>/
       con_0001.nii   — contrast image, whole-brain (no mask)
       beta_*.nii     — beta images, whole-brain
 
@@ -54,11 +54,11 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 GLM_DIR   = os.path.join(ROOT, "data", "original", "spm_mats")
 FMRI4D_DIR = os.path.join(ROOT, "data", "original", "fmri_4d")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step06")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step12")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
-OUT_MASKED   = os.path.join(DERIV_DIR, "step06_fmri_contrasts_masked")
-OUT_UNMASKED = os.path.join(DERIV_DIR, "step06_fmri_contrasts_unmasked")
+OUT_MASKED   = os.path.join(DERIV_DIR, "step12_fmri_contrasts_masked")
+OUT_UNMASKED = os.path.join(DERIV_DIR, "step12_fmri_contrasts_unmasked")
 
 GM_MASK_FNAME = "sUPLOAD2_T1w__gm-2mm-binarized(0.25).nii"
 
@@ -227,7 +227,7 @@ def process_subject(subj_id: str, overwrite: bool = False,
     return f"{int(in_mask.sum())} masked / {int(valid.sum())} unmasked voxels"
 
 
-def run_step06(overwrite: bool = False, verbose: bool = True, refit: bool = False):
+def run_step12(overwrite: bool = False, verbose: bool = True, refit: bool = False):
     overwrite = overwrite or refit
     os.makedirs(OUT_MASKED,   exist_ok=True)
     os.makedirs(OUT_UNMASKED, exist_ok=True)
@@ -283,7 +283,7 @@ def main():
                         help="Re-run computation from scratch instead of loading saved derivatives")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    run_step06(overwrite=args.overwrite, verbose=not args.quiet, refit=args.refit)
+    run_step12(overwrite=args.overwrite, verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

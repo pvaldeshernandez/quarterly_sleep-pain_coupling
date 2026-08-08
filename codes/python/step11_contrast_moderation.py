@@ -2,17 +2,17 @@
 Step 04 — Contrast moderation analysis (Johnson-Neyman).
 ======================================================================
 
-Input:  derivatives/step04_coupling_model/step04_posterior_draws.npz
+Input:  derivatives/step07_coupling_model/step07_posterior_draws.npz
 Output:
   derivatives/
-    step05_jn_localization_results.csv — full JN grid for both directions
+    step11_jn_localization_results.csv — full JN grid for both directions
   results/
-    step05_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
-    step05_figure_s3_jn_localization_sp.png — Figure S3: SP direction JN (null)
-    step05_text_numbers.csv                — JN boundary, simple slopes, etc.
+    step11_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
+    step11_figure_s3_jn_localization_sp.png — Figure S3: SP direction JN (null)
+    step11_text_numbers.csv                — JN boundary, simple slopes, etc.
 
 Note: contrast moderation parameters (delta_p, omega_sp, delta_s, omega_ps)
-are in Table 4 (results/step04/step04_table4_coupling.csv), not a separate table.
+are in Table 4 (results/step07/step07_table4_coupling.csv), not a separate table.
 
 This step reads the posterior draws from the VARX(1) fit (Step 03)
 and runs the Bayesian Johnson-Neyman analysis on the contrast
@@ -45,26 +45,26 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step05_contrast_moderation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step11_contrast_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step05_contrast_moderation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step11_contrast_moderation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step04_coupling_model", "step04_posterior_draws.npz")
+IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step07_coupling_model", "step07_posterior_draws.npz")
 
 # Derivatives
-OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step05_jn_localization_results.csv")
+OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step11_jn_localization_results.csv")
 
 # Results
-OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step05_figure4_jn_localization_ps.png")
+OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step11_figure4_jn_localization_ps.png")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FIG_S3 = os.path.join(SUPP_DIR, "figure_s3_jn_localization_sp.png")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step05_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step11_text_numbers.csv")
 
 
 # =====================================================================
@@ -264,7 +264,7 @@ def draw_jn_panel(ax, jn, panel_label, direction_label, slopes_dict,
 # Main pipeline
 # =====================================================================
 
-def run_step05(verbose: bool = True, refit: bool = False):
+def run_step11(verbose: bool = True, refit: bool = False):
     """Run contrast moderation JN analysis."""
     from coupling_model import compute_jn_curve
 
@@ -457,120 +457,6 @@ def run_step05(verbose: bool = True, refit: bool = False):
         print("STEP 04 COMPLETE")
         print("=" * 70)
 
-    generate_text_paragraphs(verbose)
-
-
-def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step05_text.md with the manuscript paragraphs for Results
-    section 3.3 (contrast moderation / pain localization), populated from
-    step05_text_numbers.csv and step04_table4_coupling.csv.
-
-    Reads all computed numbers from saved CSVs and writes fully formatted
-    markdown paragraphs into the results directory.
-    """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step05_text.md")
-    TABLE4_CSV = os.path.join(DERIV_DIR, "..", "results",
-                              "step04_coupling_model", "step04_table4_coupling.csv")
-
-    for required in (OUT_TEXT_CSV, TABLE4_CSV):
-        if not os.path.exists(required):
-            if verbose:
-                print(f"  SKIP: {os.path.basename(required)} not found — "
-                      f"run upstream step first")
-            return
-
-    if verbose:
-        print("  Generating step05_text.md ...")
-
-    text_df = pd.read_csv(OUT_TEXT_CSV)
-    v = dict(zip(text_df["metric"], text_df["value"]))
-    table4 = pd.read_csv(TABLE4_CSV)
-    t4 = dict(zip(table4["Parameter"], table4.to_dict("records")))
-
-    # ----- Table 4 values for contrast moderation -----
-    delta_s = t4["b3"]
-    delta_s_est = float(delta_s["Estimate"])
-    delta_s_ci = f"[{float(delta_s['CrI_lo']):.3f}, {float(delta_s['CrI_hi']):.3f}]"
-    delta_s_pneg = float(delta_s["P_neg"])
-
-    omega_ps = t4["b4"]
-    omega_ps_est = float(omega_ps["Estimate"])
-    omega_ps_pneg = float(omega_ps["P_neg"])
-    omega_ps_ci = f"[{float(omega_ps['CrI_lo']):.3f}, {float(omega_ps['CrI_hi']):.3f}]"
-
-    # ----- JN values from step05 text_numbers -----
-    has_ps_boundary = "jn_ps_boundary_K" in v
-    if has_ps_boundary:
-        jn_ps_K = float(v["jn_ps_boundary_K"])
-        jn_ps_sd = float(v["jn_ps_boundary_sd"])
-        jn_ps_pct = float(v["jn_ps_pct_credible"])
-
-    has_sp_boundary = "jn_sp_boundary_K" in v
-    # (SP boundary is typically "none")
-
-    # ----- Paragraph 1: Direct effect, interaction, and JN analysis -----
-    p1_lead = (
-        f"The direct effect of pain localization on next-quarter sleep "
-        f"quality was credible ($\\hat{{\\delta}}_{{s}}={delta_s_est:.3f}$, "
-        f"95% CrI {delta_s_ci}; **Table 4**), indicating that quarters in "
-        f"which an individual's pain was more knee-dominant than usual "
-        f"were followed by poorer sleep quality. The pain \u00d7 localization "
-        f"interaction operated in the same direction but did not reach "
-        f"credibility ($\\hat{{\\omega}}_{{ps}}={omega_ps_est:.3f}$, "
-        f"95% CrI {omega_ps_ci}). Together, the direct and "
-        f"interaction terms shifted the conditional pain-to-sleep coupling "
-        f"such that it was credibly negative at balanced and knee-dominant "
-        f"localization levels, but not when pain was body-dominant. "
-    )
-
-    if has_ps_boundary:
-        p1_jn = (
-            f"Johnson\u2013Neyman analysis (**Figure 4**) identified this "
-            f"transition at a localization value of {jn_ps_K:.3f} "
-            f"({jn_ps_sd:.2f} SD), with {jn_ps_pct:.1f}% of observations "
-            f"falling within the region where pain-to-sleep coupling was "
-            f"credibly present. "
-        )
-    else:
-        p1_jn = (
-            f"Johnson\u2013Neyman analysis (**Figure 4**) found no boundary "
-            f"within the observed range for the pain-to-sleep pathway. "
-        )
-
-    if has_sp_boundary:
-        sp_K = float(v["jn_sp_boundary_K"])
-        p1_sp = (
-            f"In contrast, neither localization term moderated the "
-            f"sleep-to-pain pathway; a JN boundary existed at "
-            f"K = {sp_K:.3f} (**Figure S3**)."
-        )
-    else:
-        p1_sp = (
-            f"In contrast, neither localization term moderated the "
-            f"sleep-to-pain pathway, and no Johnson\u2013Neyman boundary "
-            f"was observed within the empirical range of localization "
-            f"values (**Figure S3**)."
-        )
-
-    para1 = p1_lead + p1_jn + p1_sp
-    para2 = ""  # deprecated; combined into para1
-
-    # Figure 4 and Figure S3 captions are purely descriptive (no computed
-    # numbers) and therefore live only in docs/manuscript_pain.md and
-    # docs/supplementary_materials.md.
-
-    text = f"""\
-## Results > 3.3 Moderation of pain location
-
-{para1}
-"""
-
-    with open(OUT_TEXT_MD, "w") as f:
-        f.write(text)
-
-    if verbose:
-        print(f"    Saved: {OUT_TEXT_MD}")
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -585,7 +471,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step05(verbose=not args.quiet, refit=args.refit)
+    run_step11(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

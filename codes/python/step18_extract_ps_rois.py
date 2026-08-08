@@ -2,14 +2,14 @@
 Step 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
 ======================================================================
 
-Input:  derivatives/step06_fmri_contrasts_masked/   (LH ROI)
-        derivatives/step06_fmri_contrasts_unmasked/ (all other fMRI ROIs)
+Input:  derivatives/step12_fmri_contrasts_masked/   (LH ROI)
+        derivatives/step12_fmri_contrasts_unmasked/ (all other fMRI ROIs)
         data/original/vbm/, data/atlases/
         MNI152 template (via nilearn, for Figure S6)
 Output:
-  derivatives/step10_ps_roi_values/
-    step10_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
-    step10_ps_vbm_roi_values.csv    — per-subject VBM GM volume z-scored ROI values
+  derivatives/step18_ps_roi_values/
+    step18_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
+    step18_ps_vbm_roi_values.csv    — per-subject VBM GM volume z-scored ROI values
   results/supplementary_materials/
     figure_s6_arousal_rois.png      — Figure S6: arousal ROI brain maps
 
@@ -39,19 +39,19 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step10_ps_roi_values")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step18_ps_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 
-FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step06_fmri_contrasts_masked")
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step06_fmri_contrasts_unmasked")
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step12_fmri_contrasts_masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step12_fmri_contrasts_unmasked")
 VBM_DIR   = os.path.join(ROOT, "data", "original", "vbm")
 ATLAS_DIR = os.path.join(ROOT, "data", "atlases")
 
-OUT_FMRI_CSV = os.path.join(STEP_DERIV_DIR, "step10_ps_fmri_roi_values.csv")
-OUT_VBM_CSV = os.path.join(STEP_DERIV_DIR, "step10_ps_vbm_roi_values.csv")
+OUT_FMRI_CSV = os.path.join(STEP_DERIV_DIR, "step18_ps_fmri_roi_values.csv")
+OUT_VBM_CSV = os.path.join(STEP_DERIV_DIR, "step18_ps_vbm_roi_values.csv")
 OUT_FIG_S6 = os.path.join(SUPP_DIR, "figure_s6_arousal_rois.png")
 
 AROUSAL_ROIS = {
@@ -408,82 +408,8 @@ def generate_figure_s6(verbose=True):
 # Main
 # =====================================================================
 
-def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step10_text.md with the Figure S6 caption, built
-    programmatically from the FIG_S6_ROIS dictionary and extraction
-    results. Includes atlas source references and PBN voxel count
-    at fMRI resolution when available.
-    """
-    STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step10_ps_roi_extraction")
-    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step10_text.md")
 
-    if verbose:
-        print("  Generating step10_text.md ...")
-
-    # Build ROI description list from FIG_S6_ROIS
-    roi_descs = []
-    for roi_key, cfg in FIG_S6_ROIS.items():
-        roi_descs.append(f"{cfg['label']} ({cfg['title'].split('(')[-1].rstrip(')')}"
-                         f")" if "(" in cfg["title"] else cfg["label"])
-
-    # Cleaner version: just use title which already has atlas ref
-    roi_lines = []
-    for roi_key, cfg in FIG_S6_ROIS.items():
-        roi_lines.append(cfg["title"])
-    roi_list = "; ".join(roi_lines)
-
-    # Try to read PBN voxel count from fMRI extraction results
-    pbn_note = ""
-    if os.path.exists(OUT_FMRI_CSV):
-        fmri_df = pd.read_csv(OUT_FMRI_CSV)
-        pbn_rows = fmri_df[fmri_df["ROI"] == "PBN"]
-        if len(pbn_rows) > 0:
-            n_pbn_subj = pbn_rows["ID"].nunique()
-            pbn_note = (
-                f" At 3 mm fMRI resolution, the PBN ROI contained a small "
-                f"number of voxels; extraction was successful for "
-                f"$N$ = {n_pbn_subj} participants."
-            )
-        elif "PBN" not in fmri_df["ROI"].values:
-            pbn_note = (
-                " Note: PBN yielded 0 brain voxels at 3 mm fMRI resolution "
-                "and was excluded from fMRI analyses."
-            )
-
-    # Masking note
-    masked_rois = [v["label"] for k, v in AROUSAL_ROIS.items()
-                   if v.get("fmri_mask") == "gm_masked"]
-    mask_note = ""
-    if masked_rois:
-        mask_note = (
-            f" {', '.join(masked_rois)} used GM-masked contrast images; "
-            f"all other ROIs used unmasked re-estimated contrasts."
-        )
-
-    fig_s6_caption = (
-        f"**Figure S6.** Atlas-defined arousal relay ROI locations for the "
-        f"pain-to-sleep moderation analysis, shown on the MNI152 template. "
-        f"Five ROIs are displayed in orthogonal slices centered on each "
-        f"region's center of mass: {roi_list}. "
-        f"Probability-weighted maps were used for extraction of both fMRI "
-        f"BOLD activation and VBM grey matter volume.{pbn_note}{mask_note}"
-    )
-
-    text = (
-        "## Step 10 — PS arousal ROI extraction\n\n"
-        "## Figure Captions\n\n"
-        f"{fig_s6_caption}\n"
-    )
-
-    with open(OUT_TEXT_MD, "w") as f:
-        f.write(text)
-
-    if verbose:
-        print(f"    Saved: {OUT_TEXT_MD}")
-
-
-def run_step10(verbose=True, refit=False):
+def run_step18(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
         print("STEP 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6")
@@ -519,7 +445,6 @@ def run_step10(verbose=True, refit=False):
                   f"{vbm_df['ID'].nunique()} subjects)")
 
     generate_figure_s6(verbose)
-    generate_text_paragraphs(verbose)
 
     if verbose:
         print("=" * 70)
@@ -533,7 +458,7 @@ def main():
     parser.add_argument("--refit", action="store_true",
                         help="Re-extract ROI values from fMRI/VBM images")
     args = parser.parse_args()
-    run_step10(verbose=not args.quiet, refit=args.refit)
+    run_step18(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

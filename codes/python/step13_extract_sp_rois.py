@@ -2,12 +2,12 @@
 Step 07 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
 ======================================================================
 
-Input:  derivatives/step06_fmri_contrasts_masked/   (NAcc ROIs)
-        derivatives/step06_fmri_contrasts_unmasked/ (all other ROIs)
+Input:  derivatives/step12_fmri_contrasts_masked/   (NAcc ROIs)
+        derivatives/step12_fmri_contrasts_unmasked/ (all other ROIs)
         MNI152 template (via nilearn, for Figure S4)
 Output:
-  derivatives/step07_sp_roi_values/
-    step07_sp_roi_values.csv    — per-subject z-scored ROI values
+  derivatives/step13_sp_roi_values/
+    step13_sp_roi_values.csv    — per-subject z-scored ROI values
   results/supplementary_materials/
     figure_s4_stim_rois.png    — Figure S4: ROI brain maps
 
@@ -41,7 +41,7 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step07_sp_roi_values")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step13_sp_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
@@ -50,12 +50,12 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step07_sp_roi_values.csv")
+OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step13_sp_roi_values.csv")
 OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_s4_stim_rois.png")
 
 # Contrast image directories from Step 06
-FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step06_fmri_contrasts_masked")
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step06_fmri_contrasts_unmasked")
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step12_fmri_contrasts_masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step12_fmri_contrasts_unmasked")
 
 # Stimulation-side inputs (for contralateralized ROIs: S1, Middle Insula)
 DATA_DIR = os.path.join(ROOT, "data")
@@ -447,65 +447,8 @@ def generate_figure_s4(verbose=True):
 # Main
 # =====================================================================
 
-def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step07_text.md with the Figure S4 caption, built
-    programmatically from the FIG_S4_ROIS dictionary so it stays in
-    sync with the actual ROI definitions used.
-    """
-    STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step07_sp_roi_extraction")
-    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step07_text.md")
 
-    if verbose:
-        print("  Generating step07_text.md ...")
-
-    # Build ROI description list from FIG_S4_ROIS
-    roi_descs = []
-    for roi_key, cfg in FIG_S4_ROIS.items():
-        mni = cfg["mni"]
-        r = cfg["radius_mm"]
-        if "mni_mirror" in cfg:
-            x = abs(mni[0])
-            coord_str = f"MNI $\\pm${x}, {mni[1]}, {mni[2]}"
-        else:
-            coord_str = f"MNI {mni[0]}, {mni[1]}, {mni[2]}"
-        roi_descs.append(f"{cfg['label']} ({coord_str}; $r$ = {r} mm)")
-
-    roi_list = "; ".join(roi_descs)
-
-    # Also note masking rule from SP_ROIS
-    masked_rois = [SP_ROIS[k]["label"] for k in SP_ROIS if SP_ROIS[k]["mask"] == "gm_masked"]
-    unmasked_rois = [SP_ROIS[k]["label"] for k in SP_ROIS if SP_ROIS[k]["mask"] == "unmasked"]
-    mask_note = ""
-    if masked_rois:
-        mask_note = (
-            f" {', '.join(masked_rois)} used GM-masked contrast images; "
-            f"all other ROIs used unmasked re-estimated contrasts."
-        )
-
-    fig_s4_caption = (
-        f"**Figure S4.** Spherical ROI locations for the sleep-to-pain "
-        f"moderation analysis, shown on the MNI152 template. "
-        f"Eight ROIs are displayed in orthogonal slices: {roi_list}. "
-        f"Krause et al. ROIs (S1, Middle Insula, Thalamus, Anterior Insula, "
-        f"Left and Right NAcc) are based on coordinates from Krause et al. "
-        f"(2019); dACC/MCC ROIs are from Xu et al. (2020).{mask_note}"
-    )
-
-    text = (
-        "## Step 07 — SP ROI extraction\n\n"
-        "## Figure Captions\n\n"
-        f"{fig_s4_caption}\n"
-    )
-
-    with open(OUT_TEXT_MD, "w") as f:
-        f.write(text)
-
-    if verbose:
-        print(f"    Saved: {OUT_TEXT_MD}")
-
-
-def run_step07(verbose=True, refit=False):
+def run_step13(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
         print("STEP 07 — Extract Sleep-to-Pain fMRI ROI values + Figure S4")
@@ -520,7 +463,6 @@ def run_step07(verbose=True, refit=False):
         extract_rois(verbose)
 
     generate_figure_s4(verbose)
-    generate_text_paragraphs(verbose)
 
     if verbose:
         print("=" * 70)
@@ -534,7 +476,7 @@ def main():
     parser.add_argument("--refit", action="store_true",
                         help="Re-extract ROI values from fMRI contrasts")
     args = parser.parse_args()
-    run_step07(verbose=not args.quiet, refit=args.refit)
+    run_step13(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

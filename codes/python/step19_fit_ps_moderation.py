@@ -2,18 +2,18 @@
 Step 11 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
 ======================================================================
 
-Input:  derivatives/step03_varx_data/step03_processed_long.csv
-        derivatives/step10_ps_roi_values/step10_ps_fmri_roi_values.csv
-        derivatives/step10_ps_roi_values/step10_ps_vbm_roi_values.csv
+Input:  derivatives/step04_varx_data/step04_processed_long.csv
+        derivatives/step18_ps_roi_values/step18_ps_fmri_roi_values.csv
+        derivatives/step18_ps_roi_values/step18_ps_vbm_roi_values.csv
 Output:
   derivatives/
-    step11_ps_fmri_posterior_draws.npz
-    step11_ps_vbm_posterior_draws.npz
+    step19_ps_fmri_posterior_draws.npz
+    step19_ps_vbm_posterior_draws.npz
   results/
-    step11_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
-    step11_table_s1_vbm_arousal.csv     — Table S1 VBM panel
-    step11_vbm_sign_concordance.csv     — VBM 5/5 sign test
-    step11_text_numbers.csv
+    step19_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
+    step19_table_s1_vbm_arousal.csv     — Table S1 VBM panel
+    step19_vbm_sign_concordance.csv     — VBM 5/5 sign test
+    step19_text_numbers.csv
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each arousal ROI, separately for fMRI BOLD and VBM GM volume.
@@ -37,30 +37,30 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step11_ps_moderation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step19_ps_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step11_ps_moderation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step19_ps_moderation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step03_varx_data", "step03_processed_long.csv")
-IN_FMRI_CSV = os.path.join(DERIV_DIR, "step10_ps_roi_values", "step10_ps_fmri_roi_values.csv")
-IN_VBM_CSV = os.path.join(DERIV_DIR, "step10_ps_roi_values", "step10_ps_vbm_roi_values.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data", "step04_processed_long.csv")
+IN_FMRI_CSV = os.path.join(DERIV_DIR, "step18_ps_roi_values", "step18_ps_fmri_roi_values.csv")
+IN_VBM_CSV = os.path.join(DERIV_DIR, "step18_ps_roi_values", "step18_ps_vbm_roi_values.csv")
 
-OUT_FMRI_DRAWS = os.path.join(STEP_DERIV_DIR, "step11_ps_fmri_posterior_draws.npz")
-OUT_VBM_DRAWS = os.path.join(STEP_DERIV_DIR, "step11_ps_vbm_posterior_draws.npz")
+OUT_FMRI_DRAWS = os.path.join(STEP_DERIV_DIR, "step19_ps_fmri_posterior_draws.npz")
+OUT_VBM_DRAWS = os.path.join(STEP_DERIV_DIR, "step19_ps_vbm_posterior_draws.npz")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FMRI_TABLE = os.path.join(SUPP_DIR, "table_s1_fmri_arousal.csv")
 OUT_VBM_TABLE = os.path.join(SUPP_DIR, "table_s1_vbm_arousal.csv")
-OUT_VBM_SIGN = os.path.join(STEP_DERIV_DIR, "step11_vbm_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step11_text_numbers.csv")
+OUT_VBM_SIGN = os.path.join(STEP_DERIV_DIR, "step19_vbm_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step19_text_numbers.csv")
 
 
-def load_step02_data(csv_path):
+def load_step03_data(csv_path):
     """Thin wrapper around lib.coupling_model.load_varx_frame."""
     from coupling_model import load_varx_frame
     return load_varx_frame(csv_path, verbose=False)
@@ -98,6 +98,7 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
             X_person=X_person, include_agesex=True,
             moderator_direction="ps",
             progressbar=True,
+            fit_id=f"step19_ps_{modality_name}_{roi_name}", out_dir=STEP_DERIV_DIR,
         )
 
         n_valid = len(valid_ids)
@@ -148,7 +149,7 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
     return pd.DataFrame(table_rows), draws_dict
 
 
-def run_step11(verbose=True, refit=False):
+def run_step19(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
         print("STEP 11 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
@@ -178,7 +179,7 @@ def run_step11(verbose=True, refit=False):
         vbm_draws = dict(np.load(OUT_VBM_DRAWS))
     else:
         # ------ FULL MCMC FIT ------
-        _, model_df, unique_ids, id_map = load_step02_data(IN_PROCESSED_CSV)
+        _, model_df, unique_ids, id_map = load_step03_data(IN_PROCESSED_CSV)
 
         # ---- fMRI BOLD ----
         fmri_table, fmri_draws = fit_modality(
@@ -245,186 +246,11 @@ def run_step11(verbose=True, refit=False):
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
 
-    generate_text_paragraphs(verbose)
 
     if verbose:
         print("\n" + "=" * 70)
         print("STEP 11 COMPLETE")
         print("=" * 70)
-
-
-def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step11_text.md with the manuscript paragraph for Results
-    section 3.5 (pain-arousal relay moderation), populated from the
-    table CSVs and text_numbers.csv.
-    """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step11_text.md")
-
-    if not os.path.exists(OUT_TEXT_CSV):
-        if verbose:
-            print("  SKIP: step11_text_numbers.csv not found — run step11 first")
-        return
-
-    if verbose:
-        print("  Generating step11_text.md ...")
-
-    tn = pd.read_csv(OUT_TEXT_CSV)
-    v = dict(zip(tn["metric"], tn["value"]))
-
-    # Load table CSVs for N values and CrIs
-    fmri_table = pd.read_csv(OUT_FMRI_TABLE) if os.path.exists(OUT_FMRI_TABLE) else None
-    vbm_table = pd.read_csv(OUT_VBM_TABLE) if os.path.exists(OUT_VBM_TABLE) else None
-
-    # Get N for fMRI and VBM
-    n_fmri = "N/A"
-    n_vbm = "N/A"
-    if fmri_table is not None and len(fmri_table) > 0:
-        n_fmri = str(int(fmri_table["N"].iloc[0]))
-    if vbm_table is not None and len(vbm_table) > 0:
-        n_vbm = str(int(vbm_table["N"].iloc[0]))
-
-    # Helper
-    def _val(key):
-        return v.get(key, "N/A").lstrip("+")
-
-    def _signed(key):
-        return v.get(key, "N/A")
-
-    # Find strongest fMRI effect (sorted by p)
-    fmri_rois_sorted = []
-    if fmri_table is not None:
-        for _, row in fmri_table.iterrows():
-            fmri_rois_sorted.append((row["Label"], row["ROI"], row["gamma_ps_p"]))
-        fmri_rois_sorted.sort(key=lambda x: x[2])
-
-    # Find strongest VBM effect (sorted by p)
-    vbm_rois_sorted = []
-    if vbm_table is not None:
-        for _, row in vbm_table.iterrows():
-            vbm_rois_sorted.append((row["Label"], row["ROI"], row["gamma_ps_p"]))
-        vbm_rois_sorted.sort(key=lambda x: x[2])
-
-    # Build fMRI strongest and second strongest descriptions
-    fmri_desc = ""
-    if len(fmri_rois_sorted) >= 2:
-        lab1, roi1, _ = fmri_rois_sorted[0]
-        lab2, roi2, _ = fmri_rois_sorted[1]
-        # Add "origin of the pathway" annotation only if PBN is in second place
-        if roi2 == "PBN":
-            second_annotation = "\u2014the origin of the pain-arousal relay pathway\u2014"
-        else:
-            second_annotation = " "
-        fmri_desc = (
-            f"The {lab1} showed the strongest fMRI effect "
-            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi1}')}$), "
-            f"with the {lab2}{second_annotation}showing the second strongest "
-            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi2}')}$). "
-        )
-    elif len(fmri_rois_sorted) == 1:
-        lab1, roi1, _ = fmri_rois_sorted[0]
-        fmri_desc = (
-            f"The {lab1} showed the strongest fMRI effect "
-            f"($\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_fmri_{roi1}')}$). "
-        )
-
-    # VBM sign concordance
-    sign_conc = v.get("vbm_sign_concordance", "N/A")
-    sign_p = v.get("vbm_sign_concordance_p", "N/A")
-
-    # VBM strongest
-    vbm_desc = ""
-    if len(vbm_rois_sorted) >= 1:
-        lab1, roi1, _ = vbm_rois_sorted[0]
-        vbm_desc = (
-            f"Notably, all {sign_conc.split('/')[1] if '/' in sign_conc else 'five'} "
-            f"grey matter volume estimates were negative\u2014consistent with larger "
-            f"arousal relay volumes predisposing stronger pain-to-sleep "
-            f"coupling\u2014though no individual effect was credible "
-            f"(strongest: {lab1}, "
-            f"$\\hat{{\\gamma}}_{{ps}}={_signed(f'gamma_ps_vbm_{roi1}')}$). "
-        )
-
-    paragraph = (
-        "The five nodes of the Lynch et al. (2025) pain-arousal relay pathway "
-        "were tested as moderators of pain-to-sleep coupling "
-        "($\\hat{\\gamma}_{ps}$) using two complementary approaches: "
-        f"pain-evoked fMRI response (N = {n_fmri}) and grey matter volume "
-        f"from atlas-defined probabilistic ROIs (N = {n_vbm}). "
-        "Moderation was not credible for any ROI in either modality "
-        "(**Table S1**). "
-        + fmri_desc
-        + vbm_desc
-        + "Johnson-Neyman analyses for each ROI are shown in **Figures S7-S8**."
-    )
-
-    # ----- Table S1 markdown -----
-    # Interleave fMRI and VBM rows per ROI
-    table_s1_lines = []
-    table_s1_lines.append("| ROI | Modality | $\\gamma_{ps}$ | 95% CrI |")
-    table_s1_lines.append("| :-------- | :------------ | --------------: | :--------------- |")
-
-    # Determine ROI ordering from fMRI table (preserves original order)
-    if fmri_table is not None:
-        roi_order = list(fmri_table["ROI"].values)
-    elif vbm_table is not None:
-        roi_order = list(vbm_table["ROI"].values)
-    else:
-        roi_order = []
-
-    fmri_dict = {}
-    if fmri_table is not None:
-        for _, row in fmri_table.iterrows():
-            fmri_dict[row["ROI"]] = row
-    vbm_dict = {}
-    if vbm_table is not None:
-        for _, row in vbm_table.iterrows():
-            vbm_dict[row["ROI"]] = row
-
-    # ROI short-label map (match manuscript supplementary table)
-    short_label_map = {
-        "PBN": "PBN",
-        "SI-BF/Ch4": "SI-BF/Ch4",
-        "CeA": "CeA",
-        "BNST": "BNST",
-        "LH": "LH",
-    }
-    for roi in roi_order:
-        short = short_label_map.get(roi, roi)
-        # First row for ROI: include ROI label + fMRI response
-        if roi in fmri_dict:
-            r = fmri_dict[roi]
-            table_s1_lines.append(
-                f"| {short} | fMRI response | {r['gamma_ps']:+.3f} "
-                f"| [{r['gamma_ps_ci_lo']:+.3f}, {r['gamma_ps_ci_hi']:+.3f}] |"
-            )
-        # Second row for ROI: blank ROI cell + GM volume
-        if roi in vbm_dict:
-            r = vbm_dict[roi]
-            table_s1_lines.append(
-                f"|  | GM volume | {r['gamma_ps']:+.3f} "
-                f"| [{r['gamma_ps_ci_lo']:+.3f}, {r['gamma_ps_ci_hi']:+.3f}] |"
-            )
-
-    table_s1_md = "\n".join(table_s1_lines)
-
-        # Table S1 Note is descriptive (method cross-refs, static Ns);
-    # lives only in docs/supplementary_materials.md.
-
-    text = f"""\
-## Results > 3.5 Pain-arousal relay pathway moderation
-
-{paragraph}
-
-**Table S1.** Pain-arousal relay moderation of pain-to-sleep coupling (atlas-defined ROIs).
-
-{table_s1_md}
-"""
-
-    with open(OUT_TEXT_MD, "w") as f:
-        f.write(text)
-
-    if verbose:
-        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():
@@ -435,7 +261,7 @@ def main():
     parser.add_argument("--refit", action="store_true",
                         help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step11(verbose=not args.quiet, refit=args.refit)
+    run_step19(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

@@ -11,10 +11,10 @@ Input:
   data/step00_extracted_long.csv                  — baseline PHQ endorsements
   data/original/participants_wideformat.xlsx     — WOMAC, PHQ, KL grade
 
-Output (results/step02/):
-  step02_figure_s1_endorsement.png  — Figure S1: point-biserial bar chart
-  step02_figure_s2_convergent.png   — Figure S2: scatter plots vs clinical
-  step02_text_numbers.csv           — ANOVA, Tukey, point-biserial (FDR),
+Output (results/step03/):
+  step03_figure_s1_endorsement.png  — Figure S1: point-biserial bar chart
+  step03_figure_s2_convergent.png   — Figure S2: scatter plots vs clinical
+  step03_text_numbers.csv           — ANOVA, Tukey, point-biserial (FDR),
                                      Pearson/Spearman correlations
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
@@ -34,10 +34,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DATA_DIR = os.path.join(ROOT, "data")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step02_contrast_validation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step03_contrast_validation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step02_contrast_validation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step03_contrast_validation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 IN_SCORED_CSV = os.path.join(DERIV_DIR, "step01_factor_analysis", "step01_scored_long.csv")
@@ -49,7 +49,7 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 
 OUT_FIG_S1 = os.path.join(SUPP_DIR, "figure_s1_endorsement.png")
 OUT_FIG_S2 = os.path.join(SUPP_DIR, "figure_s2_convergent.png")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step02_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step03_text_numbers.csv")
 
 AREA_LABELS = [
     "Hands", "Arms", "Shoulders", "Neck", "Head/Face/Jaw",
@@ -243,7 +243,7 @@ def generate_figure_s2(verbose=True):
 
 def generate_text_numbers(verbose=True):
     """Compute and save all convergent validity statistics to
-    step02_text_numbers.csv:
+    step03_text_numbers.csv:
       - One-way ANOVA of person-mean contrast across pain distribution
         groups (knee-only, knee+others, no-knee) with group Ns/means/SDs
       - Tukey HSD post-hoc pairwise p-values
@@ -422,195 +422,12 @@ def generate_text_numbers(verbose=True):
 # Text paragraphs — formatted markdown for manuscript
 # =====================================================================
 
-def generate_text_paragraphs(verbose=True):
-    """Generate step02_text.md with the manuscript paragraphs for Results
-    section 3.1 (contrast validation), populated from step02_text_numbers.csv.
-
-    Paragraph 2: ANOVA + Tukey + point-biserial endorsement validation.
-    Paragraph 3: Clinical correlations (Pearson + Spearman).
-    """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step02_text.md")
-
-    if not os.path.exists(OUT_TEXT_CSV):
-        if verbose:
-            print("  SKIP: step02_text_numbers.csv not found — run step02 first")
-        return
-
-    if verbose:
-        print("  Generating step02_text.md ...")
-
-    df = pd.read_csv(OUT_TEXT_CSV)
-    v = dict(zip(df["metric"], df["value"]))
-
-    # --- Paragraph 2: ANOVA + endorsement ---
-    n_ko = v.get("anova_n_knee_only", "?")
-    n_kp = v.get("anova_n_knee_plus", "?")
-    n_nk = v.get("anova_n_no_knee", "?")
-    f_val = v.get("anova_F", "?")
-    anova_df = v.get("anova_df", "?")
-    anova_p = v.get("anova_p", "?")
-    m_ko = v.get("anova_mean_knee_only", "?")
-    sd_ko = v.get("anova_sd_knee_only", "?")
-    m_kp = v.get("anova_mean_knee_plus", "?")
-    sd_kp = v.get("anova_sd_knee_plus", "?")
-    m_nk = v.get("anova_mean_no_knee", "?")
-    sd_nk = v.get("anova_sd_no_knee", "?")
-    tukey_ko_kp = v.get("tukey_p_knee_only_vs_knee_plus", "?")
-    tukey_ko_nk = v.get("tukey_p_knee_only_vs_no_knee", "?")
-    tukey_kp_nk = v.get("tukey_p_knee_plus_vs_no_knee", "?")
-
-    rpb_knees_r = v.get("rpb_knees_r", "?")
-    rpb_knees_fdr = v.get("rpb_knees_fdr", "?")
-    rpb_upper_back_r = v.get("rpb_upper_back_r", "?")
-    rpb_upper_back_fdr = v.get("rpb_upper_back_fdr", "?")
-    rpb_lower_back_r = v.get("rpb_lower_back_r", "?")
-    rpb_lower_back_fdr = v.get("rpb_lower_back_fdr", "?")
-
-    # Format p-value for display
-    def _pfmt(pstr):
-        return f"$p$ {pstr}" if pstr.startswith("<") else f"$p$ = {pstr}"
-
-    para2 = (
-        f"We provided external validation for the contrast factor. Each "
-        f"participant's mean contrast score across all available quarters "
-        f"($\\overline{{K}}$) was compared against the baseline pain area "
-        f"endorsements and clinical measures. Because the PHQ body map "
-        f"allows endorsement of multiple pain areas simultaneously "
-        f"(mean = 3.2 areas, SD = 2.5), participants were classified "
-        f"into three pain distribution groups: knee pain only "
-        f"(N = {n_ko}), knee pain plus at least one other area "
-        f"(N = {n_kp}), and no knee pain (N = {n_nk}). A one-way ANOVA "
-        f"revealed significant differences in $\\overline{{K}}$ across "
-        f"groups ($F{anova_df} = {f_val}$, {_pfmt(anova_p)}). "
-        f"Tukey post-hoc comparisons confirmed that all three groups "
-        f"differed from each other: knee-only participants had the "
-        f"highest average and positive contrast scores "
-        f"($\\overline{{K}} = {m_ko}$, SD = {sd_ko}), followed by "
-        f"knee-plus-others ($\\overline{{K}} = {m_kp}$, SD = {sd_kp}; "
-        f"{_pfmt(tukey_ko_kp)} vs knee-only), and no-knee "
-        f"participants had negative contrast scores "
-        f"($\\overline{{K}} = {m_nk}$, SD = {sd_nk}; "
-        f"{_pfmt(tukey_ko_nk)} vs knee-only and {_pfmt(tukey_kp_nk)} "
-        f"vs knee-plus-others). Complementarily, point-biserial "
-        f"correlations between each of the 13 individual pain area "
-        f"endorsements and $\\overline{{K}}$ confirmed a clear pattern: "
-        f"knee endorsement was positively associated with the contrast "
-        f"($r_{{pb}} = {rpb_knees_r}$, $p_{{FDR}}$ {rpb_knees_fdr}), "
-        f"while all 12 non-knee areas showed negative or near-zero "
-        f"associations, with upper back ($r_{{pb}} = {rpb_upper_back_r}$, "
-        f"$p_{{FDR}} = {rpb_upper_back_fdr}$) and lower back "
-        f"($r_{{pb}} = {rpb_lower_back_r}$, "
-        f"$p_{{FDR}} = {rpb_lower_back_fdr}$) showing the strongest "
-        f"negative effects; however, only knee endorsement survived "
-        f"FDR correction across the 13 tests. These results are "
-        f"illustrated in **Figure S1**."
-    )
-
-    # --- Paragraph 3: Clinical correlations ---
-    r_days = v.get("pearson_phq_knee_pain_days_r", "?")
-    p_days = v.get("pearson_phq_knee_pain_days_p", "?")
-    n_days = v.get("pearson_phq_knee_pain_days_n", "?")
-    r_pct = v.get("pearson_phq_percent_pain_r", "?")
-    p_pct = v.get("pearson_phq_percent_pain_p", "?")
-    n_pct = v.get("pearson_phq_percent_pain_n", "?")
-    r_wpain = v.get("pearson_womac_pain_r", "?")
-    p_wpain = v.get("pearson_womac_pain_p", "?")
-    r_wtotal = v.get("pearson_womac_total_r", "?")
-    p_wtotal = v.get("pearson_womac_total_p", "?")
-    r_wfunc = v.get("pearson_womac_phys_function_r", "?")
-    p_wfunc = v.get("pearson_womac_phys_function_p", "?")
-    r_wstiff = v.get("pearson_womac_stiffness_r", "?")
-    p_wstiff = v.get("pearson_womac_stiffness_p", "?")
-    r_kpr = v.get("pearson_qst_knee_pain_rating_r", "?")
-    p_kpr = v.get("pearson_qst_knee_pain_rating_p", "?")
-
-    # Spearman KL grade (may not exist)
-    rho_kl = v.get("spearman_kl_grade_rho", None)
-    p_kl = v.get("spearman_kl_grade_p", None)
-    n_kl = v.get("spearman_kl_grade_n", None)
-
-    kl_sentence = ""
-    if rho_kl is not None:
-        kl_sentence = (
-            f" Spearman correlation with radiographic severity "
-            f"(Kellgren\u2013Lawrence grade) was $\\rho$ = {rho_kl} "
-            f"({_pfmt(p_kl)}, $N$ = {n_kl})."
-        )
-
-    # Build the clinical-measure list, with KL inserted as the final item
-    # when available (so the "and" conjunction lands naturally).
-    measures = [
-        ("PHQ knee pain days per week", r_days, p_days),
-        ("PHQ percent of waking day in knee pain", r_pct, p_pct),
-        ("WOMAC Pain", r_wpain, p_wpain),
-        ("WOMAC Total", r_wtotal, p_wtotal),
-        ("WOMAC Physical Function", r_wfunc, p_wfunc),
-        ("WOMAC Stiffness", r_wstiff, p_wstiff),
-        ("knee pain rating", r_kpr, p_kpr),
-    ]
-    measure_strs = [f"{label} ($r = {r}$, {_pfmt(p)})"
-                    for label, r, p in measures]
-    if rho_kl is not None and p_kl is not None:
-        kl_str = (
-            f"radiographic OA severity (Kellgren-Lawrence grade of the "
-            f"index knee; Spearman $\\rho = {rho_kl}$, {_pfmt(p_kl)})"
-        )
-        measures_text = ", ".join(measure_strs) + ", and " + kl_str
-    else:
-        # Drop the last comma so the prose reads "..., A, B, and C."
-        measures_text = (
-            ", ".join(measure_strs[:-1]) + ", and " + measure_strs[-1]
-        )
-
-    para3 = (
-        f"Other baseline clinical measures further confirmed this pattern. "
-        f"The person-mean contrast correlated positively with all "
-        f"knee-specific continuous measures: {measures_text}. "
-        f"Scatter plots for all measures are shown in **Figure S2**."
-    )
-
-    # --- Figure captions ---
-    fig_s1_caption = (
-        f"**Figure S1.** Pain localization contrast factor and PHQ body map "
-        f"endorsements. **(A)** Point-biserial correlations between person-mean "
-        f"contrast ($\\bar{{K}}$) and each of 13 PHQ body-area endorsements. "
-        f"Asterisk indicates FDR-corrected significance ($q<0.05$). Only knee "
-        f"endorsement survived correction ($r_{{pb}}$ = {rpb_knees_r}, "
-        f"$p_{{FDR}}$ {rpb_knees_fdr}). **(B)** Person-mean contrast "
-        f"($\\bar{{K}}$) by pain distribution group: Knee only: endorsed knee "
-        f"pain but no other areas ($N$ = {n_ko}); Knee + others: endorsed knee "
-        f"pain plus at least one other area ($N$ = {n_kp}); No knee: did not "
-        f"endorse knee pain ($N$ = {n_nk}). Horizontal lines indicate "
-        f"significant Tukey post-hoc comparisons. One-way ANOVA: "
-        f"$F${anova_df} = {f_val}, {_pfmt(anova_p)}."
-    )
-
-    # Figure S2 caption lives in docs/supplementary_materials.md (not code-generated).
-    fig_s2_caption = ""
-
-    # Keep Figure S1 caption since its numbers come from the ANOVA/point-biserial fits.
-    text = (
-        "## Results > 3.1 Factor analysis and pain localization contrast\n"
-        "### Paragraph 2 (validation against PHQ endorsement)\n\n"
-        f"{para2}\n\n"
-        "### Paragraph 3 (clinical correlations)\n\n"
-        f"{para3}\n\n"
-        "### Figure S1 caption\n\n"
-        f"{fig_s1_caption}\n"
-    )
-
-    with open(OUT_TEXT_MD, "w") as f:
-        f.write(text)
-
-    if verbose:
-        print(f"    Saved: {OUT_TEXT_MD}")
-
 
 # =====================================================================
 # Main
 # =====================================================================
 
-def run_step02(verbose=True, refit=False):
+def run_step03(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
         print("STEP 02 — Contrast factor external validation")
@@ -622,7 +439,6 @@ def run_step02(verbose=True, refit=False):
     generate_figure_s1(verbose)
     generate_figure_s2(verbose)
     generate_text_numbers(verbose)
-    generate_text_paragraphs(verbose)
 
     if verbose:
         print("\n" + "=" * 70)
@@ -640,7 +456,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step02(verbose=not args.quiet, refit=args.refit)
+    run_step03(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

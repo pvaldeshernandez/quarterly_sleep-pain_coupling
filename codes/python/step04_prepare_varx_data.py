@@ -4,10 +4,10 @@ Step 03 — Segment filter, within-between decomposition, lag creation,
 ======================================================================
 
 Input:  new_organization/data/step01_scored_long.csv
-Output: new_organization/data/step02_processed_long.csv
-        new_organization/data/step02_figure1.png
-        new_organization/data/step02_table3_demographics.csv
-        new_organization/data/step02_timepoint_summary.csv
+Output: new_organization/data/step03_processed_long.csv
+        new_organization/data/step03_figure1.png
+        new_organization/data/step03_table3_demographics.csv
+        new_organization/data/step03_timepoint_summary.csv
 
 This step takes the factor-scored long table from Step 01 and
 produces the VARX(1)-ready dataset. Operations in order:
@@ -56,18 +56,18 @@ ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step03_varx_data")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step04_varx_data")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step03_varx_data")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step04_varx_data")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 IN_SCORED_CSV = os.path.join(DERIV_DIR, "step01_factor_analysis", "step01_scored_long.csv")
 
-OUT_PROCESSED_CSV = os.path.join(STEP_DERIV_DIR, "step03_processed_long.csv")
-OUT_FIGURE1 = os.path.join(STEP_RESULTS_DIR, "step03_figure1.png")
-OUT_TABLE3_CSV = os.path.join(STEP_RESULTS_DIR, "step03_table3_demographics.csv")
-OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step03_timepoint_summary.csv")
+OUT_PROCESSED_CSV = os.path.join(STEP_DERIV_DIR, "step04_processed_long.csv")
+OUT_FIGURE1 = os.path.join(STEP_RESULTS_DIR, "step04_figure1.png")
+OUT_TABLE3_CSV = os.path.join(STEP_RESULTS_DIR, "step04_table3_demographics.csv")
+OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step04_timepoint_summary.csv")
 
 
 # =====================================================================
@@ -556,7 +556,7 @@ def generate_figure1(
 # Top-level entry point
 # =====================================================================
 
-def run_step03(verbose: bool = True, refit: bool = False):
+def run_step04(verbose: bool = True, refit: bool = False):
     """Full Step 03 pipeline."""
     if verbose:
         print("=" * 70)
@@ -647,99 +647,16 @@ def run_step03(verbose: bool = True, refit: bool = False):
         {"metric": "min_lags_per_person", "value": int(per_person.min())},
         {"metric": "max_lags_per_person", "value": int(per_person.max())},
     ])
-    OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step03_text_numbers.csv")
+    OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step04_text_numbers.csv")
     text_numbers.to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved: {OUT_TEXT_CSV}")
 
-    generate_text_paragraphs(verbose)
 
     if verbose:
         print("\n" + "=" * 70)
         print("STEP 03 COMPLETE")
         print("=" * 70)
-
-
-def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step03_text.md with the manuscript paragraphs that cite
-    analytic-sample counts, populated from step03_text_numbers.csv.
-
-    Covers: Results section 2.1 (analytic sample description) and
-    the Figure 1 caption.
-    """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step03_text.md")
-    IN_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step03_text_numbers.csv")
-
-    if not os.path.exists(IN_TEXT_CSV):
-        if verbose:
-            print("  SKIP: step03_text_numbers.csv not found — run step03 first")
-        return
-
-    if verbose:
-        print("  Generating step03_text.md ...")
-
-    df = pd.read_csv(IN_TEXT_CSV)
-    v = dict(zip(df["metric"], df["value"].astype(str)))
-
-    n_parent = v["n_parent_study"]
-    n_analytic = v["n_analytic_sample"]
-    n_excluded = v["n_excluded"]
-    n_retained = v["n_retained_points"]
-    n_interp = v["n_interpolated_retained"]
-    n_lags = v["n_lag_transitions"]
-    med_lags = v["median_lags_per_person"]
-    min_lags = v["min_lags_per_person"]
-    max_lags = v["max_lags_per_person"]
-
-    # Format n_lags with comma separator (matches manuscript: 1,818)
-    try:
-        n_lags_fmt = f"{int(n_lags):,}"
-    except (TypeError, ValueError):
-        n_lags_fmt = str(n_lags)
-    para_sample = (
-        f"Of the {n_parent} participants in the parent study, {n_analytic} "
-        f"had at least one continuous segment of three or more consecutive "
-        f"quarterly timepoints with both pain factor scores and sleep "
-        f"scores available, while {n_excluded} were excluded for lacking "
-        f"such a segment (**Figure 1**). Among retained participants, the "
-        f"median number of usable lag-1 transitions was {med_lags} "
-        f"(range: {min_lags}\u2013{max_lags}), totaling {n_lags_fmt} "
-        f"transitions. **Table 3** presents the demographic and baseline "
-        f"clinical characteristics of this final analytic sample."
-    )
-
-    try:
-        n_interp_fmt = f"{int(n_interp):,}"
-        n_retained_fmt = f"{int(n_retained):,}"
-    except (TypeError, ValueError):
-        n_interp_fmt = str(n_interp)
-        n_retained_fmt = str(n_retained)
-    fig1_caption = (
-        f"**Figure 1.** Data availability grid (participants $\\times$ "
-        f"quarters). Blue dots indicate observed retained data points; "
-        f"red dots indicate retained points for which scores were "
-        f"interpolated ({n_interp_fmt} of {n_retained_fmt} retained "
-        f"points); grey dots indicate observations discarded due to "
-        f"segment length < 3. Horizontal lines connect consecutive "
-        f"quarters within retained segments. Participants are sorted by "
-        f"number of retained points (bottom = fewest). Participants "
-        f"below the dashed line (N = {n_excluded}) were excluded for "
-        f"lacking any segment of three or more consecutive quarters."
-    )
-
-    text = (
-        "## Results > 2.1 Analytic sample\n"
-        "### Paragraph (analytic sample description)\n\n"
-        f"{para_sample}\n\n"
-        "### Figure 1 caption\n\n"
-        f"{fig1_caption}\n"
-    )
-
-    with open(OUT_TEXT_MD, "w") as f:
-        f.write(text)
-
-    if verbose:
-        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():
@@ -756,7 +673,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step03(verbose=not args.quiet, refit=args.refit)
+    run_step04(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

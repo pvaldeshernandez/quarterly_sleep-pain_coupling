@@ -540,6 +540,10 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
 
     out = long.copy()
     out["interpolated"] = False
+    # Cells actually FILLED on this row. Kept per-row because the summary below used
+    # to count every non-missing cell on an interpolated row instead, which counts
+    # values that were observed, not imputed.
+    out["n_cells_filled"] = 0
 
     factor_cols = ["pain_factor", "contrast_factor", "sleep_factor"]
 
@@ -555,10 +559,24 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
             filled = qgrp[col].interpolate(
                 method="linear", limit_area="inside", limit=1,
             )
+            # `limit=1` caps how many CONSECUTIVE NaNs pandas fills, so it fills the
+            # first quarter of a gap of ANY length -- a 3-quarter gap gets its first
+            # value invented from neighbours 4 quarters apart. The Methods describes
+            # gaps of length one ("provided both neighbors were present"), which is a
+            # statement about the gap, not about how many cells to fill. Restrict to
+            # runs of exactly one so the code does what the paper says.
+            isna = before.isna().values
+            singleton = np.zeros(len(isna), dtype=bool)
+            for i in range(len(isna)):
+                if isna[i] and (i == 0 or not isna[i - 1]) and \
+                        (i == len(isna) - 1 or not isna[i + 1]):
+                    singleton[i] = True
+            filled = filled.where(pd.Series(singleton, index=filled.index), before)
             newly_filled = before.isna() & filled.notna()
             if newly_filled.any():
                 out.loc[qgrp.index[newly_filled], col] = filled[newly_filled]
                 out.loc[qgrp.index[newly_filled], "interpolated"] = True
+                out.loc[qgrp.index[newly_filled], "n_cells_filled"] += 1
                 n_filled_total += int(newly_filled.sum())
 
     n_rows_affected = int(out["interpolated"].sum())
@@ -671,10 +689,10 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
 
     # Interpolation summary
     n_interpolated_rows = int(scored["interpolated"].sum())
-    n_interpolated_cells = int(
-        scored.loc[scored["interpolated"], ["pain_factor", "contrast_factor",
-                                            "sleep_factor"]].notna().sum().sum()
-    )
+    # Cells FILLED by interpolation. The previous expression counted every non-missing
+    # factor score on an interpolated row -- including the two that were observed --
+    # so it over-reported (354 where 338 were imputed).
+    n_interpolated_cells = int(scored["n_cells_filled"].sum())
 
     model_json = {
         # Correlation matrix
@@ -800,87 +818,11 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
     if verbose:
         print(f"  Saved: {OUT_RESULTS_CSV}")
 
-    generate_text_paragraphs(verbose)
 
     if verbose:
         print("=" * 70)
 
     return scored, model_json
-
-
-def generate_text_paragraphs(verbose: bool = True) -> None:
-    """Generate step01_text.md with the manuscript paragraph for Results
-    section 3.1 (factor analysis), populated from step01_factor_results.csv.
-
-    Reads all computed numbers from the results CSV and writes a
-    fully formatted markdown paragraph into the results directory.
-    """
-    OUT_TEXT_MD = os.path.join(STEP_RESULTS_DIR, "step01_text.md")
-    RESULTS_CSV = os.path.join(STEP_DERIV_DIR, "step01_factor_results.csv")
-
-    if not os.path.exists(RESULTS_CSV):
-        if verbose:
-            print("  SKIP: step01_factor_results.csv not found — run step01 first")
-        return
-
-    if verbose:
-        print("  Generating step01_text.md ...")
-
-    df = pd.read_csv(RESULTS_CSV)
-    v = dict(zip(df["metric"], df["value"]))
-
-    # Parse values
-    eig1 = v["eigenvalue_f1"]
-    eig2 = v["eigenvalue_f2"]
-    pct1 = v["variance_f1_pct"]
-    pct2 = v["variance_f2_pct"]
-    total_pct = v["total_variance_2factor_pct"]
-    pa1 = v["pa_95th_comp1"]
-    pa2 = v["pa_95th_comp2"]
-    f1_passes = v["f1_passes_pa_95th"]
-    f2_passes = v["f2_passes_pa_95th"]
-    r_f1f2 = v["r_f1_f2"]
-    f1_range = v["f1_loadings_range"]
-    f2_knee_range = v["f2_knee_loadings_range"]
-    f2_body_range = v["f2_body_loadings_range"]
-    n_interp_rows = v["n_interpolated_rows"]
-    n_interp_cells = v["n_interpolated_cells"]
-
-    # Parse loading ranges into lo/hi components
-    f1_lo, f1_hi = f1_range.split(" to ")
-    f2_knee_lo, f2_knee_hi = f2_knee_range.split(" to ")
-    f2_body_lo, f2_body_hi = f2_body_range.split(" to ")
-
-    # Exceeded or fell below for F2
-    if f2_passes == "YES":
-        exceeded_str = "exceeded"
-    else:
-        exceeded_str = "fell below"
-
-    text = f"""\
-## Results > 3.1 Factor analysis and pain localization contrast
-### Paragraph 1 (factor analysis)
-
-An exploratory factor analysis was conducted to separate general pain \
-severity from the knee-versus-body pain distribution. The first factor was \
-dominant (eigenvalue = {eig1}, {pct1}% of variance) and exceeded the \
-95th-percentile random eigenvalue threshold ({pa1}). The second eigenvalue \
-({eig2}, {pct2}% of variance) {exceeded_str} the parallel analysis threshold \
-({pa2}). The retained two-factor solution jointly accounted for {total_pct}% \
-of the variance. The first factor (F1: General Pain) had all eight items \
-loading positively (range: {f1_lo}\u2013{f1_hi}), capturing overall pain \
-severity. The second factor (F2: Contrast) showed positive loadings on knee \
-items ({f2_knee_lo} to {f2_knee_hi}) and negative loadings on body items \
-({f2_body_lo} to {f2_body_hi}), capturing the within-person contrast between \
-knee-localized and body-wide pain. The two factors were orthogonal \
-($r = {r_f1f2}$).
-"""
-
-    with open(OUT_TEXT_MD, "w") as f:
-        f.write(text)
-
-    if verbose:
-        print(f"    Saved: {OUT_TEXT_MD}")
 
 
 def main():

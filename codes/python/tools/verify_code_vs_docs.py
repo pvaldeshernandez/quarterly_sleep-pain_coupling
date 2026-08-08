@@ -37,18 +37,18 @@ SUPPLEMENT = os.path.join(DOCS, "supplementary_materials.md")
 
 CODE_TEXT_FILES = [
     os.path.join(RESULTS, "step01_factor_analysis", "step01_text.md"),
-    os.path.join(RESULTS, "step02_contrast_validation", "step02_text.md"),
-    os.path.join(RESULTS, "step03_varx_data", "step03_text.md"),
-    os.path.join(RESULTS, "step04_coupling_model", "step04_text.md"),
-    os.path.join(RESULTS, "step05_contrast_moderation", "step05_text.md"),
-    os.path.join(RESULTS, "step08_sp_moderation", "step08_text.md"),
-    os.path.join(RESULTS, "step09_sp_jn", "step09_text.md"),
-    os.path.join(RESULTS, "step11_ps_moderation", "step11_text.md"),
+    os.path.join(RESULTS, "step03_contrast_validation", "step03_text.md"),
+    os.path.join(RESULTS, "step04_varx_data", "step04_text.md"),
+    os.path.join(RESULTS, "step07_coupling_model", "step07_text.md"),
+    os.path.join(RESULTS, "step11_contrast_moderation", "step11_text.md"),
+    os.path.join(RESULTS, "step14_sp_moderation", "step14_text.md"),
+    os.path.join(RESULTS, "step16_sp_jn", "step16_text.md"),
+    os.path.join(RESULTS, "step19_ps_moderation", "step19_text.md"),
     os.path.join(
-        RESULTS, "supplementary_materials", "step04_supp_text.md"
+        RESULTS, "supplementary_materials", "step07_supp_text.md"
     ),
     os.path.join(
-        RESULTS, "supplementary_materials", "step13_text.md"
+        RESULTS, "supplementary_materials", "step21_text.md"
     ),
 ]
 

@@ -137,6 +137,9 @@ Author: Pedro Valdes-Hernandez
 
 import os
 import warnings
+import json
+import os
+
 import numpy as np
 import pandas as pd
 import pymc as pm
@@ -148,10 +151,121 @@ warnings.filterwarnings("ignore")
 # ---------------------------------------------------------------------------
 # MCMC settings -- shared across all model fits
 # ---------------------------------------------------------------------------
-N_SAMPLES = 2000    # posterior draws per chain
-N_TUNE = 2000       # warmup/tuning iterations per chain
+N_SAMPLES = 4000    # posterior draws per chain
+N_TUNE = 4000       # warmup/tuning iterations per chain
 N_CHAINS = 4        # number of independent Markov chains
-TARGET_ACCEPT = 0.95  # NUTS target acceptance probability (high for HMC)
+TARGET_ACCEPT = 0.99  # NUTS target acceptance probability (high for HMC)
+RANDOM_SEED = 42
+
+#: The one place the sampler is configured. `run_fit` is the only function in the
+#: repository that calls `pm.sample`; every step reaches it through this dict, so a
+#: fit cannot silently run at settings the Methods does not describe. Raised from
+#: 2000/2000/0.95 on Aug 8 2026 together with the non-centered parameterization.
+SAMPLER = dict(draws=N_SAMPLES, tune=N_TUNE, chains=N_CHAINS,
+               target_accept=TARGET_ACCEPT, random_seed=RANDOM_SEED)
+
+
+
+# ===================================================================
+# Sampling -- the only place in the repository that calls pm.sample
+# ===================================================================
+
+def _fmt(x):
+    """JSON-safe scalar."""
+    if x is None:
+        return None
+    if isinstance(x, (np.floating, np.integer)):
+        return x.item()
+    return x
+
+
+def write_diagnostics(idata, fit_id, cfg, out_dir):
+    """Record how well one fit sampled, beside the fit itself.
+
+    Written for EVERY fit, without exception, because the paper reports diagnostics
+    for every model it fits and the alternative -- remembering to compute them at
+    each call site -- is what left the submitted manuscript quoting a placeholder.
+
+    The sampler configuration actually used is stored alongside the numbers, so a fit
+    that deviated is visible in its own output rather than nowhere.
+
+    Returns the dict it wrote; writes nothing if `out_dir` is None.
+    """
+    summary = az.summary(idata, round_to="none")          # NOT round_to=None: in
+    # ArviZ 0.23 the sentinel that disables rounding is the STRING "none"; passing
+    # None silently rounds to 1 decimal and would corrupt every diagnostic here.
+
+    offsets = [i for i in summary.index if str(i).endswith("_z") or "_z[" in str(i)]
+    interp = summary.drop(index=offsets, errors="ignore")
+
+    sample_stats = idata.sample_stats
+    depth = sample_stats["tree_depth"].values if "tree_depth" in sample_stats else None
+    diverging = sample_stats["diverging"].values if "diverging" in sample_stats else None
+    accept = sample_stats["acceptance_rate"].values if "acceptance_rate" in sample_stats else None
+    try:
+        bfmi = np.asarray(az.bfmi(idata))
+    except Exception:
+        bfmi = np.array([np.nan])
+
+    rec = {
+        "fit_id": fit_id,
+        "n_params": int(len(interp)),
+        "rhat_max": _fmt(interp["r_hat"].max()),
+        "rhat_max_param": str(interp["r_hat"].idxmax()),
+        "ess_bulk_min": _fmt(interp["ess_bulk"].min()),
+        "ess_bulk_min_param": str(interp["ess_bulk"].idxmin()),
+        "ess_tail_min": _fmt(interp["ess_tail"].min()),
+        "ess_tail_min_param": str(interp["ess_tail"].idxmin()),
+        "divergences": int(diverging.sum()) if diverging is not None else None,
+        "n_draws_total": int(idata.posterior.draw.size * idata.posterior.chain.size),
+        "max_tree_depth": int(depth.max()) if depth is not None else None,
+        "tree_depth_cap": 10,
+        "pct_draws_at_cap": _fmt(float((depth >= 10).mean() * 100)) if depth is not None else None,
+        "mean_accept": _fmt(float(accept.mean())) if accept is not None else None,
+        "bfmi_min": _fmt(float(np.nanmin(bfmi))),
+        "bfmi_per_chain": "; ".join(f"{b:.3f}" for b in np.atleast_1d(bfmi)),
+    }
+    rec.update({f"cfg_{k}": _fmt(v) for k, v in cfg.items()})
+
+    if out_dir is not None:
+        os.makedirs(out_dir, exist_ok=True)
+        path = os.path.join(out_dir, f"diagnostics_{fit_id}.json")
+        with open(path, "w") as fh:
+            json.dump(rec, fh, indent=1)
+        # The PER-PARAMETER table too, not just the extrema. Table S3 reports
+        # convergence by parameter family, and that cannot be recovered afterwards:
+        # the saved posterior npz holds flattened draws with no chain structure, so
+        # R-hat and ESS are computable only here, while the InferenceData exists.
+        interp.to_csv(os.path.join(out_dir, f"diagnostics_{fit_id}_by_param.csv"))
+    return rec
+
+
+def run_fit(model, fit_id=None, out_dir=None, progressbar=True, **overrides):
+    """Sample `model` with the project's settings and record how it went.
+
+    Every fit in the pipeline goes through here. `pm.sample` is called nowhere else,
+    which is what makes the Methods description of the sampler true by construction
+    instead of by vigilance -- before this existed, step21 sampled at its own
+    hardcoded 2000/2000/0.95 while the library said otherwise.
+
+    `overrides` are for genuine exceptions and are recorded in the diagnostics, so a
+    deviation leaves a trace.
+    """
+    cfg = {**SAMPLER, **overrides}
+    kwargs = dict(cfg)
+    kwargs.update(
+        return_inferencedata=True,
+        progressbar=progressbar,
+        # Required by a known PyMC 5.27.1 + Python 3.13 bug where R-hat computation
+        # crashes on large random-effect arrays. Convergence is computed below from
+        # the ArviZ summary instead.
+        compute_convergence_checks=False,
+    )
+    with model:
+        idata = pm.sample(**kwargs)
+    if fit_id is not None:
+        write_diagnostics(idata, fit_id, cfg, out_dir)
+    return idata
 
 
 # ===================================================================
@@ -322,7 +436,7 @@ def sign_concordance_p(n_concordant, n_tested):
 
         p = P(X >= n_concordant | X ~ Binomial(n_tested, 0.5))
 
-    Used by step08 (Krause 6-ROI sign test) and step11 (Lynch 5-ROI
+    Used by step14 (Krause 6-ROI sign test) and step19 (Lynch 5-ROI
     sign tests, fMRI and VBM).
     """
     from math import comb
@@ -335,16 +449,16 @@ def sign_concordance_p(n_concordant, n_tested):
 
 
 # ===================================================================
-# Shared dataframe loader for step04 / step08 / step11 / step13
+# Shared dataframe loader for step07 / step14 / step19 / step21
 # ===================================================================
 
 def load_varx_frame(csv_path, verbose=False):
     """Load the VARX-ready long dataframe and prepare it for any
-    ``fit_bayesian_varx1`` / step13 call.
+    ``fit_bayesian_varx1`` / step21 call.
 
     Centralizes four previously-duplicated loader functions
-    (``step04.load_data``, ``step08.load_step02_data``,
-    ``step11.load_step02_data``, ``step13.load_data``). Performs:
+    (``step07.load_data``, ``step14.load_step03_data``,
+    ``step19.load_step03_data``, ``step21.load_data``). Performs:
 
       1. Read ``csv_path``.
       2. Compute Age_z and Sex_c at the PERSON level (one row per
@@ -427,7 +541,7 @@ def add_bivariate_innovations_likelihood(
     avoids the O(n^3) per-evaluation cost of ``pm.MvNormal`` and
     samples ~100x faster while being mathematically identical (see the
     module docstring). Both the main VARX fit (``fit_bayesian_varx1``)
-    and the severity-joint model (``step13``) attach their likelihood
+    and the severity-joint model (``step21``) attach their likelihood
     through this helper so the speed and priors stay in sync.
 
     Priors (declared here and returned as Deterministics/RVs):
@@ -494,7 +608,8 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        moderator_direction="both",
                        idata_kwargs=None,
                        cores=None,
-                       progressbar=True):
+                       progressbar=True,
+                       fit_id=None, out_dir=None):
     """Fit the Bayesian VARX(1) model with contrast and optional moderators.
 
     This is the core model-fitting function used by all analyses. It builds
@@ -670,10 +785,24 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         # present in the model.
         if include_sp:
             tau_sp = pm.HalfCauchy("tau_sp", beta=1)
-            u_sp = pm.Normal("u_sp", mu=0, sigma=tau_sp, shape=n_persons)
+            # NON-CENTERED. u = z * tau with z ~ N(0,1) is exactly u | tau ~ N(0, tau^2),
+            # and the HalfCauchy(1) prior on tau is untouched, so this is a
+            # reparameterization and not a model change. It is the remedy for the funnel
+            # that left BFMI at 0.09-0.16 and bulk ESS at ~370 no matter how many draws
+            # were taken. `u_sp` remains in the posterior as a Deterministic, so every
+            # downstream reader of idata.posterior["u_sp"] is unaffected.
+            #
+            # The offset is named `u_sp_z` deliberately: it contains the substring
+            # "u_sp", so az.summary(var_names=["~u_sp", "~u_ps"], filter_vars="like")
+            # still excludes every person-level parameter. Naming it `z_sp` would
+            # silently turn "worst population-level parameter" into a max over 458
+            # person-level offsets.
+            u_sp_z = pm.Normal("u_sp_z", mu=0, sigma=1, shape=n_persons)
+            u_sp = pm.Deterministic("u_sp", u_sp_z * tau_sp)
         if include_ps:
             tau_ps = pm.HalfCauchy("tau_ps", beta=1)
-            u_ps = pm.Normal("u_ps", mu=0, sigma=tau_ps, shape=n_persons)
+            u_ps_z = pm.Normal("u_ps_z", mu=0, sigma=1, shape=n_persons)
+            u_ps = pm.Deterministic("u_ps", u_ps_z * tau_ps)
 
         # --- Assemble person-varying coupling slopes ---
         # If the corresponding direction is disabled, a2_i / b1_i stay
@@ -708,25 +837,15 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         )
 
         # --- MCMC sampling ---
-        sample_kwargs = dict(
-            draws=N_SAMPLES,
-            tune=N_TUNE,
-            chains=N_CHAINS,
-            target_accept=TARGET_ACCEPT,
-            return_inferencedata=True,
-            progressbar=progressbar,
-            random_seed=42,
-            # compute_convergence_checks=False is required due to a known
-            # bug in PyMC 5.27.1 + Python 3.13 where the R-hat computation
-            # crashes with large random-effect arrays. Convergence is
-            # checked manually via ArviZ summary after sampling.
-            compute_convergence_checks=False,
-        )
+        # Delegated so that this function does not decide sampler settings and does
+        # not have to remember to write diagnostics; `run_fit` owns both.
+        extra = {}
         if cores is not None:
-            sample_kwargs["cores"] = cores
+            extra["cores"] = cores
         if idata_kwargs is not None:
-            sample_kwargs["idata_kwargs"] = idata_kwargs
-        idata = pm.sample(**sample_kwargs)
+            extra["idata_kwargs"] = idata_kwargs
+        idata = run_fit(model, fit_id=fit_id, out_dir=out_dir,
+                        progressbar=progressbar, **extra)
 
     return idata, sub_df, valid_ids
 
