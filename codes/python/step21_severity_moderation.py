@@ -329,8 +329,15 @@ def _fit_joint_model(model_df, unique_ids, id_map,
         # Random effects
         tau_sp = pm.HalfCauchy("tau_sp", 1)
         tau_ps = pm.HalfCauchy("tau_ps", 1)
-        u_sp = pm.Normal("u_sp", 0, tau_sp, shape=N)
-        u_ps = pm.Normal("u_ps", 0, tau_ps, shape=N)
+        # NON-CENTERED, matching lib.coupling_model. This model is built inline rather
+        # than through fit_bayesian_varx1, so it did not inherit the reparameterization
+        # and was left as the one funnel in the paper: BFMI 0.120 and bulk ESS 537
+        # against 0.653 and 2,917 for every other fit. Same target density; u_sp and
+        # u_ps stay in the posterior as Deterministics for downstream readers.
+        u_sp_z = pm.Normal("u_sp_z", 0, 1, shape=N)
+        u_ps_z = pm.Normal("u_ps_z", 0, 1, shape=N)
+        u_sp = pm.Deterministic("u_sp", u_sp_z * tau_sp)
+        u_ps = pm.Deterministic("u_ps", u_ps_z * tau_ps)
 
         # SP coupling (sleep -> pain)
         lambda_sp = (a2
