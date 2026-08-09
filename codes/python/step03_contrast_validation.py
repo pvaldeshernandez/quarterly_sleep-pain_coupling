@@ -59,12 +59,44 @@ AREA_LABELS = [
 KNEE_AREA_COL = "phq_pain_areas___11__s1"  # area 11 = knees
 
 
+#: Restrict every validation statistic to the coupling model's analytic sample.
+#:
+#: Step 01 scores everyone with enough items — 243 participants — but only 229 of
+#: them survive the segment filter and enter the model. This step's statistics are
+#: reported in the manuscript alongside the model's, and the manuscript states the
+#: ANOVA denominator as 226 degrees of freedom, i.e. 229 participants. Computing
+#: them on 243 therefore describes a DIFFERENT sample than the one the sentence
+#: claims, which is why the published F could not be reproduced from either arm.
+#:
+#: Set False to validate on everyone with a contrast score; the counts, F and the
+#: point-biserial correlations all change, so the choice is explicit, not implicit
+#: in whichever frame happened to be loaded.
+RESTRICT_TO_ANALYTIC = True
+
+IN_ANALYTIC_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
+                               "step04_processed_long.csv")
+
+
 def _load_person_mean_contrast():
-    """Return DataFrame with columns [ID, K_i] from step01 scored output."""
+    """Return DataFrame with columns [ID, K_i] from step01 scored output.
+
+    Restricted to the analytic sample when ``RESTRICT_TO_ANALYTIC`` is set, so
+    every number this step publishes describes the same participants as every
+    other number in the paper.
+    """
     scored = pd.read_csv(IN_SCORED_CSV)
     ki = scored.groupby("ID")["contrast_factor"].mean().reset_index()
     ki.columns = ["ID", "K_i"]
     ki["ID"] = ki["ID"].astype(str)
+
+    if RESTRICT_TO_ANALYTIC:
+        if not os.path.exists(IN_ANALYTIC_CSV):
+            raise FileNotFoundError(
+                f"{IN_ANALYTIC_CSV} does not exist, so the analytic sample is "
+                f"unknown. Run step 04 first, or set RESTRICT_TO_ANALYTIC = False "
+                f"to validate on everyone with a contrast score.")
+        from analytic_sample import analytic_ids
+        ki = ki[ki["ID"].isin(analytic_ids(IN_ANALYTIC_CSV))].reset_index(drop=True)
     return ki
 
 

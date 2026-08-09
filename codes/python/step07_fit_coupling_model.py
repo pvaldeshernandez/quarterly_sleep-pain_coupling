@@ -57,6 +57,11 @@ IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data", "step04_processed
 # Derivatives
 OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step07_posterior_draws.npz")
 OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step07_person_coupling.csv")
+# The FULL posterior of the primary fit. The NPZ above keeps only the handful of
+# parameters the figures need; the posterior predictive check (step 08) has to
+# re-simulate the whole generative model, so it needs every parameter and the
+# person random effects together with their chain/draw structure.
+OUT_IDATA_NC = os.path.join(STEP_DERIV_DIR, "step07_primary_idata.nc")
 
 # Results
 OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step07_table4_coupling.csv")
@@ -398,6 +403,18 @@ def run_step07(verbose: bool = True, refit: bool = False):
         if verbose:
             print(f"  Saved posterior draws: {OUT_DRAWS_NPZ}")
 
+        # The full posterior, for step 08. Written before `del idata` below.
+        # A failure here must not lose the fit that has already been tabulated,
+        # so it is reported rather than raised.
+        try:
+            idata.to_netcdf(OUT_IDATA_NC)
+            if verbose:
+                print(f"  Saved full posterior: {OUT_IDATA_NC}")
+        except Exception as exc:
+            print(f"  WARNING: could not write {OUT_IDATA_NC}: {exc}")
+            print("           step 08 (posterior predictive check) will not run "
+                  "until this file exists.")
+
         # ==============================================================
         # 5. LOO-CV model comparison
         # ==============================================================
@@ -588,6 +605,60 @@ def run_step07(verbose: bool = True, refit: bool = False):
     )
     if verbose:
         print(f"  Saved Figure 3: {OUT_FIG3}")
+
+    # ==================================================================
+    # 8. The numbers registry
+    # ==================================================================
+    # The primary fit is the one step 09, step 10 and step 17 cross-check their
+    # own sample against, and it was the only step publishing nothing under a
+    # NAME — step 09 had to fall back to counting rows of a CSV and warned that
+    # it could not check the transition count at all. Both paths run this, so a
+    # reload republishes the same keys rather than leaving the registry stale.
+    from registry import write_numbers
+
+    # The transition count comes from the analytic frame on BOTH paths. `model_df`
+    # exists only inside the fit branch, and reading the frame here is a CSV read of
+    # ~2,000 rows -- cheap, and it keeps the published count defined by the data
+    # rather than by which branch happened to run.
+    n_transitions = len(load_data(IN_PROCESSED_CSV)[1])
+
+    nums = {
+        "n_persons": int(len(person_df)),
+        "n_transitions": int(n_transitions),
+        "rhat_max": float(results["rhat_max"]),
+    }
+    for name, param in (("lambda_sp", "a2"), ("lambda_ps", "b1"),
+                        ("phi_p", "a1"), ("phi_s", "b2"),
+                        ("mu_p", "a0"), ("mu_s", "b0"),
+                        ("delta_p", "a3"), ("delta_s", "b3"),
+                        ("omega_sp", "a4"), ("omega_ps", "b4"),
+                        ("tau_sp", "tau_sp"), ("tau_ps", "tau_ps"),
+                        ("sigma_pain", "sigma_pain"),
+                        ("sigma_sleep", "sigma_sleep"),
+                        ("rho_innov", "rho_innov")):
+        nums[f"{name}_mean"] = float(results[f"{param}_mean"])
+        nums[f"{name}_ci"] = [float(results[f"{param}_ci_lo"]),
+                              float(results[f"{param}_ci_hi"])]
+        nums[f"{name}_pneg"] = float(results[f"{param}_prob_neg"])
+
+    for _, row in loo_df.iterrows():
+        stem = f"loo_{row['model_a']}_vs_{row['model_b']}"
+        nums[f"{stem}_delta"] = float(row["delta_elpd"])
+        nums[f"{stem}_se"] = float(row["se"])
+        nums[f"{stem}_ratio"] = float(row["delta_over_se"])
+
+    nums["person_ps_min"] = float(person_df["beta_ps_mean"].min())
+    nums["person_ps_max"] = float(person_df["beta_ps_mean"].max())
+    nums["person_ps_sd"] = float(person_df["beta_ps_mean"].std())
+    nums["person_ps_n_credible_neg"] = int((person_df["beta_ps_prob_neg"] > 0.95).sum())
+    nums["person_sp_min"] = float(person_df["beta_sp_mean"].min())
+    nums["person_sp_max"] = float(person_df["beta_sp_mean"].max())
+    nums["person_sp_sd"] = float(person_df["beta_sp_mean"].std())
+    nums["person_sp_n_credible_neg"] = int((person_df["beta_sp_prob_neg"] > 0.95).sum())
+
+    numbers_path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step07")
+    if verbose:
+        print(f"  Saved numbers ({len(nums)} keys): {numbers_path}")
 
     # Print key results
     if verbose:

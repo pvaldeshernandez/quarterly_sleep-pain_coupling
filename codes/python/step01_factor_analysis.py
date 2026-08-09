@@ -55,6 +55,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import warnings
 from typing import Dict, List, Tuple
 
@@ -69,6 +70,7 @@ warnings.filterwarnings("ignore")
 # =====================================================================
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
 ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 
@@ -88,14 +90,12 @@ OUT_MODEL_JSON = os.path.join(STEP_DERIV_DIR, "step01_factor_model.json")
 # Constants
 # =====================================================================
 
-KNEE_ITEMS = [
-    "q2_knee_pain", "q3_knee_pain", "q4_knee_pain", "q5_knee_pain",
-]
-BODY_ITEMS = [
-    "q7_body_pain", "q8_body_pain", "q9_body_pain", "q10_body_pain",
-]
-PAIN_ITEMS = KNEE_ITEMS + BODY_ITEMS
-SLEEP_ITEM = "q13_sleep"
+# The item lists live in lib/descriptives.py, which is their one home: step 02
+# and step 05 describe the same items and must not be able to disagree with the
+# measurement model about which eight items "the pain items" are.
+from descriptives import (  # noqa: E402
+    BODY_ITEMS, KNEE_ITEMS, PAIN_ITEMS, SLEEP_ITEM,
+)
 
 N_FACTORS = 2
 QUARTERS = list(range(1, 12))  # 1..11
@@ -191,6 +191,7 @@ def polychoric_corr_matrix(
 
 def calibrate_factor_model(
     quarterly_items: pd.DataFrame, use_polychoric: bool = True,
+    verbose: bool = True,
 ) -> Dict:
     """Iterative principal axis factoring with 2 factors.
 
@@ -224,9 +225,12 @@ def calibrate_factor_model(
           ``n_obs_used``            number of fully non-missing rows
                                     across the 8 items
     """
-    print("\n" + "=" * 70)
-    print("2-FACTOR PAF CALIBRATION (8 pain items)")
-    print("=" * 70)
+    if verbose:
+        print("\n" + "=" * 70)
+    if verbose:
+        print("2-FACTOR PAF CALIBRATION (8 pain items)")
+    if verbose:
+        print("=" * 70)
 
     available = [c for c in PAIN_ITEMS if c in quarterly_items.columns]
     if len(available) < len(PAIN_ITEMS):
@@ -240,17 +244,20 @@ def calibrate_factor_model(
     item_sds = {c: float(data[c].std()) for c in available}
 
     if use_polychoric:
-        print("  Using polychoric correlation matrix (MLE for ordinal data)")
+        if verbose:
+            print("  Using polychoric correlation matrix (MLE for ordinal data)")
         R = polychoric_corr_matrix(data, available)
     else:
-        print("  Using Pearson correlation matrix (z-scored)")
+        if verbose:
+            print("  Using Pearson correlation matrix (z-scored)")
         data_z = (data - data.mean()) / data.std()
         R = data_z.corr()
 
     off_diag = (R.values.sum() - len(available)) / (
         len(available) ** 2 - len(available)
     )
-    print(f"  Mean off-diagonal correlation: {off_diag:.3f}")
+    if verbose:
+        print(f"  Mean off-diagonal correlation: {off_diag:.3f}")
 
     # Iterative PAF: update communalities until convergence
     k = len(available)
@@ -279,10 +286,12 @@ def calibrate_factor_model(
         communalities = new_communalities
 
         if change < 1e-6:
-            print(f"  Converged after {iteration + 1} iterations")
+            if verbose:
+                print(f"  Converged after {iteration + 1} iterations")
             break
     else:
-        print("  WARNING: PAF did not converge after 100 iterations")
+        if verbose:
+            print("  WARNING: PAF did not converge after 100 iterations")
 
     # Factor orientation: F1 all positive (general pain severity),
     # F2 knee-positive / body-negative (contrast).
@@ -296,23 +305,29 @@ def calibrate_factor_model(
     # Unreduced eigenvalues (for parallel analysis reporting)
     eig_unreduced = np.linalg.eigvalsh(R.values)[::-1]
 
-    print(
+    if verbose:
+        print(
         f"  Reduced eigenvalues (PAF): "
         f"{eigenvalues[0]:.3f}, {eigenvalues[1]:.3f}"
     )
-    print(
+    if verbose:
+        print(
         f"  Unreduced eigenvalues (for PA): "
         f"{eig_unreduced[0]:.3f}, {eig_unreduced[1]:.3f}"
     )
-    print(
+    if verbose:
+        print(
         f"  Variance explained (unreduced): "
         f"{eig_unreduced[0] / k * 100:.1f}%, "
         f"{eig_unreduced[1] / k * 100:.1f}%"
     )
-    print(f"\n  {'Item':<20s} {'F1 (Severity)':>14s} {'F2 (Contrast)':>14s}")
-    print(f"  {'-' * 52}")
+    if verbose:
+        print(f"\n  {'Item':<20s} {'F1 (Severity)':>14s} {'F2 (Contrast)':>14s}")
+    if verbose:
+        print(f"  {'-' * 52}")
     for i, item in enumerate(available):
-        print(
+        if verbose:
+            print(
             f"  {item:<20s} "
             f"{loadings[i, 0]:>14.4f} {loadings[i, 1]:>14.4f}"
         )
@@ -519,6 +534,23 @@ def score_all_rows(
 # Interpolation
 # =====================================================================
 
+#: True  -> fill ONLY gaps of exactly one quarter
+#: False -> fill the first quarter of any interior gap  <-- THE COMMITTED RULE
+#:
+#: DECIDED (Aug 8 2026): False. The analysis is the submitted one, N = 229 /
+#: 1,818 transitions. Both arms were run end to end through the identical
+#: pipeline and compared on every conclusion the paper draws
+#: (`tools/compare_interpolation_arms.py`); the choice was made on that
+#: comparison, not left to whichever branch happened to be in the file.
+#:
+#: The switch stays because the alternative rule is a genuine sensitivity
+#: question and step 09 reports one, not because the choice is still open.
+#: Flipping it changes the analytic sample and moves three reported findings,
+#: so it is not a free parameter -- change it only deliberately, and re-run the
+#: whole pipeline when you do.
+SINGLETON_GAPS_ONLY = False
+
+
 def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
     """Linearly interpolate single interior gaps in factor scores.
 
@@ -563,8 +595,21 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
             # first quarter of a gap of ANY length -- a 3-quarter gap gets its first
             # value invented from neighbours 4 quarters apart. The Methods describes
             # gaps of length one ("provided both neighbors were present"), which is a
-            # statement about the gap, not about how many cells to fill. Restrict to
-            # runs of exactly one so the code does what the paper says.
+            # statement about the gap, not about how many cells to fill.
+            #
+            # SINGLETON_GAPS_ONLY selects between the two. True makes the code match the
+            # Methods sentence; False reproduces the submitted behaviour. It is a switch
+            # rather than an edit because the choice changes the analytic sample
+            # (229/1,818 -> 227/1,793) and therefore several reported findings, so both
+            # arms have to stay runnable while that is being decided.
+            if not SINGLETON_GAPS_ONLY:
+                newly_filled = before.isna() & filled.notna()
+                if newly_filled.any():
+                    out.loc[qgrp.index[newly_filled], col] = filled[newly_filled]
+                    out.loc[qgrp.index[newly_filled], "interpolated"] = True
+                    out.loc[qgrp.index[newly_filled], "n_cells_filled"] += 1
+                    n_filled_total += int(newly_filled.sum())
+                continue
             isna = before.isna().values
             singleton = np.zeros(len(isna), dtype=bool)
             for i in range(len(isna)):

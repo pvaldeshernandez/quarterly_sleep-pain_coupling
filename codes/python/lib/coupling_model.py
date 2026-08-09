@@ -135,10 +135,10 @@ Bauer, D. J., & Curran, P. J. (2005). Probing interactions in fixed and
 Author: Pedro Valdes-Hernandez
 """
 
-import os
-import warnings
+import glob
 import json
 import os
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -238,6 +238,127 @@ def write_diagnostics(idata, fit_id, cfg, out_dir):
         # R-hat and ESS are computable only here, while the InferenceData exists.
         interp.to_csv(os.path.join(out_dir, f"diagnostics_{fit_id}_by_param.csv"))
     return rec
+
+
+def read_diagnostics(out_dir, fit_id_prefix=""):
+    """Every diagnostics record `write_diagnostics` left in `out_dir`, as one frame.
+
+    The counterpart of ``write_diagnostics``. Step 22 aggregates across the whole
+    pipeline and several steps aggregate over their own fits; both read the JSON
+    rather than recompute, because R-hat and ESS need the chain structure and the
+    saved posteriors keep only flattened draws.
+
+    Parameters
+    ----------
+    out_dir : str
+        Directory holding ``diagnostics_<fit_id>.json`` files. A missing
+        directory gives an empty frame, not an error: a step that has not been
+        refit yet has no diagnostics, and that is a reportable state.
+    fit_id_prefix : str, default ""
+        Keep only fits whose id starts with this. Use it to separate several
+        steps' fits when they share a directory.
+
+    Returns
+    -------
+    DataFrame
+        One row per fit, sorted by ``fit_id``; empty (no columns) when nothing
+        matched.
+    """
+    if not os.path.isdir(out_dir):
+        return pd.DataFrame()
+    rows = []
+    for path in sorted(glob.glob(os.path.join(out_dir, "diagnostics_*.json"))):
+        try:
+            with open(path) as fh:
+                rec = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if fit_id_prefix and not str(rec.get("fit_id", "")).startswith(fit_id_prefix):
+            continue
+        rows.append(rec)
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).sort_values("fit_id").reset_index(drop=True)
+
+
+def summarize_posterior(idata, labels=None, n_obs=None, n_persons=None,
+                        var_names=None):
+    """One tidy row per scalar parameter of one fit.
+
+    The canonical replacement for the near-identical summary blocks that used to
+    live in the sandbox (a07, a09, a09b). Every consumer gets the same column
+    names, so summaries of different fits stack without renaming.
+
+    Non-centered offsets (``*_z``) are dropped: they are an implementation
+    detail of the parameterization, carry no interpretation, and would swamp a
+    table with hundreds of rows.
+
+    Parameters
+    ----------
+    idata : arviz.InferenceData
+        A fit produced by ``fit_bayesian_varx1``.
+    labels : dict, optional
+        Extra constant columns, inserted BEFORE ``param`` so they read as keys
+        (e.g. ``{"covariate_set": "clinical", "model": "C1"}``).
+    n_obs, n_persons : int, optional
+        The fit's sample size, carried as columns so a stacked summary can state
+        what each row was estimated on.
+    var_names : sequence of str, optional
+        Restrict to these parameters. Default is every scalar in the posterior.
+
+    Returns
+    -------
+    DataFrame
+        Columns: [*labels], param, mean, sd, ci_lo_2.5, ci_hi_97.5, P_neg,
+        rhat, ess_bulk, ess_tail, [n_obs], [n_persons].
+
+        ``P_neg`` is P(theta < 0) computed from the draws themselves, not from a
+        normal approximation to the summary. ``ci_lo_2.5``/``ci_hi_97.5`` are
+        equal-tailed percentiles of the draws, matching how every table in the
+        paper reports its 95% credible intervals -- ArviZ's default ``hdi`` is a
+        DIFFERENT interval and would silently change published bounds.
+    """
+    post = idata.posterior
+    summary = az.summary(idata, round_to="none")
+
+    rows = []
+    for name in post.data_vars:
+        if str(name).endswith("_z"):
+            continue
+        if var_names is not None and name not in var_names:
+            continue
+        draws = post[name].values
+        # Scalars only. A vector parameter (u_sp, u_ps) has one entry per person
+        # and belongs in the person-level output, not in a parameter table.
+        if draws.ndim != 2:
+            continue
+        flat = draws.reshape(-1)
+        row = dict(labels) if labels else {}
+        row["param"] = str(name)
+        row["mean"] = float(np.mean(flat))
+        row["sd"] = float(np.std(flat))
+        row["ci_lo_2.5"] = float(np.percentile(flat, 2.5))
+        row["ci_hi_97.5"] = float(np.percentile(flat, 97.5))
+        row["P_neg"] = float((flat < 0).mean())
+        if name in summary.index:
+            row["rhat"] = float(summary.loc[name, "r_hat"])
+            row["ess_bulk"] = float(summary.loc[name, "ess_bulk"])
+            row["ess_tail"] = float(summary.loc[name, "ess_tail"])
+        else:
+            row["rhat"] = row["ess_bulk"] = row["ess_tail"] = np.nan
+        if n_obs is not None:
+            row["n_obs"] = int(n_obs)
+        if n_persons is not None:
+            row["n_persons"] = int(n_persons)
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+#: Historical name. `summarize_posterior` is canonical; this alias exists because
+#: step 10 was written against `tidy_posterior_summary` while step 09 was written
+#: against `summarize_posterior`. One function, two names -- never two functions.
+tidy_posterior_summary = summarize_posterior
 
 
 def run_fit(model, fit_id=None, out_dir=None, progressbar=True, **overrides):
@@ -602,10 +723,101 @@ def add_bivariate_innovations_likelihood(
 # Model Fitting
 # ===================================================================
 
+def build_timevarying(model_df, df_full, raw_long, covars,
+                      standardize=True, binary=False, interpolate=True):
+    """Within-person-centered time-varying covariates and their within-segment lag-1.
+
+    The merged canonical form of the two near-identical builders that used to
+    live in the sandbox (a09's continuous mood/fatigue version and a09b's binary
+    treatment version). They differed in exactly two places -- whether the
+    centered deviations were z-scored, and whether interpolated values were
+    rounded back to {0, 1} -- so those are the two parameters.
+
+    The recipe mirrors how pain and sleep themselves are treated, deliberately:
+    interpolate single interior gaps, subtract the person mean, optionally
+    z-score the pooled within-person deviations, then lag WITHIN
+    ``(ID, segment_id)`` so a lag never crosses a break in a person's run.
+
+    Parameters
+    ----------
+    model_df : DataFrame
+        The transitions being modelled; keyed on (ID, quarter).
+    df_full : DataFrame
+        The full long frame, which is where ``segment_id`` lives. The lag has to
+        be taken on the full frame and merged back: taking it on ``model_df``
+        would shift across the rows that lag-completeness already removed.
+    raw_long : DataFrame
+        The raw item-level frame holding the covariate columns, with ID and
+        quarter. Passed in rather than read from a path, so the same function
+        serves any source frame.
+    covars : dict
+        ``{source_column: output_name}``. The output frame gains
+        ``<name>_within`` and ``<name>_within_lag1`` for each entry.
+    standardize : bool, default True
+        Z-score the within-person deviations (population SD, ``ddof=0``) so a
+        theta is per within-person SD. Set False to keep the raw units, which is
+        what a binary item wants.
+    binary : bool, default False
+        Round interpolated values back to whole numbers, so a 0/1 item cannot
+        acquire a 0.5. Only affects interpolated cells.
+    interpolate : bool, default True
+        Fill single interior gaps (pandas linear, ``limit=1``,
+        ``limit_area="inside"``) exactly as ``step01`` does for the factor
+        scores. Consistency with the primary variables is the point: a covariate
+        that dropped rows the outcome kept would change the sample for a reason
+        that has nothing to do with the adjustment.
+
+    Returns
+    -------
+    DataFrame
+        ``model_df`` with the ``_within`` and ``_within_lag1`` columns merged on.
+        Rows where a covariate was never observed keep NaN; selecting the
+        complete subset is the caller's decision, because which block of
+        covariates must be complete depends on the model being fit.
+    """
+    need = ["ID", "quarter"] + list(covars)
+    missing = [c for c in need if c not in raw_long.columns]
+    if missing:
+        raise KeyError(f"raw frame is missing {missing}")
+    if "segment_id" not in df_full.columns:
+        raise KeyError(
+            "df_full has no segment_id; the lag would silently cross a break "
+            "in a person's run of quarters"
+        )
+
+    raw = raw_long[need].copy().sort_values(["ID", "quarter"])
+
+    if interpolate:
+        for src in covars:
+            filled = raw.groupby("ID")[src].transform(
+                lambda s: s.interpolate(method="linear", limit=1,
+                                        limit_area="inside")
+            )
+            raw[src] = filled.round() if binary else filled
+
+    for src, name in covars.items():
+        w = raw[src] - raw.groupby("ID")[src].transform("mean")
+        raw[f"{name}_within"] = (w - w.mean()) / w.std(ddof=0) if standardize else w
+
+    within = ["ID", "quarter"] + [f"{n}_within" for n in covars.values()]
+    out = model_df.merge(raw[within], on=["ID", "quarter"], how="left")
+
+    src_full = (df_full[["ID", "quarter", "segment_id"]]
+                .merge(raw[within], on=["ID", "quarter"], how="left")
+                .sort_values(["ID", "segment_id", "quarter"]))
+    for n in covars.values():
+        src_full[f"{n}_within_lag1"] = (
+            src_full.groupby(["ID", "segment_id"])[f"{n}_within"].shift(1)
+        )
+    lagged = ["ID", "quarter"] + [f"{n}_within_lag1" for n in covars.values()]
+    return out.merge(src_full[lagged], on=["ID", "quarter"], how="left")
+
+
 def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        X_person=None, include_agesex=True,
                        include_sp=True, include_ps=True,
                        moderator_direction="both",
+                       X_tv=None,
                        idata_kwargs=None,
                        cores=None,
                        progressbar=True,
@@ -655,6 +867,17 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         behavior), and "none" to ignore X entirely. Requires
         ``include_sp=True`` when "sp" or "both"; ``include_ps=True``
         when "ps" or "both". Has no effect when ``X_person is None``.
+    X_tv : sequence of str, optional
+        Column names of TIME-VARYING covariates to adjust for. Each gets a
+        ``theta_p_<col>`` and a ``theta_s_<col>``, both ``N(0, 5)``, entering
+        the pain and sleep linear predictors as main effects. They do NOT touch
+        the coupling slopes: this asks whether lambda survives adjustment, which
+        is a different question from whether the covariate moderates lambda
+        (that is ``X_person``). Columns must exist in ``model_df`` and be
+        complete on every row passed; both are checked, because PyMC would
+        otherwise propagate a NaN into the likelihood and return a NaN
+        log-probability instead of failing.
+        Build the columns with ``build_timevarying``.
     idata_kwargs : dict, optional
         Extra keyword arguments forwarded to ``pm.sample`` via its
         ``idata_kwargs``. Use ``{"log_likelihood": True}`` to compute
@@ -823,10 +1046,39 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
 
         # --- Linear predictors ---
         mu_pain = a0 + a1 * pain_lag + a3 * contrast_lag
+
+        # --- Time-varying covariates, main effects only ---------------------
+        # One theta per covariate per equation, N(0, 5) as for the localization
+        # terms. They enter the LINEAR PREDICTORS only, never the coupling
+        # slopes, so lambda_sp and lambda_ps keep the primary model's meaning
+        # and Table S4 answers "does the coupling survive adjustment?" rather
+        # than estimating a different quantity.
+        tv_cols = list(X_tv) if X_tv else []
+        for col in tv_cols:
+            if col not in model_df.columns:
+                raise KeyError(
+                    f"X_tv names {col!r}, which is not a column of the model "
+                    f"frame. Build the covariate columns with "
+                    f"`build_timevarying` and pass the subset that is complete."
+                )
+            if model_df[col].isna().any():
+                raise ValueError(
+                    f"X_tv column {col!r} has "
+                    f"{int(model_df[col].isna().sum())} missing value(s). "
+                    f"PyMC would propagate the NaN into the likelihood and the "
+                    f"fit would return NaN log-probabilities rather than fail; "
+                    f"restrict the frame to complete rows first."
+                )
+        for col in tv_cols:
+            x_tv = model_df[col].values.astype("float64")
+            mu_pain = mu_pain + pm.Normal(f"theta_p_{col}", mu=0, sigma=5) * x_tv
         if include_sp:
             mu_pain = mu_pain + a2_i * sleep_lag + a4 * sleep_x_contrast
 
         mu_sleep = b0 + b2 * sleep_lag + b3 * contrast_lag
+        for col in tv_cols:
+            x_tv = model_df[col].values.astype("float64")
+            mu_sleep = mu_sleep + pm.Normal(f"theta_s_{col}", mu=0, sigma=5) * x_tv
         if include_ps:
             mu_sleep = mu_sleep + b1_i * pain_lag + b4 * pain_x_contrast
 
@@ -853,6 +1105,143 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
 # ===================================================================
 # LOO-CV Model Comparison
 # ===================================================================
+
+#: which posterior names carry the population slope and the person deviations
+#: for each coupling direction. Naming this once is what lets the ROI loop below
+#: be written for "a direction" rather than twice, once per direction.
+_DIRECTION_VARS = {
+    "sp": {"slope": "a2", "person": "u_sp", "gamma": "gamma_sp"},
+    "ps": {"slope": "b1", "person": "u_ps", "gamma": "gamma_ps"},
+}
+
+
+def fit_roi_moderation_set(roi_df, model_df, unique_ids, id_map,
+                           direction="sp", rois=None,
+                           fit_id_prefix="roi", out_dir=None,
+                           include_agesex=True, progressbar=True,
+                           verbose=True):
+    """Fit one moderation model per ROI and tabulate them.
+
+    The canonical form of the per-ROI loop that steps 14, 17, 19 and 21 all
+    need: take a long ROI frame, fit ``fit_bayesian_varx1`` once per ROI with
+    that ROI's z-scored value as the person-level moderator, and return one
+    tidy row per ROI plus the draws a Johnson-Neyman step needs.
+
+    Parameters
+    ----------
+    roi_df : DataFrame
+        Long, one row per (participant, ROI). Required columns: ``ID``, ``ROI``,
+        ``z_value``. Optional and carried through when present: ``label``,
+        ``framework``, ``mask_type``, ``modality``, ``raw_mean``, ``raw_sd``,
+        ``expected_sign_sp``, ``expected_sign_ps``.
+    model_df, unique_ids, id_map
+        As for ``fit_bayesian_varx1``.
+    direction : {"sp", "ps"}, default "sp"
+        Which coupling slope the ROI moderates. Passed straight through as
+        ``moderator_direction``, so the OTHER direction's gamma is absent from
+        the posterior and its columns come back NaN -- which is the honest
+        result, not a missing one.
+    rois : sequence of str, optional
+        Fit only these, in this order. Default is every ROI in ``roi_df``, in
+        first-appearance order. A name that is not present raises rather than
+        being skipped: a silently dropped ROI silently deletes a published
+        number.
+    fit_id_prefix : str, default "roi"
+        Each fit is recorded as ``<prefix>_<ROI>``, so ``write_diagnostics``
+        leaves one record per ROI and step 22 can find them.
+    out_dir : str, optional
+        Where the per-fit diagnostics go. None writes none.
+
+    Returns
+    -------
+    (fitted, draws) : (DataFrame, dict)
+        ``fitted`` has one row per ROI: ROI, label, framework, mask_type,
+        modality, direction, n_persons, n_obs, rhat_max, the passthrough
+        columns, and for BOTH directions gamma_<d>_mean / _sd / _ci_lo /
+        _ci_hi / _prob_neg / _p.
+
+        ``draws`` is keyed for ``np.savez``: for each ROI,
+        ``<ROI>_<slope>_draws``, ``<ROI>_gamma_<d>_draws``, ``<ROI>_X_vals``,
+        ``<ROI>_u_<d>_mean``, ``<ROI>_raw_mean``, ``<ROI>_raw_sd`` -- the six
+        arrays a Johnson-Neyman curve needs to be redrawn without refitting.
+    """
+    if direction not in _DIRECTION_VARS:
+        raise ValueError(f"direction must be 'sp' or 'ps'; got {direction!r}")
+    names = _DIRECTION_VARS[direction]
+
+    for col in ("ID", "ROI", "z_value"):
+        if col not in roi_df.columns:
+            raise KeyError(f"roi_df has no {col!r} column")
+
+    available = list(dict.fromkeys(roi_df["ROI"]))
+    if rois is None:
+        rois = available
+    else:
+        absent = [r for r in rois if r not in set(available)]
+        if absent:
+            raise KeyError(f"ROI(s) {absent} absent from roi_df; present: {available}")
+
+    passthrough = [c for c in ("label", "framework", "mask_type", "modality",
+                               "raw_mean", "raw_sd",
+                               "expected_sign_sp", "expected_sign_ps")
+                   if c in roi_df.columns]
+
+    rows, draws = [], {}
+    for roi in rois:
+        block = roi_df[roi_df["ROI"] == roi]
+        X_person = dict(zip(block["ID"].astype(str), block["z_value"].values))
+
+        if verbose:
+            label = block["label"].iloc[0] if "label" in block.columns else roi
+            print(f"\n    Fitting: {label}...")
+
+        idata, sub_df, valid_ids = fit_bayesian_varx1(
+            model_df, unique_ids, id_map,
+            X_person=X_person, include_agesex=include_agesex,
+            moderator_direction=direction,
+            progressbar=progressbar,
+            fit_id=f"{fit_id_prefix}_{roi}", out_dir=out_dir,
+        )
+
+        res = extract_results(idata, moderator_name=roi)
+        row = {"ROI": roi, "direction": direction,
+               "n_persons": int(len(valid_ids)), "n_obs": int(len(sub_df)),
+               "rhat_max": float(res.get("rhat_max", np.nan))}
+        for col in passthrough:
+            row[col] = block[col].iloc[0]
+        for d in ("sp", "ps"):
+            g = _DIRECTION_VARS[d]["gamma"]
+            row[f"{g}_mean"] = res.get(f"{g}_mean", np.nan)
+            row[f"{g}_sd"] = res.get(f"{g}_sd", np.nan)
+            row[f"{g}_ci_lo"] = res.get(f"{g}_ci_lo", np.nan)
+            row[f"{g}_ci_hi"] = res.get(f"{g}_ci_hi", np.nan)
+            row[f"{g}_prob_neg"] = res.get(f"{g}_prob_neg", np.nan)
+            row[f"{g}_p"] = two_tail_p(res.get(f"{g}_prob_neg", np.nan))
+        rows.append(row)
+
+        post = idata.posterior
+        draws[f"{roi}_{names['slope']}_draws"] = post[names["slope"]].values.reshape(-1)
+        draws[f"{roi}_{names['gamma']}_draws"] = post[names["gamma"]].values.reshape(-1)
+        draws[f"{roi}_X_vals"] = np.array(
+            [X_person[sid] for sid in valid_ids if sid in X_person])
+        draws[f"{roi}_{names['person']}_mean"] = (
+            post[names["person"]].values.reshape(-1, len(valid_ids)).mean(axis=0))
+        for stat in ("raw_mean", "raw_sd"):
+            if stat in block.columns:
+                draws[f"{roi}_{stat}"] = np.array([block[stat].iloc[0]])
+
+        if verbose:
+            g = names["gamma"]
+            print(f"      N={row['n_persons']}, obs={row['n_obs']}")
+            print(f"      {g} = {row[f'{g}_mean']:+.4f} "
+                  f"[{row[f'{g}_ci_lo']:+.4f}, {row[f'{g}_ci_hi']:+.4f}], "
+                  f"p={row[f'{g}_p']:.3f}")
+            print(f"      R-hat max: {row['rhat_max']:.3f}")
+
+        del idata
+
+    return pd.DataFrame(rows), draws
+
 
 def compute_loo_comparison(data_dir, synthetic=False):
     """Fit four nested coupling-direction models and compare via LOO-CV.
