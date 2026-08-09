@@ -53,7 +53,10 @@ SUPPLEMENT = {
                   "PHQ body map endorsements"),
     "Figure S2": (f"{RESULTS}/supplementary_materials/figure_s2_convergent.png",
                   "Convergent validity"),
-    "Figure S3": (f"{DERIV}/revision/figureS3_sleep_stability_heatmap.png",
+    # Step 06 now renders this; it used to exist only as a sandbox output, so the
+    # supplement's Figure S3 had no pipeline source. The two files are byte-identical,
+    # so this is a provenance change, not a content one.
+    "Figure S3": (f"{RESULTS}/supplementary_materials/figure_s3_sleep_stability_heatmap.png",
                   "Per-quarter stability"),
     "Figure S4": (f"{RESULTS}/supplementary_materials/figure_s3_jn_localization_sp.png",
                   "pain localization moderation"),

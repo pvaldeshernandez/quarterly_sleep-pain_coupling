@@ -61,6 +61,16 @@ LABEL_BEFORE = re.compile(
 #: entry, or a year. Neither is a result.
 YEAR = re.compile(r"^(1[89]\d{2}|20\d{2})$")
 
+#: Numbers inside a formatted CSV cell such as "11.1 (18.6)" or "0.58 (0.66)".
+CELL_NUM = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
+
+#: A test statistic's DEGREES OF FREEDOM, written "F(2,226)" or "t(174)". The 226 is
+#: not a measurement, and NUM sees "2,226" as one thousands-separated number, so this
+#: single construct produced six of the checker's fifteen unmatched reports. The df
+#: are still checkable -- they equal n minus the parameters -- but as a df, not as a
+#: free-standing value.
+DF_PAREN = re.compile(r"\b[Ftχ2]\s*\(\s*\d+\s*,?\s*\d*\s*\)\s*=?")
+
 
 def load_pool():
     """Every value the pipeline produced: the registry, plus all numeric CSV cells."""
@@ -83,12 +93,24 @@ def load_pool():
                 with open(p, newline="") as fh:
                     for row in csv.reader(fh):
                         for cell in row:
-                            cell = cell.strip().replace(",", "")
+                            cell = cell.strip()
+                            bare = cell.replace(",", "")
                             try:
-                                x = float(cell)
-                            except (TypeError, ValueError):
+                                pool.setdefault(round(float(bare), 10), set()).add(rel)
                                 continue
-                            pool.setdefault(round(x, 10), set()).add(rel)
+                            except (TypeError, ValueError):
+                                pass
+                            # A FORMATTED cell — "11.1 (18.6)", "0.58 (0.66)", "3 of 8" —
+                            # is still a published value; step 04's demographics table is
+                            # written that way throughout. Reading only float-parseable
+                            # cells made every such number look sourceless, so the checker
+                            # reported the document as wrong when the pipeline agreed
+                            # with it.
+                            for tok in CELL_NUM.findall(bare):
+                                try:
+                                    pool.setdefault(round(float(tok), 10), set()).add(rel)
+                                except (TypeError, ValueError):
+                                    continue
             except Exception:
                 continue
     for k, v in pool.items():
@@ -166,6 +188,11 @@ def main() -> int:
                 if LABEL_BEFORE.search(text[:m.start()]):
                     continue
                 if YEAR.match(tok):
+                    continue
+                # skip degrees of freedom: "F(2,226)" is one construct, and NUM reads
+                # its "2,226" as a thousands-separated measurement that nothing produces
+                if any(dm.start() <= m.start() < dm.end()
+                       for dm in DF_PAREN.finditer(text)):
                     continue
                 n_tok += 1
                 if val in wl_values:
