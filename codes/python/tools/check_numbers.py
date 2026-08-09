@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import math
 import os
 import re
 import sys
@@ -126,12 +127,36 @@ def whitelist():
     return {}
 
 
+#: A BOUND claim is not a rounded report. "bulk ESS were at least 4,441" is TRUE of a
+#: minimum of 4441.77 and would be FALSE at the rounded 4,442, so the honest figure to
+#: print is the floor -- which a rounding-only check then flags as unsourced. Same in
+#: the other direction for "no more than" / "did not exceed".
+LOWER_BOUND = re.compile(r"\b(at least|no less than|minimum of|or more)\b", re.I)
+UPPER_BOUND = re.compile(r"\b(at most|no more than|did not exceed|under|below)\b", re.I)
+
+
 def matches(value, text, pool, tol_digits):
-    """True when some pooled value rounds to `value` at the document's precision."""
+    """True when some pooled value rounds to `value` at the document's precision.
+
+    A number stated as a BOUND is additionally allowed to be the floor (for a lower
+    bound) or the ceiling (for an upper bound) of a pooled value, because that is the
+    correct way to state it -- rounding a minimum upward would make the claim false.
+    The leniency is context-gated on the wording, so it never applies to an ordinary
+    reported value.
+    """
     if value in pool:
         return True
+    scale = 10 ** tol_digits
+    lower = bool(LOWER_BOUND.search(text))
+    upper = bool(UPPER_BOUND.search(text))
     for stored in pool:
+        if not math.isfinite(stored):
+            continue          # a NaN cell is a real thing in these CSVs, not a value
         if round(stored, tol_digits) == value:
+            return True
+        if lower and math.floor(stored * scale) / scale == value:
+            return True
+        if upper and math.ceil(stored * scale) / scale == value:
             return True
     return False
 
