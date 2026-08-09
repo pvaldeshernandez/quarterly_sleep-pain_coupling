@@ -42,8 +42,10 @@ DERIV_DIR = os.path.join(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step18_ps_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step18_ps_roi_extraction")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
+DATA_DIR = os.path.join(ROOT, "data")
 
 FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step12_fmri_contrasts_masked")
 FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step12_fmri_contrasts_unmasked")
@@ -446,8 +448,71 @@ def run_step18(verbose=True, refit=False):
 
     generate_figure_s6(verbose)
 
+    publish_subsample_demographics(verbose)
+
     if verbose:
         print("=" * 70)
+
+
+def publish_subsample_demographics(verbose=True):
+    """Demographics of the imaging subsamples, so the Results paragraph is checkable.
+
+    The manuscript describes the VBM subsample -- "125 females and 64 males, with a mean
+    age of 58.4 years (SD = 8.3); 84 Non-Hispanic Blacks, 105 Non-Hispanic Whites" -- and
+    the fMRI subsample alongside it. Nothing computed either. The values happen to be
+    right, but the checker could not tell a correct one from a typo, which is the whole
+    point of the registry.
+
+    Derived here rather than in step 04 because step 04 does not know which participants
+    have imaging; this step is where a subsample is defined.
+    """
+    import pandas as pd
+    from analytic_sample import analytic_ids
+
+    analytic = analytic_ids(os.path.join(
+        DERIV_DIR, "step04_varx_data", "step04_processed_long.csv"))
+    baseline = pd.read_csv(
+        os.path.join(DATA_DIR, "step00_extracted_long.csv"),
+        usecols=["ID", "quarter", "age__s1", "gender__s1", "Race__s1"])
+    baseline = baseline[baseline["quarter"] == 0].copy()
+    baseline["ID"] = baseline["ID"].astype(str)
+
+    nums = {}
+    subsamples = {
+        "vbm": OUT_VBM_CSV,
+        "fmri": os.path.join(DERIV_DIR, "step13_sp_roi_values",
+                             "step13_sp_roi_values.csv"),
+    }
+    for tag, path in subsamples.items():
+        if not os.path.exists(path):
+            continue
+        ids = set(pd.read_csv(path, usecols=["ID"])["ID"].astype(str)) & analytic
+        s = baseline[baseline["ID"].isin(ids)]
+        if s.empty:
+            continue
+        # gender is coded 1 = male, 2 = female in this export; Race 1 = Black, 2 = White
+        nums.update({
+            f"n_{tag}_subsample": int(len(ids)),
+            f"{tag}_age_mean": float(s["age__s1"].mean()),
+            f"{tag}_age_sd": float(s["age__s1"].std()),
+            f"n_{tag}_female": int((s["gender__s1"] == 2).sum()),
+            f"n_{tag}_male": int((s["gender__s1"] == 1).sum()),
+            f"n_{tag}_black": int((s["Race__s1"] == 1).sum()),
+            f"n_{tag}_white": int((s["Race__s1"] == 2).sum()),
+        })
+        if verbose:
+            print(f"  {tag} subsample: N = {len(ids)}, age "
+                  f"{s['age__s1'].mean():.1f} (SD {s['age__s1'].std():.1f}), "
+                  f"{int((s['gender__s1'] == 2).sum())} F / "
+                  f"{int((s['gender__s1'] == 1).sum())} M")
+
+    if nums:
+        os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+        from registry import write_numbers
+        path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step18")
+        if verbose:
+            print(f"  Saved numbers ({len(nums)} keys): "
+                  f"{os.path.relpath(path, ROOT)}")
 
 
 def main():
