@@ -51,6 +51,69 @@ BACKUP_DIR = os.path.join(de.SUBMISSION_DIR, "archive",
                           "backup_20260808_before_number_update")
 
 
+def drop_overlaps(edits, dumps, verbose=True):
+    """Remove edits whose anchor OVERLAPS a longer anchor on the same paragraph.
+
+    Two agents reading the same sentence independently propose the same change at
+    different widths: one anchors on `|λps|=0.136`, the other on the bare `0.136`.
+    Both are individually correct and individually unique, so neither an anchor check
+    nor a per-edit verifier can see the problem — but applying both edits the same
+    characters twice, and the second application lands on text the first already
+    rewrote.
+
+    The wider anchor wins: it carries the context that says WHICH quantity is meant,
+    which is the whole reason a bare number is dangerous to match on.
+
+    Returns (kept, dropped).
+    """
+    from collections import defaultdict
+    by_para = defaultdict(list)
+    for e in edits:
+        by_para[(e["file"], int(e["para"]))].append(e)
+
+    kept, dropped = [], []
+    for (f, p), group_ in by_para.items():
+        line = dumps.get(f.replace(".docx", ""), {}).get(p, "")
+        # longest first, so a wide anchor claims its span before a narrow one asks
+        ordered = sorted(group_, key=lambda e: -len(e["old"]))
+        claimed = []
+        for e in ordered:
+            i = line.find(e["old"])
+            if i < 0:
+                kept.append(e)          # resolve() will report it
+                continue
+            span = (i, i + len(e["old"]))
+            if any(span[0] < c[1] and c[0] < span[1] for c in claimed):
+                dropped.append(e)
+                continue
+            claimed.append(span)
+            kept.append(e)
+
+    if verbose and dropped:
+        print(f"\n{len(dropped)} edit(s) dropped as overlapping a wider anchor:")
+        for e in dropped[:10]:
+            print(f"    {e['file']} [{e['para']}] {e['old'][:44]!r}")
+        if len(dropped) > 10:
+            print(f"    ... and {len(dropped) - 10} more")
+    return kept, dropped
+
+
+def load_dumps(dump_dir):
+    """{stem: {para_index: line}} from the accepted-text dumps."""
+    import re
+    out = {}
+    for fn in os.listdir(dump_dir):
+        if not fn.endswith(".txt"):
+            continue
+        d = {}
+        for line in open(os.path.join(dump_dir, fn)):
+            m = re.match(r"\[\s*(\d+)\](EQ|  ) (.*)", line.rstrip("\n"))
+            if m:
+                d[int(m.group(1))] = m.group(3)
+        out[fn[:-4]] = d
+    return out
+
+
 def group(edits):
     """{file: {"text": [...], "equation": {para: [...]}}} — equation edits per paragraph."""
     out = {}
@@ -204,6 +267,11 @@ def gate(names, verbose=True):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--spec", required=True, help="JSON list of verified edits")
+    ap.add_argument("--dumps", help="directory of accepted-text dumps, for the "
+                                    "overlap pre-pass")
+    ap.add_argument("--skip-high-risk", action="store_true",
+                    help="do not apply edits marked risk=high; those change what a "
+                         "SENTENCE claims and are the author's to word")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--quiet", action="store_true")
     a = ap.parse_args()
@@ -213,7 +281,19 @@ def main():
     edits = spec["apply"] if isinstance(spec, dict) else spec
     verbose = not a.quiet
 
-    print(f"{len(edits)} verified edit(s) across "
+    if a.skip_high_risk:
+        held = [e for e in edits if e.get("risk") == "high"]
+        edits = [e for e in edits if e.get("risk") != "high"]
+        if held:
+            print(f"{len(held)} high-risk edit(s) HELD BACK for the author:")
+            for e in held:
+                print(f"    {e['file']} [{e['para']}] {e['old'][:56]!r}")
+                print(f"        {e['reason'][:130]}")
+
+    if a.dumps:
+        edits, _ = drop_overlaps(edits, load_dumps(a.dumps), verbose=verbose)
+
+    print(f"\n{len(edits)} edit(s) to apply across "
           f"{len(set(e['file'] for e in edits))} document(s)")
 
     grouped = group(edits)
