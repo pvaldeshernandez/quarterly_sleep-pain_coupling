@@ -242,6 +242,16 @@ def gate(names, verbose=True):
             ok = False
             continue
 
+        # A document that is NEW in this resubmission carries no revisions at all, by
+        # design (`Doc.UNTRACKED`). Rejecting nothing leaves the edits in place, so its
+        # "base" view legitimately moves and this invariant does not apply to it. The
+        # check is still worth printing — it says how much of the document changed.
+        if name in de.Doc.UNTRACKED:
+            before, after = _view(backup, "accept"), _view(live, "accept")
+            n = sum(1 for a, b in zip(before, after) if a != b)
+            print(f"  {name:34s} untracked by design; {n} paragraph(s) changed")
+            continue
+
         base_before, base_after = _view(backup, "reject"), _view(live, "reject")
         acc_before, acc_after = _view(backup, "accept"), _view(live, "accept")
 
