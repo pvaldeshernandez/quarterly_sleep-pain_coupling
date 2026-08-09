@@ -54,6 +54,13 @@ Item-level descriptives and the canonical item lists.
 - `icc_varcomp(df, value, group)` — One-way random-effects ICC from VARIANCE COMPONENTS, not a variance ratio.
 - `restrict_to_analytic(raw, analytic, by)` — The rows of ``raw`` whose ``by`` key appears in ``analytic``.
 
+### `heatmap.py`
+
+The stability heatmap: one cell per (measure, occasion), carrying r, p and n.
+
+- `fmt_p(p)` — p as printed in a cell: scientific below .001, three decimals above.
+- `render(r, p, n, columns, row_labels, out_path, alpha, vmin, vmax, cbar_label, dpi)` — Draw the grid and save it.
+
 ### `measurement.py`
 
 Measurement-model comparison helpers.
@@ -532,5 +539,6 @@ Did the re-run reproduce the results it was supposed to reproduce?
 
 - `tabular(root)` — {relative path: absolute path} for every CSV under `root`.
 - `compare(a_path, b_path)` — (verdict, detail) for one pair of CSVs.
+  - `numeric(s)` — *(undocumented)*
 - `main()` — *(undocumented)*
 

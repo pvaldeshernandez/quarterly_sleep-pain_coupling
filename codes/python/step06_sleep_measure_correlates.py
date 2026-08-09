@@ -102,6 +102,11 @@ OUT_QUARTER_CSV = os.path.join(STEP_DERIV_DIR, "step06_per_quarter_correlations.
 OUT_STOPBANG_CSV = os.path.join(STEP_DERIV_DIR, "step06_stopbang_summary.csv")
 OUT_GRID_CSV = os.path.join(STEP_DERIV_DIR, "step06_figureS3_grid.csv")
 
+#: Every supplementary figure lands in one directory, named as the supplement numbers
+#: it, so the figure-update tool can pair a file with the caption that guards it.
+SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+OUT_FIGURE_S3 = os.path.join(SUPP_DIR, "figure_s3_sleep_stability_heatmap.png")
+
 #: the coupling model's quarters. The quarterly item is restricted to these in ONE
 #: place; a10b did not filter and a10c/a10e did, which was only harmless because
 #: quarter 0 carries no q13 rating at all. `_load_inputs` asserts that, so the day it
@@ -521,6 +526,24 @@ def run_step06(verbose=True, refit=False):
         stopbang = pd.read_csv(OUT_STOPBANG_CSV,
                                float_precision="round_trip").iloc[0].to_dict()
         grid = pd.read_csv(OUT_GRID_CSV, float_precision="round_trip")
+
+    # ---- Figure S3 ---------------------------------------------------------
+    # Drawn from the grid DATA, on both paths. Until this existed, step 06 computed
+    # the grid and nothing rendered it: the only thing that could draw Figure S3 was
+    # a sandbox script that was never migrated, so the figure in the supplement had
+    # no pipeline source and could not be regenerated.
+    r_grid, p_grid, n_grid = pivot_grid(grid)
+    check_grid(r_grid, p_grid, n_grid)
+    os.makedirs(SUPP_DIR, exist_ok=True)
+    from heatmap import render as render_heatmap
+    fig_path = render_heatmap(
+        r_grid, p_grid, n_grid,
+        columns=COL_LABELS,
+        row_labels=[si.label(v) for v in r_grid.index],
+        out_path=OUT_FIGURE_S3,
+    )
+    if verbose:
+        print(f"  wrote {os.path.relpath(fig_path, ROOT)}")
 
     nums = compute_numbers(grid, per_quarter, stopbang, verbose)
 
