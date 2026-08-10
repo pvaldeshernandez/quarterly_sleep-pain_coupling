@@ -192,8 +192,13 @@ Step 02 — Measurement checks on the published two-factor pain solution.
 Step 02 — External validation of the contrast factor.
 
 - `_load_person_mean_contrast()` — Return DataFrame with columns [ID, K_i] from step01 scored output.
+- `_resolve_kl_column(df)` — Return the Kellgren-Lawrence column present in `df` (from
+  `KL_COLUMN_CANDIDATES`), or None. Shared by the Figure S2 panel and the Spearman text number
+  so both resolve the same column.
 - `generate_figure_s1(verbose)` — Figure S1: body-map endorsement point-biserial correlations.
 - `generate_figure_s2(verbose)` — Figure S2: convergent validity of the contrast factor vs baseline
+  clinical measures; 10 panels, Pearson r for the 9 continuous measures and Spearman rho for the
+  ordinal KL grade (jittered).
 - `generate_text_numbers(verbose)` — Compute and save all convergent validity statistics to
   - `_t(metric, value, note)` — *(undocumented)*
 - `run_step03(verbose, refit)` — *(undocumented)*

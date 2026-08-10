@@ -58,6 +58,20 @@ AREA_LABELS = [
 ]
 KNEE_AREA_COL = "phq_pain_areas___11__s1"  # area 11 = knees
 
+#: Kellgren-Lawrence grade of the index knee. The wide file has used several
+#: spellings across exports, so the column is resolved by search rather than
+#: hardcoded. Figure S2 and the Spearman text number must resolve the SAME
+#: column, hence one list and one resolver shared by both.
+KL_COLUMN_CANDIDATES = [
+    "KL_Index__s1", "kl_index__s1", "kl_grade__s1", "kl_grade_s1",
+    "klg__s1", "KL_grade__s1", "kellgren_lawrence__s1",
+]
+
+
+def _resolve_kl_column(df):
+    """Return the name of the KL-grade column present in `df`, or None."""
+    return next((c for c in KL_COLUMN_CANDIDATES if c in df.columns), None)
+
 
 #: Restrict every validation statistic to the coupling model's analytic sample.
 #:
@@ -208,17 +222,24 @@ def generate_figure_s2(verbose=True):
     df = ki.merge(wide, on="ID", how="inner")
 
     panels = [
-        ("phq_knee_pain_days__s1", "PHQ knee pain days per week"),
-        ("phq_percent_pain__s1", "PHQ % waking day in knee pain"),
-        ("womac_pain__s1", "WOMAC Pain"),
-        ("total_womac__s1", "WOMAC Total"),
-        ("womac_phys_function__s1", "WOMAC Physical Function"),
-        ("womac_stiffness__s1", "WOMAC Stiffness"),
-        ("qst_knee_pain_rating__s1", "Knee pain rating"),
-        ("gcps_pain_intensity__s1", "GCPS pain intensity"),
-        ("gcps_interference__s1", "GCPS pain interference"),
+        ("phq_knee_pain_days__s1", "PHQ knee pain days per week", "pearson"),
+        ("phq_percent_pain__s1", "PHQ % waking day in knee pain", "pearson"),
+        ("womac_pain__s1", "WOMAC Pain", "pearson"),
+        ("total_womac__s1", "WOMAC Total", "pearson"),
+        ("womac_phys_function__s1", "WOMAC Physical Function", "pearson"),
+        ("womac_stiffness__s1", "WOMAC Stiffness", "pearson"),
+        ("qst_knee_pain_rating__s1", "Knee pain rating", "pearson"),
+        ("gcps_pain_intensity__s1", "GCPS pain intensity", "pearson"),
+        ("gcps_interference__s1", "GCPS pain interference", "pearson"),
     ]
-    available_panels = [(c, l) for c, l in panels if c in df.columns]
+
+    # The KL grade is ordinal: Spearman, not Pearson. Same column resolver the
+    # text numbers use, so the figure and the caption's rho cannot diverge.
+    kl_col = _resolve_kl_column(df)
+    if kl_col:
+        panels.append((kl_col, "Kellgren-Lawrence grade", "spearman"))
+
+    available_panels = [(c, l, m) for c, l, m in panels if c in df.columns]
 
     if not available_panels:
         if verbose:
@@ -234,22 +255,32 @@ def generate_figure_s2(verbose=True):
         axes = np.array([axes])
     axes = axes.ravel()
 
-    for i, (col, label) in enumerate(available_panels):
+    for i, (col, label, method) in enumerate(available_panels):
         ax = axes[i]
         tmp = df[["K_i", col]].dropna()
         if len(tmp) < 5:
             ax.set_visible(False)
             continue
         x, y = tmp["K_i"].values, tmp[col].values
-        r, p = sp_stats.pearsonr(x, y)
+        if method == "spearman":
+            r, p = sp_stats.spearmanr(x, y)
+            stat_name = "$\\rho$"
+            # Ordinal grades land on a handful of rows; jitter so density is
+            # visible instead of a few opaque lines.
+            y_plot = y + np.random.default_rng(0).uniform(-0.12, 0.12, len(y))
+        else:
+            r, p = sp_stats.pearsonr(x, y)
+            stat_name = "r"
+            y_plot = y
 
-        ax.scatter(x, y, alpha=0.35, s=18, color="steelblue", edgecolor="none")
+        ax.scatter(x, y_plot, alpha=0.35, s=18, color="steelblue",
+                   edgecolor="none")
         slope, intercept = np.polyfit(x, y, 1)
         xline = np.linspace(x.min(), x.max(), 200)
         ax.plot(xline, intercept + slope * xline, color="firebrick", linewidth=2)
 
         pstr = "p < 0.001" if p < 0.001 else f"p = {p:.3f}"
-        ax.text(0.05, 0.95, f"r = {r:.3f}\n{pstr}\nN = {len(tmp)}",
+        ax.text(0.05, 0.95, f"{stat_name} = {r:.3f}\n{pstr}\nN = {len(tmp)}",
                 transform=ax.transAxes, va="top", ha="left", fontsize=9,
                 bbox=dict(boxstyle="round,pad=0.3", facecolor="wheat",
                           alpha=0.85, edgecolor="gray"))
@@ -426,10 +457,7 @@ def generate_text_numbers(verbose=True):
                       f"p={'<0.001' if p<0.001 else f'{p:.3f}'}, N={len(tmp)}")
 
         # Spearman for KL grade (ordinal)
-        kl_col = next((c for c in ["KL_Index__s1", "kl_index__s1",
-                                    "kl_grade__s1", "kl_grade_s1", "klg__s1",
-                                    "KL_grade__s1", "kellgren_lawrence__s1"]
-                       if c in df_clin.columns), None)
+        kl_col = _resolve_kl_column(df_clin)
         if kl_col:
             tmp = df_clin[["K_i", kl_col]].dropna()
             if len(tmp) >= 5:
