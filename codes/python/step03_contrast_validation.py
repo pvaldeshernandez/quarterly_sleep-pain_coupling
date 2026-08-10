@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 import warnings
 
 import numpy as np
@@ -32,6 +33,11 @@ warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
+
+# lib/ holds the shared helpers; without this the step imports only when
+# something else (run_pipeline.py) has already put lib/ on the path.
+LIB_DIR = os.path.join(HERE, "lib")
+sys.path.insert(0, LIB_DIR)
 DATA_DIR = os.path.join(ROOT, "data")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step03_contrast_validation")

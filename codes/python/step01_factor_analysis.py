@@ -97,6 +97,10 @@ from descriptives import (  # noqa: E402
     BODY_ITEMS, KNEE_ITEMS, PAIN_ITEMS, SLEEP_ITEM,
 )
 
+# Deterministic bivariate normal CDF. See its docstring for why the SciPy one is
+# unusable inside a likelihood that an optimizer descends.
+from measurement import bvn_cdf  # noqa: E402
+
 N_FACTORS = 2
 QUARTERS = list(range(1, 12))  # 1..11
 
@@ -144,20 +148,18 @@ def polychoric_corr_pair(x: np.ndarray, y: np.ndarray) -> float:
         if abs(rho) >= 0.999:
             return 1e10
         ll = 0.0
-        cov = [[1, rho], [rho, 1]]
         for i in range(len(cats_x)):
             for j in range(len(cats_y)):
                 if table[i, j] == 0:
                     continue
+                # bvn_cdf, not stats.multivariate_normal.cdf: the latter integrates by
+                # randomized QMC, which makes THIS log-likelihood noisy and the
+                # optimizer below land somewhere slightly different on every run.
                 p = (
-                    stats.multivariate_normal.cdf(
-                        [tx[i + 1], ty[j + 1]], mean=[0, 0], cov=cov)
-                    - stats.multivariate_normal.cdf(
-                        [tx[i + 1], ty[j]], mean=[0, 0], cov=cov)
-                    - stats.multivariate_normal.cdf(
-                        [tx[i], ty[j + 1]], mean=[0, 0], cov=cov)
-                    + stats.multivariate_normal.cdf(
-                        [tx[i], ty[j]], mean=[0, 0], cov=cov)
+                    bvn_cdf(tx[i + 1], ty[j + 1], rho)
+                    - bvn_cdf(tx[i + 1], ty[j], rho)
+                    - bvn_cdf(tx[i], ty[j + 1], rho)
+                    + bvn_cdf(tx[i], ty[j], rho)
                 )
                 ll += table[i, j] * np.log(max(p, 1e-15))
         return -ll
@@ -652,6 +654,29 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
         print("=" * 70)
         print("STEP 01 — Factor analysis and interpolation")
         print("=" * 70)
+
+    # Without --refit, load the saved solution instead of re-estimating it.
+    #
+    # This is not just a time saving. `calibrate_factor_model` is NOT bit-reproducible:
+    # `polychoric_corr_pair` builds its log-likelihood from
+    # `scipy.stats.multivariate_normal.cdf`, which integrates by randomized
+    # quasi-Monte-Carlo, so L-BFGS-B optimizes a noisy objective and the loadings move a
+    # little on every call. Re-estimating on a replot therefore silently rewrites the
+    # factor scores that every later step reads, and reported numbers drift between runs
+    # that were supposed to change nothing -- the ANOVA F of step 03 moved 17.00 -> 16.52
+    # exactly this way. Recomputing is now something you ask for.
+    if not refit and os.path.exists(OUT_SCORED_CSV) and os.path.exists(OUT_MODEL_JSON):
+        scored = pd.read_csv(OUT_SCORED_CSV)
+        with open(OUT_MODEL_JSON) as fh:
+            model = json.load(fh)
+        if verbose:
+            print(f"  Loaded saved solution: {OUT_SCORED_CSV}")
+            print(f"                         {OUT_MODEL_JSON}")
+            print("  (pass --refit to re-estimate; the polychoric EFA is not "
+                  "bit-reproducible)")
+        return scored, model
+
+    if verbose:
         print(f"  Input:  {IN_LONG_CSV}")
 
     long = pd.read_csv(IN_LONG_CSV)

@@ -71,10 +71,22 @@ def main() -> int:
 
     steps = discover()
     if args.only:
-        keep = {s.strip() for s in args.only.split(",")}
+        # Accept "7" for "07": the step numbers are zero-padded on disk, and a
+        # selection that silently matches nothing is worse than a typo.
+        keep = {s.strip().zfill(2) for s in args.only.split(",") if s.strip()}
+        unknown = keep - {s[0] for s in steps}
+        if unknown:
+            print(f"error: --only names no such step: {', '.join(sorted(unknown))}",
+                  file=sys.stderr)
+            return 2
         steps = [s for s in steps if s[0] in keep]
     else:
-        steps = [s for s in steps if args.start <= s[0] <= args.stop]
+        steps = [s for s in steps
+                 if args.start.zfill(2) <= s[0] <= args.stop.zfill(2)]
+
+    if not steps:
+        print("error: the selection matched no steps", file=sys.stderr)
+        return 2
 
     if args.list:
         for num, name in steps:
@@ -99,11 +111,23 @@ def main() -> int:
             if takes_refit:
                 fn(verbose=verbose, refit=args.refit)
             else:
-                fn()
+                # A step whose only entry point is main() parses sys.argv itself, so
+                # it would see the RUNNER's flags and argparse-exit the whole run.
+                # Hand it the flags it understands and nothing else.
+                argv = sys.argv
+                sys.argv = [name] + (["--refit"] if args.refit else []) \
+                    + ([] if verbose else ["--quiet"])
+                try:
+                    fn()
+                finally:
+                    sys.argv = argv
             dt = time.time() - t0
             results.append((num, name, "ok", dt, ""))
             print(f"[{num}] done in {dt:.1f}s", flush=True)
-        except Exception as exc:                       # noqa: BLE001
+        # SystemExit is a BaseException, so a step that calls sys.exit() -- argparse
+        # does, on any flag it does not recognize -- would otherwise kill the run
+        # without ever reaching the summary.
+        except (Exception, SystemExit) as exc:         # noqa: BLE001
             dt = time.time() - t0
             results.append((num, name, "FAIL", dt, f"{type(exc).__name__}: {exc}"))
             print(f"[{num}] FAILED after {dt:.1f}s: {type(exc).__name__}: {exc}",

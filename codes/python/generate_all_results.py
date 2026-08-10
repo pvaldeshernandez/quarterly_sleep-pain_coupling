@@ -1,104 +1,31 @@
 #!/usr/bin/env python3
-"""
-Regenerate all manuscript results from saved derivatives — no model refitting.
+"""Regenerate all manuscript results — a thin shim over ``run_pipeline.py``.
 
-Calls each step's run function in default (replot) mode, which loads
-saved posterior draws and intermediate outputs to regenerate all figures,
-tables, and text numbers. No MCMC is re-run.
+This script used to hold its own hand-written list of steps to call. That list went
+stale: it named 8 of the 24 steps, so most registries, tables and figures were left
+untouched while it printed "All results regenerated", and it crashed on its first step
+because it put the package directory on ``sys.path`` but not ``lib/``.
 
-To re-run a specific step's computation from scratch, run that step
-individually with the --refit flag:
+Both failure modes came from having a second, hand-maintained ordering. There is now one
+ordering -- ``run_pipeline.discover()``, which reads it off the filenames -- and this
+name is kept only so existing habits and older READMEs keep working.
 
-    python step07_fit_coupling_model.py --refit
+    python generate_all_results.py            # replot from saved derivatives
+    python generate_all_results.py --refit    # recompute everything (hours)
 
-Usage:
-    python generate_all_results.py
-    python generate_all_results.py --quiet
-
-Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
+Prefer ``python run_pipeline.py``, which additionally offers --from/--to/--only/--list.
 """
 from __future__ import annotations
 
-import argparse
 import os
 import sys
-import warnings
 
-warnings.filterwarnings("ignore")
-
-HERE  = os.path.dirname(os.path.abspath(__file__))
-ROOT  = os.path.dirname(os.path.dirname(HERE))
+HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, "lib"))
 
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Regenerate all manuscript results from saved derivatives."
-    )
-    parser.add_argument("--quiet", action="store_true")
-    args = parser.parse_args()
-    verbose = not args.quiet
-
-    if verbose:
-        print("=" * 70)
-        print("GENERATE ALL RESULTS (replot mode — no model refitting)")
-        print("=" * 70)
-        print()
-
-    # Step 02: Factor validation (Figures S1, S2 + text numbers)
-    if verbose:
-        print("\n--- Step 02: Factor validation ---")
-    import step03_contrast_validation as s2
-    s2.run_step03(verbose=verbose)
-
-    # Step 03: VARX data prep (Figure 1 + Table 3 + text numbers)
-    if verbose:
-        print("\n--- Step 03: Data preparation ---")
-    import step04_prepare_varx_data as s3
-    s3.run_step04(verbose=verbose)
-
-    # Step 04: Coupling model (Figures 2-3 + Table 4 + text numbers)
-    if verbose:
-        print("\n--- Step 04: Coupling model figures ---")
-    import step07_fit_coupling_model as s4
-    s4.run_step07(verbose=verbose, refit=False)
-
-    # Step 05: Contrast moderation JN (Figure 4 + Figure S3 + text numbers)
-    if verbose:
-        print("\n--- Step 05: Contrast moderation JN ---")
-    import step11_contrast_moderation as s5
-    s5.run_step11(verbose=verbose, refit=False)
-
-    # Step 07: SP ROI extraction + Figure S4
-    if verbose:
-        print("\n--- Step 07: SP ROI maps (Figure S4) ---")
-    import step13_extract_sp_rois as s7
-    s7.generate_figure_s4(verbose=verbose)
-
-    # Step 09: SP moderation JN (Figures 5, 6, S5 + text numbers)
-    if verbose:
-        print("\n--- Step 09: SP moderation JN ---")
-    import step16_sp_moderation_jn as s9
-    s9.run_step16(verbose=verbose, refit=False)
-
-    # Step 10: PS ROI extraction + Figure S6
-    if verbose:
-        print("\n--- Step 10: PS arousal ROI maps (Figure S6) ---")
-    import step18_extract_ps_rois as s10
-    s10.generate_figure_s6(verbose=verbose)
-
-    # Step 12: PS moderation JN (Figures S7, S8 + text numbers)
-    if verbose:
-        print("\n--- Step 12: PS moderation JN ---")
-    import step20_ps_moderation_jn as s12
-    s12.run_step20(verbose=verbose, refit=False)
-
-    if verbose:
-        print("\n" + "=" * 70)
-        print("All results regenerated from saved derivatives.")
-        print("Figures, tables, and text numbers saved to results/.")
-        print("=" * 70)
+import run_pipeline  # noqa: E402
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(run_pipeline.main())

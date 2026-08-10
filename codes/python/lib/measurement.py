@@ -7,12 +7,79 @@ Functions
 ---------
 tucker_congruence(x, y)
     Tucker's coefficient of congruence between two loading vectors.
+bvn_cdf(h, k, rho)
+    Standard bivariate normal CDF, exactly and deterministically.
 """
 from __future__ import annotations
 
 import numpy as np
+from scipy import special, stats
 
-__all__ = ["tucker_congruence"]
+__all__ = ["tucker_congruence", "bvn_cdf"]
+
+
+def bvn_cdf(h, k, rho):
+    """P(X <= h, Y <= k) for standard bivariate normal with correlation `rho`.
+
+    Why this exists rather than ``scipy.stats.multivariate_normal.cdf``: SciPy
+    integrates the multivariate normal by RANDOMIZED quasi-Monte-Carlo, so the same
+    call returns a slightly different number every time (spread ~1e-6). That is
+    harmless when you want one probability, and corrosive when the value feeds a
+    likelihood that ``optimize.minimize`` then descends -- the optimizer is handed a
+    noisy objective and lands somewhere slightly different on each run. The polychoric
+    correlations, hence the factor loadings, hence every factor score and every number
+    derived from one, drifted between runs for exactly this reason.
+
+    The bivariate case does not need numerical integration. Owen (1956) gives it in
+    closed form through Owen's T function, which SciPy provides exactly
+    (``scipy.special.owens_t``):
+
+        BVN(h, k, r) = [Phi(h) + Phi(k)]/2 - T(h, a_h) - T(k, a_k) - delta
+
+    with a_h = (k - r h) / (h sqrt(1 - r^2)), a_k symmetric, and delta = 1/2 when h and
+    k have opposite signs (0 otherwise).
+
+    Parameters
+    ----------
+    h, k : float
+        Upper limits, in standard-normal units.
+    rho : float
+        Correlation, |rho| < 1. Values at or beyond +-1 are pulled just inside it;
+        the caller's optimizer walks to the boundary and a hard error there would
+        abort a fit over a point it was going to reject anyway.
+
+    Returns
+    -------
+    float
+        The probability. Deterministic: identical arguments give identical bits.
+    """
+    h, k, r = float(h), float(k), float(rho)
+    if abs(r) >= 1.0:
+        r = np.sign(r) * (1.0 - 1e-12)
+
+    # Both limits at the origin: the orthant probability, in closed form.
+    if h == 0.0 and k == 0.0:
+        return 0.25 + np.arcsin(r) / (2.0 * np.pi)
+
+    den = np.sqrt(1.0 - r * r)
+
+    def _a(num, denom_var):
+        # h or k of exactly zero sends the argument to +-infinity, where
+        # T(x, +-inf) = +-arctan(inf)/(2 pi) = +-1/4. owens_t handles the infinity,
+        # but the ratio has to be formed without dividing by zero.
+        if denom_var == 0.0:
+            return np.inf if num > 0 else (-np.inf if num < 0 else 0.0)
+        return num / (denom_var * den)
+
+    a_h = _a(k - r * h, h)
+    a_k = _a(h - r * k, k)
+
+    # delta corrects the quadrant: a half is subtracted when h and k straddle zero.
+    prod = h * k
+    delta = 0.0 if (prod > 0 or (prod == 0.0 and (h + k) >= 0)) else 0.5
+
+    return float(0.5 * (stats.norm.cdf(h) + stats.norm.cdf(k))
+                 - special.owens_t(h, a_h) - special.owens_t(k, a_k) - delta)
 
 
 def tucker_congruence(x, y):
