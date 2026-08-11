@@ -13,10 +13,10 @@ Inputs:
       Smoothed, normalised 4D functional time series.
 
 Outputs (per subject, per variant):
-  derivatives/step12_fmri_contrasts_masked/<subj>/
+  derivatives/step13_fmri_contrasts/masked/<subj>/
       con_0001.nii   — contrast image (stimulation > baseline), GM-masked
       beta_*.nii     — beta images, GM-masked
-  derivatives/step12_fmri_contrasts_unmasked/<subj>/
+  derivatives/step13_fmri_contrasts/unmasked/<subj>/
       con_0001.nii   — contrast image, whole-brain (no mask)
       beta_*.nii     — beta images, whole-brain
 
@@ -57,8 +57,12 @@ DERIV_DIR = os.path.join(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step13")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
-OUT_MASKED   = os.path.join(DERIV_DIR, "step13_fmri_contrasts_masked")
-OUT_UNMASKED = os.path.join(DERIV_DIR, "step13_fmri_contrasts_unmasked")
+#: One folder per step, subfolders inside it. The two mask variants are two kinds of
+#: output from ONE step, not two steps, so they are subdirectories rather than
+#: sibling stepNN_* folders.
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step13_fmri_contrasts")
+OUT_MASKED   = os.path.join(STEP_DERIV_DIR, "masked")
+OUT_UNMASKED = os.path.join(STEP_DERIV_DIR, "unmasked")
 
 GM_MASK_FNAME = "sUPLOAD2_T1w__gm-2mm-binarized(0.25).nii"
 

@@ -52,7 +52,10 @@ IN_VBM_CSV = os.path.join(DERIV_DIR, "step20_ps_roi_values", "step20_ps_vbm_roi_
 
 OUT_FMRI_DRAWS = os.path.join(STEP_DERIV_DIR, "step21_ps_fmri_posterior_draws.npz")
 OUT_VBM_DRAWS = os.path.join(STEP_DERIV_DIR, "step21_ps_vbm_posterior_draws.npz")
-SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+#: A step writes into its OWN results folder. tools/collect_deliverables.py
+#: copies what the documents need into results/manuscript/ and
+#: results/supplementary_materials/ under their document-facing names.
+SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FMRI_TABLE = os.path.join(SUPP_DIR, "table_s1_fmri_arousal.csv")
 OUT_VBM_TABLE = os.path.join(SUPP_DIR, "table_s1_vbm_arousal.csv")

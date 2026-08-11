@@ -2,13 +2,13 @@
 Step 07 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
 ======================================================================
 
-Input:  derivatives/step13_fmri_contrasts_masked/   (NAcc ROIs)
-        derivatives/step13_fmri_contrasts_unmasked/ (all other ROIs)
+Input:  derivatives/step13_fmri_contrasts/masked/   (NAcc ROIs)
+        derivatives/step13_fmri_contrasts/unmasked/ (all other ROIs)
         MNI152 template (via nilearn, for Figure S4)
 Output:
   derivatives/step14_sp_roi_values/
     step14_sp_roi_values.csv    — per-subject z-scored ROI values
-  results/supplementary_materials/
+  results/<this step>/
     figure_stim_rois.png    — Figure S4: ROI brain maps
 
 Extracts mean fMRI BOLD contrast (stimulation > baseline) within
@@ -44,7 +44,10 @@ DERIV_DIR = os.path.join(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step14_sp_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+#: A step writes into its OWN results folder. tools/collect_deliverables.py
+#: copies what the documents need into results/manuscript/ and
+#: results/supplementary_materials/ under their document-facing names.
+SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
@@ -54,8 +57,8 @@ OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step14_sp_roi_values.csv")
 OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_stim_rois.png")
 
 # Contrast image directories from Step 06
-FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step13_fmri_contrasts_masked")
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step13_fmri_contrasts_unmasked")
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step13_fmri_contrasts", "masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step13_fmri_contrasts", "unmasked")
 
 # Stimulation-side inputs (for contralateralized ROIs: S1, Middle Insula)
 DATA_DIR = os.path.join(ROOT, "data")

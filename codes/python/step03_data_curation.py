@@ -34,11 +34,15 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 import warnings
 from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+from registry import write_numbers  # noqa: E402
 
 warnings.filterwarnings("ignore")
 
@@ -432,6 +436,25 @@ def run_step03(verbose: bool = True, refit: bool = False):
     generate_figure1(df_out, df_full, OUT_FIGURE1)
     if verbose:
         print(f"  Saved: {OUT_FIGURE1}")
+
+    # The curation counts the Results state directly. They were previously readable only
+    # from step 07's timepoint summary, which is a different step describing a different
+    # frame -- so "229 participants" had no named value of its own to be checked against.
+    n_before = int(df_full["ID"].nunique())
+    n_after = int(df_out["ID"].nunique())
+    nums = {
+        "n_participants_scored": n_before,
+        "n_participants_retained": n_after,
+        "n_participants_excluded": n_before - n_after,
+        "n_person_quarters_retained": int(len(df_out)),
+        "n_segments": int(df_out.groupby(["ID", "segment_id"]).ngroups),
+        "min_segment_length": int(MIN_SEGMENT),
+    }
+    if "interpolated" in df_out.columns:
+        nums["n_interpolated_rows_retained"] = int(df_out["interpolated"].sum())
+    path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step03")
+    if verbose:
+        print(f"  Wrote {len(nums)} numbers: {path}")
         print("\n" + "=" * 70)
         print("STEP 03 COMPLETE")
         print("=" * 70)

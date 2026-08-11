@@ -35,7 +35,10 @@ DERIV_DIR = os.path.join(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step23_severity_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+#: A step writes into its OWN results folder. tools/collect_deliverables.py
+#: copies what the documents need into results/manuscript/ and
+#: results/supplementary_materials/ under their document-facing names.
+SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")

@@ -2,15 +2,15 @@
 Step 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
 ======================================================================
 
-Input:  derivatives/step13_fmri_contrasts_masked/   (LH ROI)
-        derivatives/step13_fmri_contrasts_unmasked/ (all other fMRI ROIs)
+Input:  derivatives/step13_fmri_contrasts/masked/   (LH ROI)
+        derivatives/step13_fmri_contrasts/unmasked/ (all other fMRI ROIs)
         data/original/vbm/, data/atlases/
         MNI152 template (via nilearn, for Figure S6)
 Output:
   derivatives/step20_ps_roi_values/
     step20_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
     step20_ps_vbm_roi_values.csv    — per-subject VBM GM volume z-scored ROI values
-  results/supplementary_materials/
+  results/<this step>/
     figure_arousal_rois.png      — Figure S6: arousal ROI brain maps
 
 Extracts probability-weighted mean fMRI BOLD and VBM GM volume
@@ -48,12 +48,15 @@ STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step20_ps_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step20_ps_roi_extraction")
-SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+#: A step writes into its OWN results folder. tools/collect_deliverables.py
+#: copies what the documents need into results/manuscript/ and
+#: results/supplementary_materials/ under their document-facing names.
+SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 DATA_DIR = os.path.join(ROOT, "data")
 
-FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step13_fmri_contrasts_masked")
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step13_fmri_contrasts_unmasked")
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step13_fmri_contrasts", "masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step13_fmri_contrasts", "unmasked")
 VBM_DIR   = os.path.join(ROOT, "data", "original", "vbm")
 ATLAS_DIR = os.path.join(ROOT, "data", "atlases")
 

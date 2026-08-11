@@ -143,6 +143,19 @@ def main() -> int:
         flag = "ok  " if status == "ok" else "FAIL"
         print(f"  {flag}  {num}  {name:42s} {dt:7.1f}s  {err[:60]}")
     n_ok = sum(1 for r in results if r[2] == "ok")
+
+    # Collect the deliverables into the two document folders. Not a step: it computes
+    # nothing, it only gathers what the steps produced under the names the documents use.
+    if not args.only and n_ok == len(results):
+        print(f"\n{'-' * 72}\n[--] collect deliverables\n{'-' * 72}", flush=True)
+        try:
+            import subprocess
+            subprocess.run([sys.executable,
+                            os.path.join(HERE, "tools", "collect_deliverables.py")],
+                           check=False)
+        except Exception as exc:                       # noqa: BLE001
+            print(f"  collector failed: {type(exc).__name__}: {exc}")
+
     print(f"\n{n_ok}/{len(results)} step(s) succeeded in {time.time() - t_all:.1f}s")
     return 0 if n_ok == len(results) else 1
 

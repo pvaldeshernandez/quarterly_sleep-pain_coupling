@@ -104,7 +104,10 @@ OUT_GRID_CSV = os.path.join(STEP_DERIV_DIR, "step06_figureS3_grid.csv")
 
 #: Every supplementary figure lands in one directory, named as the supplement numbers
 #: it, so the figure-update tool can pair a file with the caption that guards it.
-SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+#: A step writes into its OWN results folder. tools/collect_deliverables.py
+#: copies what the documents need into results/manuscript/ and
+#: results/supplementary_materials/ under their document-facing names.
+SUPP_DIR = STEP_RESULTS_DIR
 OUT_FIGURE_S3 = os.path.join(SUPP_DIR, "figure_sleep_stability_heatmap.png")
 
 #: the coupling model's quarters. The quarterly item is restricted to these in ONE

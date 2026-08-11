@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 """
-Step 15 — Imaging quality control, and the nuisance-adjusted sleep-to-pain moderation.
-======================================================================================
+Step 15 — Imaging quality control of the fMRI subsample (Section S9).
+=====================================================================
 
-Two things that share one sample and one set of covariates, which is why they are one
-step rather than the four sandbox scripts they replace (a04, a06b, a06c, a06d):
+Head motion (framewise displacement read from each participant's SPM design matrix),
+scanner site, and the maximum pain rating evoked during the fMRI run -- plus how each of
+those tracks the eight sleep-to-pain ROI values.
 
-  1. QUALITY CONTROL of the fMRI subsample — head motion (framewise displacement read
-     from each participant's SPM design matrix), scanner site, and the maximum pain
-     rating evoked during the fMRI run — plus how each of those tracks the eight
-     sleep-to-pain ROI values.
-  2. SENSITIVITY of the moderation estimates to those same three nuisances: each of the
-     four Table S8 ROIs is refit with its moderator residualized on site, on evoked
-     pain, on mean framewise displacement, and on all three jointly. 4 ROIs x 4 schemes
-     = 16 fits.
+The sixteen nuisance-adjusted refits that used to live here moved to STEP 18 on 11 Aug
+2026. They read Table 5 for their unadjusted column, so keeping them here dragged this QC
+after the moderation fits, while the paper reports it under "Final MRI samples", before
+them. `prepare_inputs()` is the setup both steps share; step 18 imports it rather than
+repeating it, so the two sample definitions cannot drift apart.
 
 SAMPLE. Every DESCRIPTIVE is computed on the fitted fMRI subsample — the intersection
 of the ROI table with the analytic sample, N = 174 — not on the 188 rows of the ROI
@@ -233,9 +231,16 @@ def absmax_other(per_roi, named):
 # Step
 # ======================================================================
 
-def run_step15(verbose=True, refit=False):
-    """Imaging QC descriptives + the 16 nuisance-adjusted moderation fits."""
-    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
+
+def prepare_inputs(verbose=True, refit=False):
+    """ROI values, samples and nuisance covariates — shared with step 18.
+
+    Returns a dict. `fmri_ids` (N=174) is the fitted subsample every DESCRIPTIVE
+    is computed on; `roi_maps` is keyed over the full ROI table (188 rows, 182 for
+    the two contralateralized ROIs), which is the base step 14 z-scored the
+    unadjusted moderator over. Table S8 stays comparable to Table 5 only if the
+    residualization uses that same base, so both live here in one definition.
+    """
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
     if verbose:
@@ -322,6 +327,30 @@ def run_step15(verbose=True, refit=False):
     nums["n_spm_dirs"] = int(n_spm_dirs)
     nums["n_spm_read_failures"] = int(n_failures)
     nums["n_motion_qc"] = int(len(motion))
+
+    return dict(nums=nums, rois=rois, roi_df=roi_df, roi_maps=roi_maps,
+                roi_ids=roi_ids,
+                fmri_ids=fmri_ids, analytic_ids=analytic_ids,
+                site_map=site_map, pain_map=pain_map, fd_map=fd_map,
+                motion=motion, df_full=df_full, model_df=model_df,
+                unique_ids=unique_ids, id_map=id_map)
+
+
+def run_step15(verbose=True, refit=False):
+    """Imaging QC descriptives for the fMRI subsample."""
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+    if verbose:
+        print("=" * 70)
+        print("STEP 15 — Imaging quality control")
+        print("=" * 70)
+
+    ctx = prepare_inputs(verbose=verbose, refit=refit)
+    nums = ctx["nums"]
+    rois, roi_maps = ctx["rois"], ctx["roi_maps"]
+    fmri_ids, motion = ctx["fmri_ids"], ctx["motion"]
+    roi_ids = ctx["roi_ids"]
+    site_map, pain_map, fd_map = ctx["site_map"], ctx["pain_map"], ctx["fd_map"]
 
     # ------------------------------------------------------------------
     # QC descriptives — all on the 174-participant fMRI subsample
@@ -425,157 +454,10 @@ def run_step15(verbose=True, refit=False):
               f"ROIs differing at p<.05 — {nums['site_diff_n_credible_8roi']}/8 "
               f"(all eight), {nums['site_diff_n_credible_tableS8']}/4 (Table S8)")
 
-    # ------------------------------------------------------------------
-    # The 16 nuisance-adjusted fits
-    # ------------------------------------------------------------------
-    covmaps = {"site": [site_map], "pain": [pain_map], "motion": [fd_map],
-               "all3": [site_map, pain_map, fd_map]}
-
-    have_fits = os.path.exists(OUT_DRAWS_NPZ) and os.path.exists(OUT_TABLE_S8_CSV)
-    if not refit and not have_fits:
-        if verbose:
-            print("  Saved fits not found — forcing refit of the 16 models.")
-        refit_fits = True
-    else:
-        refit_fits = refit
-
-    if not refit_fits:
-        # ------ LOAD MODE ------
-        if verbose:
-            print("  WARNING: Running in load mode -- using saved posterior draws.")
-            print("  If you have changed upstream data or code, re-run with --refit.")
-        table_s8 = pd.read_csv(OUT_TABLE_S8_CSV)
-        draws = dict(np.load(OUT_DRAWS_NPZ, allow_pickle=False))
-    else:
-        # ------ FULL MCMC: 4 ROIs x 4 schemes ------
-        pub = pd.read_csv(IN_TABLE5_CSV).set_index("ROI")
-        draws, table_rows = {}, []
-        for roi in TABLE_S8_ROIS:
-            mod = roi_maps[roi]
-            ids = list(mod)
-            z = np.array([mod[i] for i in ids], dtype=float)
-            row = {"ROI": roi, "n_resid_sample": len(ids)}
-            for col, key in (("gamma_sp_unadjusted", "gamma_sp"),
-                             ("ci_lo_unadjusted", "gamma_sp_ci_lo"),
-                             ("ci_hi_unadjusted", "gamma_sp_ci_hi"),
-                             ("p_unadjusted", "gamma_sp_p")):
-                row[col] = float(pub.at[roi, key]) if key in pub.columns else np.nan
-
-            for scheme in SCHEMES:
-                resid, ok = residualize(ids, z, covmaps[scheme])
-                X_person = {i: float(v) for i, v, k in zip(ids, resid, ok) if k}
-                fit_id = f"step15_{scheme}_{roi}"
-                if verbose:
-                    print(f"\n  Fitting {fit_id} "
-                          f"(moderator residualized on {scheme}, "
-                          f"n = {len(X_person)} with covariates)...")
-
-                idata, sub_df, valid_ids = fit_bayesian_varx1(
-                    model_df, unique_ids, id_map,
-                    X_person=X_person,
-                    include_agesex=True,
-                    moderator_direction="sp",
-                    progressbar=False,
-                    fit_id=fit_id, out_dir=STEP_DERIV_DIR,
-                )
-                res = extract_results(idata, moderator_name=roi)
-                g_mean = res.get("gamma_sp_mean", np.nan)
-                g_lo = res.get("gamma_sp_ci_lo", np.nan)
-                g_hi = res.get("gamma_sp_ci_hi", np.nan)
-                g_p = two_tail_p(res.get("gamma_sp_prob_neg", np.nan))
-
-                row[f"gamma_sp_{scheme}"] = g_mean
-                row[f"ci_lo_{scheme}"] = g_lo
-                row[f"ci_hi_{scheme}"] = g_hi
-                row[f"p_{scheme}"] = g_p
-                row[f"n_persons_{scheme}"] = int(len(valid_ids))
-                row[f"n_obs_{scheme}"] = int(len(sub_df))
-                row[f"n_resid_ok_{scheme}"] = int(ok.sum())
-
-                stem = f"{roi}_{scheme}"
-                draws[f"{stem}_gamma_sp_draws"] = \
-                    idata.posterior["gamma_sp"].values.flatten()
-                # The adjusted moderator itself, in fit order: without it the
-                # residualization cannot be checked afterwards from saved output.
-                draws[f"{stem}_X_vals"] = np.array(
-                    [X_person[s] for s in valid_ids], dtype=float)
-                draws[f"{stem}_n_persons"] = np.array([len(valid_ids)])
-
-                if verbose:
-                    print(f"    gamma_sp = {g_mean:+.4f} [{g_lo:+.4f}, {g_hi:+.4f}], "
-                          f"p = {g_p:.4f}, N = {len(valid_ids)}")
-                del idata
-
-            table_rows.append(row)
-
-        table_s8 = pd.DataFrame(table_rows)
-        table_s8.to_csv(OUT_TABLE_S8_CSV, index=False)
-        np.savez(OUT_DRAWS_NPZ, **draws)
-        if verbose:
-            print(f"\n  Saved Table S8 data: {OUT_TABLE_S8_CSV}")
-            print(f"  Saved draws: {OUT_DRAWS_NPZ}")
-
-    # The NPZ is the provenance of the table: one gamma_sp draw array per fit.
-    expected_draws = [f"{roi}_{scheme}_gamma_sp_draws"
-                      for roi in TABLE_S8_ROIS for scheme in SCHEMES]
-    missing_draws = [k for k in expected_draws if k not in draws]
-    if missing_draws:
-        raise ValueError(f"{OUT_DRAWS_NPZ} is missing draws for: {missing_draws}")
-    nums["n_draws_per_fit"] = int(len(draws[expected_draws[0]]))
-
-    # numbers from the table, identically on both paths
-    n_persons_seen = []
-    for _, row in table_s8.iterrows():
-        roi = row["ROI"]
-        for scheme in SCHEMES:
-            nums[f"gamma_sp_{roi}_{scheme}"] = float(row[f"gamma_sp_{scheme}"])
-            nums[f"gamma_sp_p_{roi}_{scheme}"] = float(row[f"p_{scheme}"])
-            nums[f"gamma_sp_ci_lo_{roi}_{scheme}"] = float(row[f"ci_lo_{scheme}"])
-            nums[f"gamma_sp_ci_hi_{roi}_{scheme}"] = float(row[f"ci_hi_{scheme}"])
-            nums[f"n_resid_ok_{roi}_{scheme}"] = int(row[f"n_resid_ok_{scheme}"])
-            n_persons_seen.append(int(row[f"n_persons_{scheme}"]))
-    nums["n_fits"] = len(n_persons_seen)
-    nums["n_persons_fit_min"] = int(min(n_persons_seen))
-    nums["n_persons_fit_max"] = int(max(n_persons_seen))
-    nums["n_persons_fit"] = int(max(set(n_persons_seen), key=n_persons_seen.count))
-    if nums["n_persons_fit_min"] != nums["n_persons_fit_max"] and verbose:
-        print(f"  WARNING: the 16 fits do not share one N "
-              f"({nums['n_persons_fit_min']}-{nums['n_persons_fit_max']}); "
-              f"'N = 174 throughout' would be false.")
-
-    # ------------------------------------------------------------------
-    # Diagnostics of the 16 fits (written by run_fit; aggregated here)
-    # ------------------------------------------------------------------
-    diag = read_diagnostics(STEP_DERIV_DIR, fit_id_prefix="step15_")
-    if (diag is None or len(diag) == 0) and os.path.exists(OUT_DIAG_CSV):
-        diag = pd.read_csv(OUT_DIAG_CSV)
-    if diag is not None and len(diag):
-        diag.to_csv(OUT_DIAG_CSV, index=False)
-        # "all-parameter" flavor: run_fit's rhat_max/ess_* are computed over every
-        # parameter except the non-centered offsets. Step 22 must read the same
-        # columns, or the paper's two diagnostics sentences will disagree.
-        nums["n_fit_records"] = int(len(diag))
-        nums["rhat_max_all_16"] = float(diag["rhat_max"].max())
-        nums["rhat_max_all_16_fit"] = str(diag.loc[diag["rhat_max"].idxmax(), "fit_id"])
-        nums["ess_bulk_min_all_16"] = float(diag["ess_bulk_min"].min())
-        nums["ess_bulk_min_all_16_fit"] = str(
-            diag.loc[diag["ess_bulk_min"].idxmin(), "fit_id"])
-        nums["ess_tail_min_all_16"] = float(diag["ess_tail_min"].min())
-        nums["ess_tail_min_all_16_fit"] = str(
-            diag.loc[diag["ess_tail_min"].idxmin(), "fit_id"])
-        nums["n_divergences_16"] = int(diag["divergences"].sum())
-        if "bfmi_min" in diag.columns:
-            nums["bfmi_min_16"] = float(diag["bfmi_min"].min())
-        if verbose:
-            print(f"  Diagnostics over {len(diag)} fit(s): "
-                  f"R-hat <= {nums['rhat_max_all_16']:.4f}, "
-                  f"bulk ESS >= {nums['ess_bulk_min_all_16']:.0f}, "
-                  f"tail ESS >= {nums['ess_tail_min_all_16']:.0f}, "
-                  f"{nums['n_divergences_16']} divergence(s)")
-    elif verbose:
-        print("  WARNING: no diagnostics records for step 15 — the Table S8 note's "
-              "R-hat/ESS/divergence numbers cannot be published. Re-run with --refit.")
-
+    # n_resid_sample_* describes the base the RESIDUALIZATION uses, which is step 18's
+    # concern, not this step's. It is computed here because prepare_inputs builds the ROI
+    # maps, but step 18 publishes it -- one quantity, one owner, one registry.
+    nums = {k: v for k, v in nums.items() if not k.startswith("n_resid_sample_")}
     path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step15")
     if verbose:
         print(f"\n  Wrote {len(nums)} numbers: {path}")
@@ -586,17 +468,13 @@ def run_step15(verbose=True, refit=False):
 
 
 def main():
-    ap = argparse.ArgumentParser(
-        description="Step 15 — imaging QC and nuisance-adjusted SP moderation."
-    )
-    ap.add_argument("--refit", action="store_true",
-                    help="rescan SPM.mat and re-run the 16 fits instead of "
-                         "loading saved derivatives")
+    ap = argparse.ArgumentParser(description="Step 15 — Imaging quality control.")
     ap.add_argument("--quiet", action="store_true")
-    args = ap.parse_args()
-    run_step15(verbose=not args.quiet, refit=args.refit)
-    return 0
+    ap.add_argument("--refit", action="store_true",
+                    help="rescan every SPM.mat instead of loading the saved motion table")
+    a = ap.parse_args()
+    run_step15(verbose=not a.quiet, refit=a.refit)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

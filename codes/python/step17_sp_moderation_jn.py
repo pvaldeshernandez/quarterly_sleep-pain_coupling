@@ -45,7 +45,10 @@ IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation", "step16_table5
 OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step17_jn_sp_results.csv")
 OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step17_figure5_jn_nacc.png")
 OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step17_figure6_jn_acc.png")
-SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
+#: A step writes into its OWN results folder. tools/collect_deliverables.py
+#: copies what the documents need into results/manuscript/ and
+#: results/supplementary_materials/ under their document-facing names.
+SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FIG_S5 = os.path.join(SUPP_DIR, "figure_krause_jn.png")
 OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step17_text_numbers.csv")
