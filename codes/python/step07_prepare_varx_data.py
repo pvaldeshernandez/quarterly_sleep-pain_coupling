@@ -243,7 +243,12 @@ def run_step07(verbose: bool = True, refit: bool = False):
             f"{IN_CURATED_CSV} does not exist. Run step 03 first -- it defines the "
             f"analytic sample this step centers and lags.")
 
-    df = pd.read_csv(IN_CURATED_CSV)
+    # float_precision="round_trip": pandas' DEFAULT csv parser is a fast one that can be
+    # off by 1 ULP. That did not matter before the split, when the frame was built in a
+    # single pass in memory; now the curated sample makes an extra trip through disk, and
+    # a 4.4e-16 difference on eleven rows was enough for NUTS to take a different
+    # trajectory and move step10 and step15 in the third decimal.
+    df = pd.read_csv(IN_CURATED_CSV, float_precision="round_trip")
     if verbose:
         print(f"  Loaded: {len(df):,} rows, {df['ID'].nunique()} subjects")
 
