@@ -11,7 +11,7 @@ Output:
     step18_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
     step18_ps_vbm_roi_values.csv    — per-subject VBM GM volume z-scored ROI values
   results/supplementary_materials/
-    figure_s6_arousal_rois.png      — Figure S6: arousal ROI brain maps
+    figure_arousal_rois.png      — Figure S6: arousal ROI brain maps
 
 Extracts probability-weighted mean fMRI BOLD and VBM GM volume
 from 5 atlas-defined arousal relay ROIs (Lynch et al. 2025):
@@ -59,7 +59,7 @@ ATLAS_DIR = os.path.join(ROOT, "data", "atlases")
 
 OUT_FMRI_CSV = os.path.join(STEP_DERIV_DIR, "step18_ps_fmri_roi_values.csv")
 OUT_VBM_CSV = os.path.join(STEP_DERIV_DIR, "step18_ps_vbm_roi_values.csv")
-OUT_FIG_S6 = os.path.join(SUPP_DIR, "figure_s6_arousal_rois.png")
+OUT_FIG_S6 = os.path.join(SUPP_DIR, "figure_arousal_rois.png")
 
 AROUSAL_ROIS = {
     "PBN": {

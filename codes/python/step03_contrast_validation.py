@@ -12,8 +12,8 @@ Input:
   data/original/participants_wideformat.xlsx     — WOMAC, PHQ, KL grade
 
 Output (results/step03/):
-  step03_figure_s1_endorsement.png  — Figure S1: point-biserial bar chart
-  step03_figure_s2_convergent.png   — Figure S2: scatter plots vs clinical
+  step03_figure_endorsement.png  — Figure S1: point-biserial bar chart
+  step03_figure_convergent.png   — Figure S2: scatter plots vs clinical
   step03_text_numbers.csv           — ANOVA, Tukey, point-biserial (FDR),
                                      Pearson/Spearman correlations
 
@@ -53,8 +53,8 @@ IN_WIDE_XLSX = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx"
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 
-OUT_FIG_S1 = os.path.join(SUPP_DIR, "figure_s1_endorsement.png")
-OUT_FIG_S2 = os.path.join(SUPP_DIR, "figure_s2_convergent.png")
+OUT_FIG_S1 = os.path.join(SUPP_DIR, "figure_endorsement.png")
+OUT_FIG_S2 = os.path.join(SUPP_DIR, "figure_convergent.png")
 OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step03_text_numbers.csv")
 
 AREA_LABELS = [

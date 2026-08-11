@@ -9,7 +9,7 @@ Output:
   derivatives/step13_sp_roi_values/
     step13_sp_roi_values.csv    — per-subject z-scored ROI values
   results/supplementary_materials/
-    figure_s4_stim_rois.png    — Figure S4: ROI brain maps
+    figure_stim_rois.png    — Figure S4: ROI brain maps
 
 Extracts mean fMRI BOLD contrast (stimulation > baseline) within
 8 spherical ROIs for the Sleep-to-Pain moderation analysis:
@@ -51,7 +51,7 @@ LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
 OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step13_sp_roi_values.csv")
-OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_s4_stim_rois.png")
+OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_stim_rois.png")
 
 # Contrast image directories from Step 06
 FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step12_fmri_contrasts_masked")

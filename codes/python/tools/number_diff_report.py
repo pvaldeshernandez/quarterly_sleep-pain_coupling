@@ -30,7 +30,7 @@ import pandas as pd
 HERE = os.path.dirname(os.path.abspath(__file__))
 CODE = os.path.dirname(HERE)
 ROOT = os.path.dirname(os.path.dirname(CODE))
-sys.path.insert(0, os.path.join(CODE, "revision"))
+sys.path.insert(0, os.path.join(CODE, "lib"))
 
 RESULTS = os.path.join(ROOT, "results")
 OUT = os.path.join(ROOT, "docs/plans/number_diff_report.md")

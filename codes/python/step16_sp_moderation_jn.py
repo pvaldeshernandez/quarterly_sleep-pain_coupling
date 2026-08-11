@@ -10,7 +10,7 @@ Output:
   results/
     step16_figure5_jn_nacc.png            — Figure 5: Left NAcc JN
     step16_figure6_jn_acc.png             — Figure 6: ACC JN (Right + Left, 2 panels)
-    step16_figure_s5_krause_jn.png        — Figure S5: 4 non-sig Krause JN
+    step16_figure_krause_jn.png        — Figure S5: 4 non-sig Krause JN
     step16_text_numbers.csv               — JN boundaries, % sample, slopes
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
@@ -47,7 +47,7 @@ OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step16_figure5_jn_nacc.png")
 OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step16_figure6_jn_acc.png")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
-OUT_FIG_S5 = os.path.join(SUPP_DIR, "figure_s5_krause_jn.png")
+OUT_FIG_S5 = os.path.join(SUPP_DIR, "figure_krause_jn.png")
 OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step16_text_numbers.csv")
 
 # ROI for Figure 5 (single panel)

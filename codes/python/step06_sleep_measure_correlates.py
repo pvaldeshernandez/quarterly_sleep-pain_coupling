@@ -105,7 +105,7 @@ OUT_GRID_CSV = os.path.join(STEP_DERIV_DIR, "step06_figureS3_grid.csv")
 #: Every supplementary figure lands in one directory, named as the supplement numbers
 #: it, so the figure-update tool can pair a file with the caption that guards it.
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
-OUT_FIGURE_S3 = os.path.join(SUPP_DIR, "figure_s3_sleep_stability_heatmap.png")
+OUT_FIGURE_S3 = os.path.join(SUPP_DIR, "figure_sleep_stability_heatmap.png")
 
 #: the coupling model's quarters. The quarterly item is restricted to these in ONE
 #: place; a10b did not filter and a10c/a10e did, which was only harmless because

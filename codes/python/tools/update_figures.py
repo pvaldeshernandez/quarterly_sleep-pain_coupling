@@ -7,15 +7,18 @@ Two different mechanisms, because the two documents store figures differently:
   * the SUPPLEMENT embeds all nine, each stored TWICE (a DrawingML copy under
     `mc:Choice` and a VML copy under `mc:Fallback`), so eighteen media parts move.
 
-THE TRAP THIS SCRIPT EXISTS TO AVOID. The supplement was renumbered when Section S4 was
-inserted, but the pipeline's filenames were not. `figure_s3_jn_localization_sp.png` is
-Figure **S4** in the document. Mapping by number would put the Johnson-Neyman panel under
-"Per-quarter stability of sleep quality correlations" and nothing would complain — the
-caption and the image would simply disagree. Every pairing below was therefore verified
-against the caption TEXT, and the script re-verifies it at run time.
+THE TRAP THIS SCRIPT EXISTS TO AVOID. Figure numbers change; the things figures show do
+not. The supplement was renumbered when Section S4 was inserted, and the pipeline's
+filenames -- `figure_s3_jn_localization_sp.png` for what is Figure **S4** -- did not
+follow, so mapping by number would have put the Johnson-Neyman panel under "Per-quarter
+stability of sleep quality correlations" with nothing to complain: the caption and the
+image would simply disagree.
 
-Figure S3 comes from the sandbox (`a10d_render_heatmap.py`) because step 06 is not built
-yet; it is the only figure not produced by a numbered step.
+The filenames therefore no longer carry a number at all. They say what the figure shows,
+and the map below is the ONE place a figure number appears, verified against the caption
+TEXT and re-verified at run time. Renumber the supplement again and only this map moves.
+
+All nine come from numbered pipeline steps; none is produced by the sandbox.
 
     python tools/update_figures.py --dry-run
     python tools/update_figures.py
@@ -30,7 +33,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 CODE = os.path.dirname(HERE)
 ROOT = os.path.dirname(os.path.dirname(CODE))
-sys.path.insert(0, os.path.join(CODE, "revision"))
+sys.path.insert(0, os.path.join(CODE, "lib"))
 
 RESULTS = os.path.join(ROOT, "results")
 DERIV = os.path.join(ROOT, "derivatives")
@@ -49,26 +52,26 @@ MANUSCRIPT = {
 #: supplement figure label -> (source PNG, a distinctive phrase of its caption)
 #: The phrase is the guard: it is checked against the live caption before the swap.
 SUPPLEMENT = {
-    "Figure S1": (f"{RESULTS}/supplementary_materials/figure_s1_endorsement.png",
+    "Figure S1": (f"{RESULTS}/supplementary_materials/figure_endorsement.png",
                   "PHQ body map endorsements"),
-    "Figure S2": (f"{RESULTS}/supplementary_materials/figure_s2_convergent.png",
+    "Figure S2": (f"{RESULTS}/supplementary_materials/figure_convergent.png",
                   "Convergent validity"),
     # Step 06 now renders this; it used to exist only as a sandbox output, so the
     # supplement's Figure S3 had no pipeline source. The two files are byte-identical,
     # so this is a provenance change, not a content one.
-    "Figure S3": (f"{RESULTS}/supplementary_materials/figure_s3_sleep_stability_heatmap.png",
+    "Figure S3": (f"{RESULTS}/supplementary_materials/figure_sleep_stability_heatmap.png",
                   "Per-quarter stability"),
-    "Figure S4": (f"{RESULTS}/supplementary_materials/figure_s3_jn_localization_sp.png",
+    "Figure S4": (f"{RESULTS}/supplementary_materials/figure_jn_localization_sp.png",
                   "pain localization moderation"),
-    "Figure S5": (f"{RESULTS}/supplementary_materials/figure_s4_stim_rois.png",
+    "Figure S5": (f"{RESULTS}/supplementary_materials/figure_stim_rois.png",
                   "Spherical regions of interest"),
-    "Figure S6": (f"{RESULTS}/supplementary_materials/figure_s5_krause_jn.png",
+    "Figure S6": (f"{RESULTS}/supplementary_materials/figure_krause_jn.png",
                   "non-credible Krause ROI"),
-    "Figure S7": (f"{RESULTS}/supplementary_materials/figure_s6_arousal_rois.png",
+    "Figure S7": (f"{RESULTS}/supplementary_materials/figure_arousal_rois.png",
                   "Atlas-defined probabilistic"),
-    "Figure S8": (f"{RESULTS}/supplementary_materials/figure_s7_fmri_arousal_jn.png",
+    "Figure S8": (f"{RESULTS}/supplementary_materials/figure_fmri_arousal_jn.png",
                   "fMRI BOLD moderation"),
-    "Figure S9": (f"{RESULTS}/supplementary_materials/figure_s8_vbm_arousal_jn.png",
+    "Figure S9": (f"{RESULTS}/supplementary_materials/figure_vbm_arousal_jn.png",
                   "matter volume moderation"),
 }
 

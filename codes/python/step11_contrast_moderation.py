@@ -8,7 +8,7 @@ Output:
     step11_jn_localization_results.csv — full JN grid for both directions
   results/
     step11_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
-    step11_figure_s3_jn_localization_sp.png — Figure S3: SP direction JN (null)
+    step11_figure_jn_localization_sp.png — Figure S3: SP direction JN (null)
     step11_text_numbers.csv                — JN boundary, simple slopes, etc.
 
 Note: contrast moderation parameters (delta_p, omega_sp, delta_s, omega_ps)
@@ -63,7 +63,7 @@ OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step11_jn_localization_results.csv")
 OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step11_figure4_jn_localization_ps.png")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
-OUT_FIG_S3 = os.path.join(SUPP_DIR, "figure_s3_jn_localization_sp.png")
+OUT_FIG_S3 = os.path.join(SUPP_DIR, "figure_jn_localization_sp.png")
 OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step11_text_numbers.csv")
 
 

@@ -11,8 +11,8 @@ Output:
     step20_jn_ps_fmri_results.csv
     step20_jn_ps_vbm_results.csv
   results/step20/
-    step20_figure_s7_fmri_arousal_jn.png   — Figure S7
-    step20_figure_s8_vbm_arousal_jn.png    — Figure S8
+    step20_figure_fmri_arousal_jn.png   — Figure S7
+    step20_figure_vbm_arousal_jn.png    — Figure S8
     step20_text_numbers.csv
 
 Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
@@ -50,8 +50,8 @@ OUT_FMRI_JN = os.path.join(STEP_DERIV_DIR, "step20_jn_ps_fmri_results.csv")
 OUT_VBM_JN = os.path.join(STEP_DERIV_DIR, "step20_jn_ps_vbm_results.csv")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
-OUT_FIG_S7 = os.path.join(SUPP_DIR, "figure_s7_fmri_arousal_jn.png")
-OUT_FIG_S8 = os.path.join(SUPP_DIR, "figure_s8_vbm_arousal_jn.png")
+OUT_FIG_S7 = os.path.join(SUPP_DIR, "figure_fmri_arousal_jn.png")
+OUT_FIG_S8 = os.path.join(SUPP_DIR, "figure_vbm_arousal_jn.png")
 OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step20_text_numbers.csv")
 
 
