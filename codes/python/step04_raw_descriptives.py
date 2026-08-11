@@ -9,7 +9,7 @@ raw items and the three factor scores, and the zero-pain floor structure at both
 person-quarter and the participant level.
 
 Input:  data/step00_extracted_long.csv                          (READ ONLY — raw q2-q13 items)
-        derivatives/step07_varx_data/step07_processed_long.csv  (analytic row set + factors)
+        derivatives/step03_curation/step03_curated_long.csv  (analytic row set + factors)
 Output:
   results/step04_raw_descriptives/
     step04_item_descriptives.csv       — per item, pooled over the described person-quarters
@@ -72,8 +72,8 @@ sys.path.insert(0, LIB_DIR)
 IN_LONG_CSV = os.path.join(ROOT, "data", "step00_extracted_long.csv")
 #: the VARX-ready frame; supplies the analytic ID set, the retained (ID, quarter)
 #: pairs, and pain_factor / contrast_factor / sleep_factor.
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
-                                "step07_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step03_curation",
+                                "step03_curated_long.csv")
 
 OUT_ITEM_CSV = os.path.join(STEP_RESULTS_DIR, "step04_item_descriptives.csv")
 OUT_BY_QUARTER_CSV = os.path.join(STEP_RESULTS_DIR, "step04_by_quarter.csv")

@@ -93,8 +93,8 @@ def _resolve_kl_column(df):
 #: in whichever frame happened to be loaded.
 RESTRICT_TO_ANALYTIC = True
 
-IN_ANALYTIC_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
-                               "step07_processed_long.csv")
+IN_ANALYTIC_CSV = os.path.join(DERIV_DIR, "step03_curation",
+                               "step03_curated_long.csv")
 
 
 def _load_person_mean_contrast():

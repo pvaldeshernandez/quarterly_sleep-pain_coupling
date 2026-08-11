@@ -38,7 +38,7 @@ Input:  data/original/participants_wideformat.xlsx          (read-only)
         derivatives/step00_extract_data/step00_extracted_long.csv   (step 00; ID, quarter,
                                                              q13_sleep -- falls back to
                                                              data/step00_extracted_long.csv)
-        derivatives/step07_varx_data/step07_processed_long.csv      (step 04; ID only,
+        derivatives/step03_curation/step03_curated_long.csv      (step 04; ID only,
                                                              defines the N=229 sample)
 Output:
   derivatives/step06_sleep_measure_correlates/
@@ -87,7 +87,7 @@ STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step06_sleep_measure_correlates")
 
 IN_WIDE = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
 IN_DICT = os.path.join(DATA_DIR, "original", "UPLOAD2_Data_Dictionary.xlsx")
-IN_ANALYTIC = os.path.join(DERIV_DIR, "step07_varx_data", "step07_processed_long.csv")
+IN_ANALYTIC = os.path.join(DERIV_DIR, "step03_curation", "step03_curated_long.csv")
 
 # Step 00's long export. The pipeline is moving it out of the read-only data/ tree into
 # derivatives/; accept either while that move is in flight rather than hard-coding the
