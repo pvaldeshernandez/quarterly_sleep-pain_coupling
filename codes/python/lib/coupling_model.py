@@ -627,16 +627,23 @@ def load_varx_frame(csv_path, verbose=False):
     id_map = {sid: i for i, sid in enumerate(unique_ids)}
     df["pid_idx"] = df["ID"].map(id_map)
 
-    model_df = df.dropna(
-        subset=["pain_within_lag1", "sleep_within_lag1"]
-    ).copy()
+    # The CURATED frame (step 03) has no lag columns -- they are built in step 07.
+    # Callers that only want the full long frame with consistent ID typing and
+    # demographics (step 04's descriptives) load the curated file and never touch
+    # model_df; every fitting step loads the VARX frame, where the columns exist.
+    # Returning None rather than raising keeps one loader for both, and a fitting
+    # step that somehow got a lagless frame fails loudly at first use.
+    lag_cols = ["pain_within_lag1", "sleep_within_lag1"]
+    model_df = (df.dropna(subset=lag_cols).copy()
+                if all(c in df.columns for c in lag_cols) else None)
 
     if verbose:
         n_female = int((person_demo["Sex_coded"] == 1).sum())
         n_male = int((person_demo["Sex_coded"] == 0).sum())
+        n_obs = len(model_df) if model_df is not None else len(df)
         print(
             f"  Loaded: {len(unique_ids)} subjects, "
-            f"{len(model_df)} observations"
+            f"{n_obs} observations"
         )
         print(f"  Age (person-level): mean={age_mean:.1f}, SD={age_sd:.1f}")
         print(f"  Sex: {n_female} female, {n_male} male")
