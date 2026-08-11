@@ -2,17 +2,17 @@
 Step 04 — Contrast moderation analysis (Johnson-Neyman).
 ======================================================================
 
-Input:  derivatives/step07_coupling_model/step07_posterior_draws.npz
+Input:  derivatives/step08_coupling_model/step08_posterior_draws.npz
 Output:
   derivatives/
-    step11_jn_localization_results.csv — full JN grid for both directions
+    step12_jn_localization_results.csv — full JN grid for both directions
   results/
-    step11_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
-    step11_figure_jn_localization_sp.png — Figure S3: SP direction JN (null)
-    step11_text_numbers.csv                — JN boundary, simple slopes, etc.
+    step12_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
+    step12_figure_jn_localization_sp.png — Figure S3: SP direction JN (null)
+    step12_text_numbers.csv                — JN boundary, simple slopes, etc.
 
 Note: contrast moderation parameters (delta_p, omega_sp, delta_s, omega_ps)
-are in Table 4 (results/step07/step07_table4_coupling.csv), not a separate table.
+are in Table 4 (results/step08/step08_table4_coupling.csv), not a separate table.
 
 This step reads the posterior draws from the VARX(1) fit (Step 03)
 and runs the Bayesian Johnson-Neyman analysis on the contrast
@@ -45,26 +45,26 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step11_contrast_moderation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step12_contrast_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step11_contrast_moderation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step12_contrast_moderation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step07_coupling_model", "step07_posterior_draws.npz")
+IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step08_coupling_model", "step08_posterior_draws.npz")
 
 # Derivatives
-OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step11_jn_localization_results.csv")
+OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step12_jn_localization_results.csv")
 
 # Results
-OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step11_figure4_jn_localization_ps.png")
+OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step12_figure4_jn_localization_ps.png")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FIG_S3 = os.path.join(SUPP_DIR, "figure_jn_localization_sp.png")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step11_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step12_text_numbers.csv")
 
 
 # =====================================================================
@@ -264,7 +264,7 @@ def draw_jn_panel(ax, jn, panel_label, direction_label, slopes_dict,
 # Main pipeline
 # =====================================================================
 
-def run_step11(verbose: bool = True, refit: bool = False):
+def run_step12(verbose: bool = True, refit: bool = False):
     """Run contrast moderation JN analysis."""
     from coupling_model import compute_jn_curve
 
@@ -471,7 +471,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step11(verbose=not args.quiet, refit=args.refit)
+    run_step12(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

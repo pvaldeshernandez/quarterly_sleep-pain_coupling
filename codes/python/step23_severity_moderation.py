@@ -8,11 +8,11 @@ the coupling parameters. Three models:
   2. Mean sleep quality alone
   3. Both jointly
 
-Input:  derivatives/step04_varx_data/step04_processed_long.csv
+Input:  derivatives/step07_varx_data/step07_processed_long.csv
 Output:
-  results/step21_severity_moderation/
-    step21_table_s2_severity.csv   — Table S2
-    step21_text_numbers.csv        — estimates for manuscript text
+  results/step23_severity_moderation/
+    step23_table_s2_severity.csv   — Table S2
+    step23_text_numbers.csv        — estimates for manuscript text
 
 Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
 """
@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step21_severity_moderation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step23_severity_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
@@ -41,8 +41,8 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
-                                "step04_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
+                                "step07_processed_long.csv")
 
 OUT_TABLE_CSV = os.path.join(SUPP_DIR, "table_s2_severity.csv")
 OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "text_numbers_severity.csv")
@@ -76,7 +76,7 @@ MODELS = [
 ]
 
 
-def run_step21(verbose=True, refit=False):
+def run_step23(verbose=True, refit=False):
     from coupling_model import fit_bayesian_varx1, extract_results
 
     if verbose:
@@ -189,7 +189,7 @@ def run_step21(verbose=True, refit=False):
             X_person=X_person,
             include_agesex=True,
             progressbar=True,
-            fit_id=f"step21_severity_{mod_name}", out_dir=STEP_DERIV_DIR,
+            fit_id=f"step23_severity_{mod_name}", out_dir=STEP_DERIV_DIR,
         )
 
         from coupling_model import two_tail_p
@@ -253,7 +253,7 @@ def run_step21(verbose=True, refit=False):
 def _fit_joint_model(model_df, unique_ids, id_map,
                      pain_mean, pain_sd, sleep_mean, sleep_sd,
                      table_rows, text_rows, verbose=True,
-                     fit_id="step21_severity_joint", out_dir=None):
+                     fit_id="step23_severity_joint", out_dir=None):
     """Fit a 2-moderator VARX(1) model with both pain and sleep severity."""
     import pymc as pm
     import arviz as az
@@ -412,7 +412,7 @@ def main():
     parser.add_argument("--refit", action="store_true",
                         help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step21(verbose=not args.quiet, refit=args.refit)
+    run_step23(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

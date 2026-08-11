@@ -2,18 +2,18 @@
 Step 11 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
 ======================================================================
 
-Input:  derivatives/step04_varx_data/step04_processed_long.csv
-        derivatives/step18_ps_roi_values/step18_ps_fmri_roi_values.csv
-        derivatives/step18_ps_roi_values/step18_ps_vbm_roi_values.csv
+Input:  derivatives/step07_varx_data/step07_processed_long.csv
+        derivatives/step20_ps_roi_values/step20_ps_fmri_roi_values.csv
+        derivatives/step20_ps_roi_values/step20_ps_vbm_roi_values.csv
 Output:
   derivatives/
-    step19_ps_fmri_posterior_draws.npz
-    step19_ps_vbm_posterior_draws.npz
+    step21_ps_fmri_posterior_draws.npz
+    step21_ps_vbm_posterior_draws.npz
   results/
-    step19_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
-    step19_table_s1_vbm_arousal.csv     — Table S1 VBM panel
-    step19_vbm_sign_concordance.csv     — VBM 5/5 sign test
-    step19_text_numbers.csv
+    step21_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
+    step21_table_s1_vbm_arousal.csv     — Table S1 VBM panel
+    step21_vbm_sign_concordance.csv     — VBM 5/5 sign test
+    step21_text_numbers.csv
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each arousal ROI, separately for fMRI BOLD and VBM GM volume.
@@ -37,30 +37,30 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step19_ps_moderation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step21_ps_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step19_ps_moderation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step21_ps_moderation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data", "step04_processed_long.csv")
-IN_FMRI_CSV = os.path.join(DERIV_DIR, "step18_ps_roi_values", "step18_ps_fmri_roi_values.csv")
-IN_VBM_CSV = os.path.join(DERIV_DIR, "step18_ps_roi_values", "step18_ps_vbm_roi_values.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data", "step07_processed_long.csv")
+IN_FMRI_CSV = os.path.join(DERIV_DIR, "step20_ps_roi_values", "step20_ps_fmri_roi_values.csv")
+IN_VBM_CSV = os.path.join(DERIV_DIR, "step20_ps_roi_values", "step20_ps_vbm_roi_values.csv")
 
-OUT_FMRI_DRAWS = os.path.join(STEP_DERIV_DIR, "step19_ps_fmri_posterior_draws.npz")
-OUT_VBM_DRAWS = os.path.join(STEP_DERIV_DIR, "step19_ps_vbm_posterior_draws.npz")
+OUT_FMRI_DRAWS = os.path.join(STEP_DERIV_DIR, "step21_ps_fmri_posterior_draws.npz")
+OUT_VBM_DRAWS = os.path.join(STEP_DERIV_DIR, "step21_ps_vbm_posterior_draws.npz")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FMRI_TABLE = os.path.join(SUPP_DIR, "table_s1_fmri_arousal.csv")
 OUT_VBM_TABLE = os.path.join(SUPP_DIR, "table_s1_vbm_arousal.csv")
-OUT_VBM_SIGN = os.path.join(STEP_DERIV_DIR, "step19_vbm_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step19_text_numbers.csv")
+OUT_VBM_SIGN = os.path.join(STEP_DERIV_DIR, "step21_vbm_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step21_text_numbers.csv")
 
 
-def load_step03_data(csv_path):
+def load_step05_data(csv_path):
     """Thin wrapper around lib.coupling_model.load_varx_frame."""
     from coupling_model import load_varx_frame
     return load_varx_frame(csv_path, verbose=False)
@@ -98,7 +98,7 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
             X_person=X_person, include_agesex=True,
             moderator_direction="ps",
             progressbar=True,
-            fit_id=f"step19_ps_{modality_name}_{roi_name}", out_dir=STEP_DERIV_DIR,
+            fit_id=f"step21_ps_{modality_name}_{roi_name}", out_dir=STEP_DERIV_DIR,
         )
 
         n_valid = len(valid_ids)
@@ -149,7 +149,7 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
     return pd.DataFrame(table_rows), draws_dict
 
 
-def run_step19(verbose=True, refit=False):
+def run_step21(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
         print("STEP 11 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
@@ -179,7 +179,7 @@ def run_step19(verbose=True, refit=False):
         vbm_draws = dict(np.load(OUT_VBM_DRAWS))
     else:
         # ------ FULL MCMC FIT ------
-        _, model_df, unique_ids, id_map = load_step03_data(IN_PROCESSED_CSV)
+        _, model_df, unique_ids, id_map = load_step05_data(IN_PROCESSED_CSV)
 
         # ---- fMRI BOLD ----
         fmri_table, fmri_draws = fit_modality(
@@ -261,7 +261,7 @@ def main():
     parser.add_argument("--refit", action="store_true",
                         help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step19(verbose=not args.quiet, refit=args.refit)
+    run_step21(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

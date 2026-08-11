@@ -12,10 +12,10 @@ This step recomputes nothing. It reads what the fits already recorded.
 
 Input:  derivatives/step*/diagnostics_*.json            (one per fit)
         derivatives/step*/diagnostics_*_by_param.csv    (per-parameter, per fit)
-Output: derivatives/step22_diagnostics/step22_all_fits.csv
-        derivatives/step22_diagnostics/step22_by_family.csv     -> Table S3
-        derivatives/step22_diagnostics/step22_sampler.csv       -> Table S4
-        results/step22_diagnostics/numbers.json
+Output: derivatives/step24_diagnostics/step24_all_fits.csv
+        derivatives/step24_diagnostics/step24_by_family.csv     -> Table S3
+        derivatives/step24_diagnostics/step24_sampler.csv       -> Table S4
+        results/step24_diagnostics/numbers.json
 
 Two fits are ALIASES of the primary model rather than separate models: the full model of
 the LOO comparison, and the "all transitions" arm of the interpolation sensitivity. They
@@ -23,7 +23,7 @@ are counted once. This is why the paper says 52 distinct fits and not 54 — a c
 adds up is a count nobody checks.
 
 Usage:
-    python step22_diagnostics_summary.py [--refit] [--quiet]
+    python step24_diagnostics_summary.py [--refit] [--quiet]
 """
 from __future__ import annotations
 
@@ -43,18 +43,18 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step22_diagnostics")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step22_diagnostics")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step24_diagnostics")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step24_diagnostics")
 
-OUT_ALL = os.path.join(STEP_DERIV_DIR, "step22_all_fits.csv")
-OUT_FAMILY = os.path.join(STEP_DERIV_DIR, "step22_by_family.csv")
-OUT_SAMPLER = os.path.join(STEP_DERIV_DIR, "step22_sampler.csv")
+OUT_ALL = os.path.join(STEP_DERIV_DIR, "step24_all_fits.csv")
+OUT_FAMILY = os.path.join(STEP_DERIV_DIR, "step24_by_family.csv")
+OUT_SAMPLER = os.path.join(STEP_DERIV_DIR, "step24_sampler.csv")
 
 #: the primary model, whose per-parameter table becomes Table S3
-PRIMARY = "step07_primary"
+PRIMARY = "step08_primary"
 
 #: fits that are the primary model under another name. Counted once.
-ALIASES = {"step07_loo_full", "step09_all_transitions"}
+ALIASES = {"step08_loo_full", "step11_all_transitions"}
 
 #: parameter -> family, for Table S3. Order is the table's row order.
 FAMILIES = [
@@ -93,7 +93,7 @@ def by_family(verbose=True):
                                   f"diagnostics_{PRIMARY}_by_param.csv"))
     if not hits:
         if verbose:
-            print(f"  no per-parameter table for {PRIMARY}; run step07 --refit first")
+            print(f"  no per-parameter table for {PRIMARY}; run step08 --refit first")
         return None
     d = pd.read_csv(hits[0], index_col=0)
     rows, used = [], []
@@ -120,7 +120,7 @@ def by_family(verbose=True):
     return pd.DataFrame(rows)
 
 
-def run_step22(verbose=True, refit=False):
+def run_step24(verbose=True, refit=False):
     os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
@@ -170,7 +170,7 @@ def run_step22(verbose=True, refit=False):
         })
 
     from registry import write_numbers
-    write_numbers(STEP_RESULTS_DIR, nums, prefix="step22")
+    write_numbers(STEP_RESULTS_DIR, nums, prefix="step24")
 
     if verbose:
         print(f"\n  {nums['n_distinct_fits']} distinct fit(s) "
@@ -192,7 +192,7 @@ def main():
                     help="accepted for pipeline uniformity; this step never fits")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
-    run_step22(verbose=not args.quiet, refit=args.refit)
+    run_step24(verbose=not args.quiet, refit=args.refit)
     return 0
 
 

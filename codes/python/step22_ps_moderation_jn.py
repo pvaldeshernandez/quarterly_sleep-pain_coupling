@@ -1,19 +1,21 @@
 """
-Step 09 — Johnson-Neyman analysis for SP moderation ROIs.
+Step 12 — Johnson-Neyman analysis for PS arousal moderation ROIs.
 ======================================================================
 
-Input:  derivatives/step14/step14_sp_posterior_draws.npz
-        results/step14/step14_table5_sp_moderation.csv
+Input:  derivatives/step21/step21_ps_fmri_posterior_draws.npz
+        derivatives/step21/step21_ps_vbm_posterior_draws.npz
+        results/step21/step21_table_s1_fmri_arousal.csv
+        results/step21/step21_table_s1_vbm_arousal.csv
 Output:
-  derivatives/
-    step16_jn_sp_results.csv              — full JN grids per ROI
-  results/
-    step16_figure5_jn_nacc.png            — Figure 5: Left NAcc JN
-    step16_figure6_jn_acc.png             — Figure 6: ACC JN (Right + Left, 2 panels)
-    step16_figure_krause_jn.png        — Figure S5: 4 non-sig Krause JN
-    step16_text_numbers.csv               — JN boundaries, % sample, slopes
+  derivatives/step22/
+    step22_jn_ps_fmri_results.csv
+    step22_jn_ps_vbm_results.csv
+  results/step22/
+    step22_figure_fmri_arousal_jn.png   — Figure S7
+    step22_figure_vbm_arousal_jn.png    — Figure S8
+    step22_text_numbers.csv
 
-Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
+Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
 """
 from __future__ import annotations
 
@@ -30,32 +32,27 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step16_sp_jn")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step22_ps_jn")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step16_sp_jn")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step22_ps_jn")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step14_sp_moderation", "step14_sp_posterior_draws.npz")
-IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step14_sp_moderation", "step14_table5_sp_moderation.csv")
+IN_FMRI_DRAWS = os.path.join(DERIV_DIR, "step21_ps_moderation", "step21_ps_fmri_posterior_draws.npz")
+IN_VBM_DRAWS = os.path.join(DERIV_DIR, "step21_ps_moderation", "step21_ps_vbm_posterior_draws.npz")
+IN_FMRI_TABLE = os.path.join(RESULTS_DIR, "supplementary_materials", "table_s1_fmri_arousal.csv")
+IN_VBM_TABLE = os.path.join(RESULTS_DIR, "supplementary_materials", "table_s1_vbm_arousal.csv")
 
-OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step16_jn_sp_results.csv")
-OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step16_figure5_jn_nacc.png")
-OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step16_figure6_jn_acc.png")
+OUT_FMRI_JN = os.path.join(STEP_DERIV_DIR, "step22_jn_ps_fmri_results.csv")
+OUT_VBM_JN = os.path.join(STEP_DERIV_DIR, "step22_jn_ps_vbm_results.csv")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
-OUT_FIG_S5 = os.path.join(SUPP_DIR, "figure_krause_jn.png")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step16_text_numbers.csv")
-
-# ROI for Figure 5 (single panel)
-FIG5_ROI = "Left_NAcc"
-# ROIs for Figure 6 (two panels stacked: Right ACC on top, Left ACC below)
-FIG6_ROIS = ["Right_dACC_MCC", "Left_dACC_MCC"]
-# Non-credible Krause ROIs for the S5 2x2 merge
-S5_ROIS = ["Contra_S1", "Contra_Middle_Insula", "Left_Thalamus", "Left_Anterior_Insula"]
+OUT_FIG_S7 = os.path.join(SUPP_DIR, "figure_fmri_arousal_jn.png")
+OUT_FIG_S8 = os.path.join(SUPP_DIR, "figure_vbm_arousal_jn.png")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step22_text_numbers.csv")
 
 
 # =====================================================================
@@ -90,7 +87,7 @@ def draw_jn_panel(ax, jn, direction_label, slopes_dict,
                    path_effects=[matplotlib.patheffects.withSimplePatchShadow(
                        offset=(0.5, -0.5), shadow_rgbFace="#1565C0", alpha=0.3)])
 
-    # Shaded CrI band (green = credible, grey = non-credible)
+    # Shaded CrI band (green = credible, grey = non-credible), per-segment
     for i in range(len(x_grid) - 1):
         color = "#81C784" if sig[i] else "#BDBDBD"
         alpha = 0.35 if sig[i] else 0.25
@@ -244,53 +241,32 @@ def draw_jn_panel(ax, jn, direction_label, slopes_dict,
               borderaxespad=0.3)
 
 
-def run_step16(verbose=True, refit=False):
+def run_jn_for_modality(modality_name, draws_path, table_path, verbose=True):
+    """Run JN for all ROIs in one modality. Returns JN grid rows, text rows,
+    jn_results dict, slopes_all dict, and the table DataFrame."""
     from coupling_model import compute_jn_curve
 
-    if verbose:
-        print("=" * 70)
-        print("STEP 09 — SP moderation Johnson-Neyman analysis")
-        print("=" * 70)
-
-    os.makedirs(DERIV_DIR, exist_ok=True)
-    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
-
-    if not refit and os.path.exists(IN_DRAWS_NPZ) and os.path.exists(IN_TABLE5_CSV):
-        if verbose:
-            print("  WARNING: Running in replot mode -- loading saved derivatives.")
-            print("  If you have changed upstream data or code, re-run with --refit.")
-
-    d = np.load(IN_DRAWS_NPZ)
-    table5 = pd.read_csv(IN_TABLE5_CSV)
-
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+    d = np.load(draws_path)
+    table = pd.read_csv(table_path)
 
     jn_rows = []
     text_rows = []
     jn_results = {}
     slopes_all = {}
 
-    def _t(metric, value, note=""):
-        text_rows.append({"metric": metric, "value": str(value), "note": note})
-
-    for _, row in table5.iterrows():
+    for _, row in table.iterrows():
         roi_name = row["ROI"]
-
-        a2_key = f"{roi_name}_a2_draws"
-        gamma_key = f"{roi_name}_gamma_sp_draws"
+        b1_key = f"{roi_name}_b1_draws"
+        gamma_key = f"{roi_name}_gamma_ps_draws"
         x_key = f"{roi_name}_X_vals"
         mean_key = f"{roi_name}_raw_mean"
         sd_key = f"{roi_name}_raw_sd"
 
-        if a2_key not in d:
+        if b1_key not in d:
             continue
 
-        a2_draws = d[a2_key]
-        gamma_sp_draws = d[gamma_key]
+        b1_draws = d[b1_key]
+        gamma_ps_draws = d[gamma_key]
         X_vals = d[x_key]
         raw_mean = float(d[mean_key][0])
         raw_sd = float(d[sd_key][0])
@@ -298,11 +274,11 @@ def run_step16(verbose=True, refit=False):
         # clip_pct=(1, 99): trim the outer 1% of the moderator distribution
         # on each side to avoid extrapolating the JN band into sparse tails
         # where the credible-region boundaries are unstable. Deliberate
-        # choice for the neuroimaging moderators (Krause / ACC ROI BOLD);
+        # choice for the neuroimaging moderators (Lynch ROI BOLD / VBM);
         # the contrast-factor JN (step 05) uses (0, 100) because that
         # moderator is already z-scored and tightly bounded. Not mentioned
         # in the manuscript.
-        jn = compute_jn_curve(a2_draws, gamma_sp_draws, X_vals,
+        jn = compute_jn_curve(b1_draws, gamma_ps_draws, X_vals,
                               raw_mean=raw_mean, raw_sd=raw_sd,
                               clip_pct=(1, 99))
         jn_results[roi_name] = jn
@@ -326,7 +302,7 @@ def run_step16(verbose=True, refit=False):
             ("median", med_z, median_raw),
             ("high", high_z, high_fence_raw),
         ]:
-            cond = a2_draws + gamma_sp_draws * x_z
+            cond = b1_draws + gamma_ps_draws * x_z
             slopes[label] = {
                 "beta": float(np.mean(cond)),
                 "ci_lo": float(np.percentile(cond, 2.5)),
@@ -342,10 +318,10 @@ def run_step16(verbose=True, refit=False):
         boundary = float(bds[0]) if len(bds) > 0 else None
 
         if verbose:
-            print(f"\n  {row['Label']}:")
+            print(f"\n  {row['Label']} ({modality_name}):")
             if boundary is not None:
                 pct_below = float((X_vals < (boundary - raw_mean) / raw_sd).mean() * 100)
-                print(f"    JN boundary: raw={boundary:.3f}, {pct_below:.1f}% below")
+                print(f"    JN boundary: raw={boundary:.4f}, {pct_below:.1f}% below")
             else:
                 print(f"    JN boundary: none")
             for lbl, ss in slopes.items():
@@ -355,54 +331,83 @@ def run_step16(verbose=True, refit=False):
 
         # Text numbers
         if boundary is not None:
-            _t(f"jn_sp_{roi_name}_boundary_raw", f"{boundary:.4f}")
+            text_rows.append({
+                "metric": f"jn_ps_{modality_name}_{roi_name}_boundary_raw",
+                "value": f"{boundary:.4f}"})
             x_grid_z = jn["x_grid_z"]
             obs_z = jn["X_vals_z"]
             sig_at_obs = np.interp(obs_z, x_grid_z, jn["sig"].astype(float))
             pct = float((sig_at_obs > 0.5).mean() * 100)
-            _t(f"jn_sp_{roi_name}_pct_credible", f"{pct:.1f}")
+            text_rows.append({
+                "metric": f"jn_ps_{modality_name}_{roi_name}_pct_credible",
+                "value": f"{pct:.1f}"})
         else:
-            _t(f"jn_sp_{roi_name}_boundary", "none")
+            text_rows.append({
+                "metric": f"jn_ps_{modality_name}_{roi_name}_boundary",
+                "value": "none"})
         for lbl, ss in slopes.items():
-            _t(f"slope_sp_{roi_name}_{lbl}", f"{ss['beta']:.4f}")
-            _t(f"slope_sp_{roi_name}_{lbl}_ci", f"[{ss['ci_lo']:.4f}, {ss['ci_hi']:.4f}]")
+            text_rows.append({
+                "metric": f"slope_ps_{modality_name}_{roi_name}_{lbl}",
+                "value": f"{ss['beta']:.4f}"})
+            text_rows.append({
+                "metric": f"slope_ps_{modality_name}_{roi_name}_{lbl}_ci",
+                "value": f"[{ss['ci_lo']:.4f}, {ss['ci_hi']:.4f}]"})
 
         # JN grid
         for i, x in enumerate(jn["x_grid"]):
             jn_rows.append({
-                "ROI": roi_name, "x": float(x),
+                "ROI": roi_name, "modality": modality_name,
+                "x": float(x),
                 "mean": float(jn["post_mean"][i]),
                 "ci_lo": float(jn["ci_lo"][i]),
                 "ci_hi": float(jn["ci_hi"][i]),
             })
 
-    pd.DataFrame(jn_rows).to_csv(OUT_JN_CSV, index=False)
-    if verbose:
-        print(f"\n  Saved JN grid: {OUT_JN_CSV}")
+    return jn_rows, text_rows, jn_results, slopes_all, table
 
-    def _person_dots(roi_name):
-        a2_draws = d[f"{roi_name}_a2_draws"]
-        gamma_draws = d[f"{roi_name}_gamma_sp_draws"]
-        X_vals = d[f"{roi_name}_X_vals"]
-        u_sp_mean = d[f"{roi_name}_u_sp_mean"] if f"{roi_name}_u_sp_mean" in d else None
-        raw_mean = float(d[f"{roi_name}_raw_mean"][0])
-        raw_sd = float(d[f"{roi_name}_raw_sd"][0])
-        a2_mean = float(np.mean(a2_draws))
-        gamma_mean = float(np.mean(gamma_draws))
-        person_x_raw = X_vals * raw_sd + raw_mean
-        if u_sp_mean is not None:
-            person_y = a2_mean + gamma_mean * X_vals + u_sp_mean
-        else:
-            person_y = a2_mean + gamma_mean * X_vals
-        return {"x_raw": person_x_raw, "y": person_y}
 
-    # --- Figure 5: Left NAcc (single panel) ---
-    if FIG5_ROI in jn_results:
-        jn = jn_results[FIG5_ROI]
-        slopes = slopes_all[FIG5_ROI]
-        row = table5[table5["ROI"] == FIG5_ROI].iloc[0]
-        raw_mean = float(d[f"{FIG5_ROI}_raw_mean"][0])
-        raw_sd = float(d[f"{FIG5_ROI}_raw_sd"][0])
+def _person_dots_ps(d, roi_name):
+    """Compute person-level fitted PS coupling values for scatter overlay."""
+    b1_draws = d[f"{roi_name}_b1_draws"]
+    gamma_draws = d[f"{roi_name}_gamma_ps_draws"]
+    X_vals = d[f"{roi_name}_X_vals"]
+    raw_mean = float(d[f"{roi_name}_raw_mean"][0])
+    raw_sd = float(d[f"{roi_name}_raw_sd"][0])
+    b1_mean = float(np.mean(b1_draws))
+    gamma_mean = float(np.mean(gamma_draws))
+    person_x_raw = X_vals * raw_sd + raw_mean
+    u_ps_key = f"{roi_name}_u_ps_mean"
+    if u_ps_key in d:
+        person_y = b1_mean + gamma_mean * X_vals + d[u_ps_key]
+    else:
+        person_y = b1_mean + gamma_mean * X_vals
+    return {"x_raw": person_x_raw, "y": person_y}
+
+
+def _make_merged_figure(jn_results, slopes_all, d, table, modality_label,
+                        fig_path, fig_title, verbose=True):
+    """Generate merged multi-panel JN figure for one modality."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    rois = list(jn_results.keys())
+    if not rois:
+        return
+
+    ncols = 2
+    nrows = (len(rois) + 1) // 2
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(12.8 * ncols, 8.05 * nrows))
+    if len(rois) == 1:
+        axes = [axes]
+    else:
+        axes = axes.ravel()
+
+    for i, roi_name in enumerate(rois):
+        row = table[table["ROI"] == roi_name].iloc[0]
+        jn = jn_results[roi_name]
+        slopes = slopes_all[roi_name]
 
         level_labels = [
             f"Q1\u22121.5\u00b7IQR\n({slopes['low']['x_val']:.3f})",
@@ -412,105 +417,102 @@ def run_step16(verbose=True, refit=False):
         level_x_vals = [slopes["low"]["x_val"], slopes["median"]["x_val"],
                         slopes["high"]["x_val"]]
 
-        dots = _person_dots(FIG5_ROI)
+        dots = _person_dots_ps(d, roi_name)
 
-        fig, ax = plt.subplots(figsize=(12.8, 8.05))
-        draw_jn_panel(ax, jn, "Sleep \u2192 Pain", slopes,
+        # For panels other than the first, place left label inside the plot
+        left_inside = (i > 0)
+
+        draw_jn_panel(axes[i], jn, "Pain \u2192 Sleep", slopes,
                       level_labels, level_x_vals,
-                      xlabel=f"{row['Label']} BOLD activation (mean contrast)",
+                      xlabel=f"{row['Label']} ({modality_label})",
                       legend_loc="lower right", info_loc="upper left",
-                      person_dots=dots)
-        ax.set_xlim(jn["x_grid"][0], jn["x_grid"][-1])
-        fig.savefig(OUT_FIG5, dpi=300, bbox_inches="tight")
-        plt.close(fig)
-        if verbose:
-            print(f"  Saved Figure 5: {OUT_FIG5}")
+                      person_dots=dots, left_label_inside=left_inside)
+        axes[i].set_xlim(jn["x_grid"][0], jn["x_grid"][-1])
 
-    # --- Figure 6: Right + Left dACC/MCC (2 panels stacked vertically) ---
-    available_f6 = [r for r in FIG6_ROIS if r in jn_results]
-    if available_f6:
-        fig, axes = plt.subplots(len(available_f6), 1,
-                                 figsize=(12.8, 8.05 * len(available_f6)))
-        if len(available_f6) == 1:
-            axes = [axes]
-        for ax, roi_name in zip(axes, available_f6):
-            jn = jn_results[roi_name]
-            slopes = slopes_all[roi_name]
-            row_r = table5[table5["ROI"] == roi_name].iloc[0]
-            level_labels = [
-                f"Q1\u22121.5\u00b7IQR\n({slopes['low']['x_val']:.3f})",
-                f"Median\n({slopes['median']['x_val']:.3f})",
-                f"Q3+1.5\u00b7IQR\n({slopes['high']['x_val']:.3f})",
-            ]
-            level_x_vals = [slopes["low"]["x_val"], slopes["median"]["x_val"],
-                            slopes["high"]["x_val"]]
-            dots = _person_dots(roi_name)
-            draw_jn_panel(ax, jn, "Sleep \u2192 Pain", slopes,
-                          level_labels, level_x_vals,
-                          xlabel=f"{row_r['Label']} BOLD activation (mean contrast)",
-                          legend_loc="lower right", info_loc="upper left",
-                          person_dots=dots)
-            ax.set_xlim(jn["x_grid"][0], jn["x_grid"][-1])
-        fig.tight_layout()
-        fig.savefig(OUT_FIG6, dpi=300, bbox_inches="tight")
-        plt.close(fig)
-        if verbose:
-            print(f"  Saved Figure 6: {OUT_FIG6}")
+    for j in range(len(rois), len(axes)):
+        axes[j].set_visible(False)
 
-    # --- Figure S5: 2x2 merge of non-credible Krause ROIs ---
-    available_s5 = [r for r in S5_ROIS if r in jn_results]
-    if len(available_s5) >= 2:
-        n_panels = len(available_s5)
-        ncols = 2
-        nrows = (n_panels + 1) // 2
-        fig, axes = plt.subplots(nrows, ncols, figsize=(12.8 * ncols, 8.05 * nrows))
-        axes = axes.ravel() if n_panels > 1 else [axes]
-        for i, roi_name in enumerate(available_s5):
-            jn = jn_results[roi_name]
-            slopes = slopes_all[roi_name]
-            row_r = table5[table5["ROI"] == roi_name].iloc[0]
-            level_labels = [
-                f"Q1\u22121.5\u00b7IQR\n({slopes['low']['x_val']:.3f})",
-                f"Median\n({slopes['median']['x_val']:.3f})",
-                f"Q3+1.5\u00b7IQR\n({slopes['high']['x_val']:.3f})",
-            ]
-            level_x_vals = [slopes["low"]["x_val"], slopes["median"]["x_val"],
-                            slopes["high"]["x_val"]]
-            dots = _person_dots(roi_name)
-            draw_jn_panel(axes[i], jn, "Sleep \u2192 Pain", slopes,
-                          level_labels, level_x_vals,
-                          xlabel=f"{row_r['Label']} BOLD activation (mean contrast)",
-                          legend_loc="lower right", info_loc="upper left",
-                          person_dots=dots)
-            axes[i].set_xlim(jn["x_grid"][0], jn["x_grid"][-1])
-        for j in range(n_panels, len(axes)):
-            axes[j].set_visible(False)
-        fig.tight_layout()
-        fig.savefig(OUT_FIG_S5, dpi=300, bbox_inches="tight")
-        plt.close(fig)
-        if verbose:
-            print(f"  Saved Figure S5: {OUT_FIG_S5}")
+    fig.tight_layout()
+    fig.savefig(fig_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    if verbose:
+        print(f"  Saved: {fig_path}")
 
-    pd.DataFrame(text_rows).to_csv(OUT_TEXT_CSV, index=False)
+
+def run_step22(verbose=True, refit=False):
+    if verbose:
+        print("=" * 70)
+        print("STEP 12 — PS arousal moderation Johnson-Neyman analysis")
+        print("=" * 70)
+
+    os.makedirs(DERIV_DIR, exist_ok=True)
+    os.makedirs(STEP_DERIV_DIR, exist_ok=True)
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+
+    if not refit and (os.path.exists(IN_FMRI_DRAWS) and os.path.exists(IN_VBM_DRAWS)
+                      and os.path.exists(IN_FMRI_TABLE) and os.path.exists(IN_VBM_TABLE)):
+        if verbose:
+            print("  WARNING: Running in replot mode -- loading saved derivatives.")
+            print("  If you have changed upstream data or code, re-run with --refit.")
+
+    all_text = []
+
+    # ---- fMRI BOLD ----
+    if verbose:
+        print("\n  fMRI BOLD JN:")
+    fmri_jn_rows, fmri_text, fmri_jn_results, fmri_slopes, fmri_table = \
+        run_jn_for_modality("fMRI", IN_FMRI_DRAWS, IN_FMRI_TABLE, verbose)
+    pd.DataFrame(fmri_jn_rows).to_csv(OUT_FMRI_JN, index=False)
+    all_text.extend(fmri_text)
+
+    fmri_d = np.load(IN_FMRI_DRAWS)
+    _make_merged_figure(
+        fmri_jn_results, fmri_slopes, fmri_d, fmri_table,
+        modality_label="fMRI BOLD",
+        fig_path=OUT_FIG_S7,
+        fig_title="Pain-to-Sleep arousal moderation (fMRI BOLD)",
+        verbose=verbose,
+    )
+
+    # ---- VBM GM volume ----
+    if verbose:
+        print("\n  VBM GM volume JN:")
+    vbm_jn_rows, vbm_text, vbm_jn_results, vbm_slopes, vbm_table = \
+        run_jn_for_modality("VBM", IN_VBM_DRAWS, IN_VBM_TABLE, verbose)
+    pd.DataFrame(vbm_jn_rows).to_csv(OUT_VBM_JN, index=False)
+    all_text.extend(vbm_text)
+
+    vbm_d = np.load(IN_VBM_DRAWS)
+    _make_merged_figure(
+        vbm_jn_results, vbm_slopes, vbm_d, vbm_table,
+        modality_label="GM volume",
+        fig_path=OUT_FIG_S8,
+        fig_title="Pain-to-Sleep arousal moderation (VBM GM volume)",
+        verbose=verbose,
+    )
+
+    # Save text numbers
+    pd.DataFrame(all_text).to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
 
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 09 COMPLETE")
+        print("STEP 12 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 09 — SP moderation JN analysis."
+        description="Step 12 — PS arousal moderation JN analysis."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",
                         help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step16(verbose=not args.quiet, refit=args.refit)
+    run_step22(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

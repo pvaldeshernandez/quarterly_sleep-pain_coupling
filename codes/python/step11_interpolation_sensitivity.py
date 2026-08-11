@@ -21,34 +21,34 @@ any of the three was filled at either end. That is deliberately stricter than "t
 modeled series were interpolated" and matches the supplement's wording.
 
 Input:
-  derivatives/step04_varx_data/step04_processed_long.csv
+  derivatives/step07_varx_data/step07_processed_long.csv
       ID, quarter, interpolated, the within/lag columns, Age, Sex
-  derivatives/step07_coupling_model/step07_posterior_summary.csv   (preferred)
+  derivatives/step08_coupling_model/step08_posterior_summary.csv   (preferred)
       the primary fit's tidy summary, if step 07 publishes one
-  results/step07_coupling_model/step07_table4_coupling.csv         (fallback estimates)
-  derivatives/step07_coupling_model/diagnostics_step07_primary_by_param.csv
+  results/step08_coupling_model/step08_table4_coupling.csv         (fallback estimates)
+  derivatives/step08_coupling_model/diagnostics_step08_primary_by_param.csv
       per-parameter R-hat / bulk ESS of the primary fit, written by lib.write_diagnostics
-  results/step07_coupling_model/numbers.json                        (optional)
+  results/step08_coupling_model/numbers.json                        (optional)
       n_transitions / n_persons of the primary fit, for the equality assertion
 
 Output:
-  derivatives/step09_interpolation_sensitivity/
-      step09_nointerp_idata.nc          posterior draws of the interpolation-free fit
-      step09_posterior_summary.csv      arm x param tidy summary (both arms)
-      step09_transition_flags.csv       per-transition audit trail behind the counts
-      diagnostics_step09_nointerp.json  written by lib.coupling_model.run_fit
-      diagnostics_step09_nointerp_by_param.csv
-  results/step09_interpolation_sensitivity/
-      step09_tableS7_interpolation.csv  Table S7 DATA (row label + numeric cells only)
-      step09_figure_interpolation_sensitivity.png
+  derivatives/step11_interpolation_sensitivity/
+      step11_nointerp_idata.nc          posterior draws of the interpolation-free fit
+      step11_posterior_summary.csv      arm x param tidy summary (both arms)
+      step11_transition_flags.csv       per-transition audit trail behind the counts
+      diagnostics_step11_nointerp.json  written by lib.coupling_model.run_fit
+      diagnostics_step11_nointerp_by_param.csv
+  results/step11_interpolation_sensitivity/
+      step11_tableS7_interpolation.csv  Table S7 DATA (row label + numeric cells only)
+      step11_figure_interpolation_sensitivity.png
       numbers.json
 
 No prose is generated. Table notes, column headers and captions are authored by hand from
 numbers.json.
 
 Usage:
-    python step09_interpolation_sensitivity.py            # load and plot (default)
-    python step09_interpolation_sensitivity.py --refit    # re-run the one MCMC fit
+    python step11_interpolation_sensitivity.py            # load and plot (default)
+    python step11_interpolation_sensitivity.py --refit    # re-run the one MCMC fit
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 5)
 """
@@ -77,41 +77,41 @@ sys.path.insert(0, LIB_DIR)
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step09_interpolation_sensitivity")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step09_interpolation_sensitivity")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step11_interpolation_sensitivity")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step11_interpolation_sensitivity")
 
 # --- inputs (data/ and data/original/ are never touched by this step) ---
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
-                                "step04_processed_long.csv")
-STEP07_DERIV_DIR = os.path.join(DERIV_DIR, "step07_coupling_model")
-STEP07_RESULTS_DIR = os.path.join(RESULTS_DIR, "step07_coupling_model")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
+                                "step07_processed_long.csv")
+STEP07_DERIV_DIR = os.path.join(DERIV_DIR, "step08_coupling_model")
+STEP07_RESULTS_DIR = os.path.join(RESULTS_DIR, "step08_coupling_model")
 #: preferred source for the primary arm — one tidy frame carrying estimates AND
 #: diagnostics. Read it if step 07 publishes it; otherwise the two files below.
-IN_STEP07_SUMMARY = os.path.join(STEP07_DERIV_DIR, "step07_posterior_summary.csv")
-IN_STEP07_TABLE4 = os.path.join(STEP07_RESULTS_DIR, "step07_table4_coupling.csv")
+IN_STEP07_SUMMARY = os.path.join(STEP07_DERIV_DIR, "step08_posterior_summary.csv")
+IN_STEP07_TABLE4 = os.path.join(STEP07_RESULTS_DIR, "step08_table4_coupling.csv")
 IN_STEP07_BYPARAM = os.path.join(STEP07_DERIV_DIR,
-                                 "diagnostics_step07_primary_by_param.csv")
+                                 "diagnostics_step08_primary_by_param.csv")
 IN_STEP07_NUMBERS = os.path.join(STEP07_RESULTS_DIR, "numbers.json")
-IN_STEP07_PERSON = os.path.join(STEP07_DERIV_DIR, "step07_person_coupling.csv")
+IN_STEP07_PERSON = os.path.join(STEP07_DERIV_DIR, "step08_person_coupling.csv")
 
 # --- outputs ---
-OUT_NI_IDATA = os.path.join(STEP_DERIV_DIR, "step09_nointerp_idata.nc")
-OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step09_posterior_summary.csv")
-OUT_FLAGS_CSV = os.path.join(STEP_DERIV_DIR, "step09_transition_flags.csv")
+OUT_NI_IDATA = os.path.join(STEP_DERIV_DIR, "step11_nointerp_idata.nc")
+OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step11_posterior_summary.csv")
+OUT_FLAGS_CSV = os.path.join(STEP_DERIV_DIR, "step11_transition_flags.csv")
 OUT_TABLE_S7_CSV = os.path.join(STEP_RESULTS_DIR,
-                                "step09_tableS7_interpolation.csv")
+                                "step11_tableS7_interpolation.csv")
 OUT_FIGURE = os.path.join(STEP_RESULTS_DIR,
-                          "step09_figure_interpolation_sensitivity.png")
+                          "step11_figure_interpolation_sensitivity.png")
 OUT_NUMBERS = os.path.join(STEP_RESULTS_DIR, "numbers.json")
 
 #: the fit this step runs. `lib.coupling_model.run_fit` writes its diagnostics under
 #: this id, and step 22 aggregates them.
-FIT_ID = "step09_nointerp"
+FIT_ID = "step11_nointerp"
 IN_NI_DIAGNOSTICS = os.path.join(STEP_DERIV_DIR, f"diagnostics_{FIT_ID}.json")
 
 #: the fit whose published output supplies the "all transitions" column. Recorded in
 #: numbers.json so the provenance of that column is not folklore.
-ALL_ARM_FIT_ID = "step07_primary"
+ALL_ARM_FIT_ID = "step08_primary"
 
 # =====================================================================
 # Schema
@@ -260,22 +260,22 @@ def primary_counts(model_df, unique_ids, verbose=True):
         # its numbers.json, but it is a real one and it exists today.
         ref_persons = int(len(pd.read_csv(IN_STEP07_PERSON)))
         if verbose:
-            print(f"  step07 numbers.json absent — person count cross-checked "
+            print(f"  step08 numbers.json absent — person count cross-checked "
                   f"against {os.path.relpath(IN_STEP07_PERSON, ROOT)}")
 
     mismatches = []
     if ref_obs is not None and int(ref_obs) != n_obs:
-        mismatches.append(f"transitions: step04 frame {n_obs} vs step07 {int(ref_obs)}")
+        mismatches.append(f"transitions: step07 frame {n_obs} vs step08 {int(ref_obs)}")
     if ref_persons is not None and int(ref_persons) != n_persons:
-        mismatches.append(f"persons: step04 frame {n_persons} vs step07 "
+        mismatches.append(f"persons: step07 frame {n_persons} vs step08 "
                           f"{int(ref_persons)}")
     if mismatches:
         raise RuntimeError(
             "the primary fit and this step do not describe the same analytic sample "
-            "(" + "; ".join(mismatches) + "). Re-run step07 --refit before comparing."
+            "(" + "; ".join(mismatches) + "). Re-run step08 --refit before comparing."
         )
     if ref_obs is None and verbose:
-        print("  WARNING: step07 published no n_transitions; the all-transitions "
+        print("  WARNING: step08 published no n_transitions; the all-transitions "
               "column header is taken from step 04's frame without cross-check.")
     return n_obs, n_persons
 
@@ -284,10 +284,10 @@ def load_primary_arm(n_obs, n_persons, verbose=True):
     """The primary fit's posterior summary, from step 07's published outputs.
 
     Preference order:
-      1. step07_posterior_summary.csv — the tidy summary, estimates and diagnostics
+      1. step08_posterior_summary.csv — the tidy summary, estimates and diagnostics
          in one frame (this is what step 07 should publish; see lib_changes_needed).
-      2. step07_table4_coupling.csv (estimates) merged with
-         diagnostics_step07_primary_by_param.csv (per-parameter R-hat and bulk ESS).
+      2. step08_table4_coupling.csv (estimates) merged with
+         diagnostics_step08_primary_by_param.csv (per-parameter R-hat and bulk ESS).
          The per-parameter diagnostics are recoverable only from that file: step 07's
          saved draws are flattened with no chain dimension, so R-hat cannot be
          recomputed downstream.
@@ -307,7 +307,7 @@ def load_primary_arm(n_obs, n_persons, verbose=True):
     if not os.path.exists(IN_STEP07_TABLE4):
         raise FileNotFoundError(
             f"neither {IN_STEP07_SUMMARY} nor {IN_STEP07_TABLE4} exists; run "
-            "step07_fit_coupling_model.py --refit before this step"
+            "step08_fit_coupling_model.py --refit before this step"
         )
     tab = pd.read_csv(IN_STEP07_TABLE4).rename(columns={
         "Parameter": "param", "Estimate": "mean", "SD": "sd",
@@ -572,7 +572,7 @@ def plot_arms(table, out_path):
 # Entry point
 # =====================================================================
 
-def run_step09(verbose: bool = True, refit: bool = False):
+def run_step11(verbose: bool = True, refit: bool = False):
     """Compare the primary fit with its interpolation-free refit (Table S7)."""
     from registry import write_numbers
 
@@ -651,7 +651,7 @@ def run_step09(verbose: bool = True, refit: bool = False):
     nums = dict(counts)
     nums.update(estimate_numbers(summary, verbose=verbose))
     nums.update(diagnostic_numbers(verbose=verbose))
-    write_numbers(STEP_RESULTS_DIR, nums, prefix="step09")
+    write_numbers(STEP_RESULTS_DIR, nums, prefix="step11")
 
     table = write_table_s7(summary, OUT_TABLE_S7_CSV)
     plot_arms(table, OUT_FIGURE)
@@ -686,7 +686,7 @@ def main():
     parser.add_argument("--quiet", action="store_true",
                         help="Suppress progress output.")
     args = parser.parse_args()
-    run_step09(verbose=not args.quiet, refit=args.refit)
+    run_step11(verbose=not args.quiet, refit=args.refit)
     return 0
 
 

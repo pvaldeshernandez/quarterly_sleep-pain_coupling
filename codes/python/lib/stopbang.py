@@ -40,14 +40,14 @@ import pandas as pd
 from scipy import stats
 
 # Resolved from THIS file's location: lib/ -> codes/python/ -> codes/ -> UPLOAD2.
-# The absolute path this module used to hard-code kept pointing at step03's
-# output long after the frame moved to step04, which is exactly the failure a
+# The absolute path this module used to hard-code kept pointing at step05's
+# output long after the frame moved to step07, which is exactly the failure a
 # hard-coded path produces -- a helper that keeps answering, with stale data.
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 IN_WIDE = os.path.join(REPO, "data/original/participants_wideformat.xlsx")
-IN_ANALYTIC = os.path.join(REPO, "derivatives/step04_varx_data",
-                           "step04_processed_long.csv")
+IN_ANALYTIC = os.path.join(REPO, "derivatives/step07_varx_data",
+                           "step07_processed_long.csv")
 
 STOP = {"S": "sleep_snore__s1", "T": "sleep_tired_daytime__s1",
         "O": "sleep_stop_breathing__s1", "P": "sleep_high_bp__s1"}

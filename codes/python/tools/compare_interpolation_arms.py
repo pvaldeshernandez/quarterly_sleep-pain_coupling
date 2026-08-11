@@ -43,7 +43,7 @@ def load(root_results, root_deriv, rel):
 
 
 def table4(res, der):
-    d = load(res, der, "step07_coupling_model/step07_table4_coupling.csv")
+    d = load(res, der, "step08_coupling_model/step08_table4_coupling.csv")
     return d.set_index("Parameter") if d is not None else None
 
 
@@ -67,7 +67,7 @@ def main():
     # ---- sample --------------------------------------------------------------
     section("SAMPLE")
     for lab, R, D in (("OLD (submitted rule)", OLD_R, OLD_D), ("NEW (Methods rule)", NEW_R, NEW_D)):
-        p = os.path.join(D, "step04_varx_data/step04_processed_long.csv")
+        p = os.path.join(D, "step07_varx_data/step07_processed_long.csv")
         if os.path.exists(p):
             d = pd.read_csv(p)
             b = d.dropna(subset=["pain_within_lag1", "sleep_within_lag1"])
@@ -85,7 +85,7 @@ def main():
             ro, rn = o.loc[k], n.loc[k]
             co, cn = credible(ro["CrI_lo"], ro["CrI_hi"]), credible(rn["CrI_lo"], rn["CrI_hi"])
             f = lambda r: f"{r['Estimate']:+.4f}[{r['CrI_lo']:+.3f},{r['CrI_hi']:+.3f}]"
-            mark = "   <<< FLIP" if co != cn else ""
+            mark = "   < FLIP" if co != cn else ""
             if co != cn:
                 flips.append(f"Table 4 {k} ({ro['Description']}): "
                              f"{'credible' if co else 'ns'} -> {'credible' if cn else 'ns'}")
@@ -95,7 +95,7 @@ def main():
     # ---- LOO -----------------------------------------------------------------
     section("LOO — the |delta/SE| > 2 claim")
     for lab, R, D in (("OLD", OLD_R, OLD_D), ("NEW", NEW_R, NEW_D)):
-        d = load(R, D, "step07_coupling_model/step07_loo_comparison.csv")
+        d = load(R, D, "step08_coupling_model/step08_loo_comparison.csv")
         if d is None:
             continue
         row = d[(d.model_a == "full") & (d.model_b == "no_PS")]
@@ -128,7 +128,7 @@ def main():
     # ---- moderation tables ---------------------------------------------------
     for title, rel, est, lo, hi, key in (
         ("TABLE 5 — sleep-to-pain fMRI moderation",
-         "step14_sp_moderation/step14_table5_sp_moderation.csv",
+         "step16_sp_moderation/step16_table5_sp_moderation.csv",
          "gamma_sp", "gamma_sp_ci_lo", "gamma_sp_ci_hi", "ROI"),
     ):
         section(title)
@@ -140,7 +140,7 @@ def main():
         m = o[[key, est, lo, hi]].merge(n[[key, est, lo, hi]], on=key, suffixes=("_o", "_n"))
         for _, r in m.iterrows():
             co = credible(r[lo + "_o"], r[hi + "_o"]); cn = credible(r[lo + "_n"], r[hi + "_n"])
-            mark = "   <<< FLIP" if co != cn else ""
+            mark = "   < FLIP" if co != cn else ""
             if co != cn:
                 flips.append(f"{title.split('—')[0].strip()} {r[key]}: "
                              f"{'credible' if co else 'ns'} -> {'credible' if cn else 'ns'}")
@@ -150,7 +150,7 @@ def main():
     # ---- arousal relay -------------------------------------------------------
     section("TABLE S9 — arousal relay (rank order matters for the PBN sentence)")
     for lab, R, D in (("OLD", OLD_R, OLD_D), ("NEW", NEW_R, NEW_D)):
-        d = load(R, D, "step19_ps_moderation/step19_text_numbers.csv")
+        d = load(R, D, "step21_ps_moderation/step21_text_numbers.csv")
         if d is None:
             continue
         s = d.set_index(d.columns[0])[d.columns[1]]

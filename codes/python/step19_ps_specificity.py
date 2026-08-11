@@ -26,9 +26,9 @@ side that gives the convenient answer. That makes four ROIs — a deliberate
 subset of step 13's eight — so this step's table is NOT row-comparable with
 Table 5.
 
-Method: identical to step14_fit_sp_moderation.py except that
+Method: identical to step16_fit_sp_moderation.py except that
 ``moderator_direction`` is "ps" instead of "sp". Same ROI values, same masking
-rule, same priors, same sample. step14 is not touched, so the published
+rule, same priors, same sample. step16 is not touched, so the published
 gamma_sp estimates cannot drift.
 
 The four fits go through ``lib.coupling_model.run_fit`` (via
@@ -39,22 +39,22 @@ pain-to-sleep fMRI ROI moderation models") and folded into the across-fits
 aggregate by step 22, which discovers them by ``fit_id``. Dropping the
 diagnostics here would silently change a published count.
 
-Input:  derivatives/step04_varx_data/step04_processed_long.csv
-        derivatives/step13_sp_roi_values/step13_sp_roi_values.csv
-        results/step14_sp_moderation/step14_table5_sp_moderation.csv
+Input:  derivatives/step07_varx_data/step07_processed_long.csv
+        derivatives/step14_sp_roi_values/step14_sp_roi_values.csv
+        results/step16_sp_moderation/step16_table5_sp_moderation.csv
             (read-only cross-check of the analytic sample; optional)
 Output:
-  derivatives/step17_ps_specificity/
-    step17_ps_specificity_draws.npz   — per-ROI posterior draws
-    diagnostics_step17_ps_<ROI>.json  — written by run_fit, one per fit
-  results/step17_ps_specificity/
-    step17_ps_specificity.csv         — table DATA, one row per ROI
+  derivatives/step19_ps_specificity/
+    step19_ps_specificity_draws.npz   — per-ROI posterior draws
+    diagnostics_step19_ps_<ROI>.json  — written by run_fit, one per fit
+  results/step19_ps_specificity/
+    step19_ps_specificity.csv         — table DATA, one row per ROI
     numbers.json                      — the registry entries
 
 No figure: there is no Johnson-Neyman curve for this control. No prose.
 
 Usage:
-    python step17_ps_specificity.py [--refit] [--quiet]
+    python step19_ps_specificity.py [--refit] [--quiet]
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 5)
 """
@@ -73,33 +73,33 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step17_ps_specificity")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step19_ps_specificity")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step17_ps_specificity")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step19_ps_specificity")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
-                                "step04_processed_long.csv")
-IN_ROI_CSV = os.path.join(DERIV_DIR, "step13_sp_roi_values",
-                          "step13_sp_roi_values.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
+                                "step07_processed_long.csv")
+IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values",
+                          "step14_sp_roi_values.csv")
 #: step 14's table, used only to verify that this control ran on the same
 #: persons as the sleep-to-pain fits it is a control for. Never written.
-IN_STEP14_TABLE = os.path.join(RESULTS_DIR, "step14_sp_moderation",
-                               "step14_table5_sp_moderation.csv")
+IN_STEP14_TABLE = os.path.join(RESULTS_DIR, "step16_sp_moderation",
+                               "step16_table5_sp_moderation.csv")
 
-OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step17_ps_specificity_draws.npz")
-OUT_SUMMARY_CSV = os.path.join(STEP_RESULTS_DIR, "step17_ps_specificity.csv")
+OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step19_ps_specificity_draws.npz")
+OUT_SUMMARY_CSV = os.path.join(STEP_RESULTS_DIR, "step19_ps_specificity.csv")
 
 #: Row order is the sentence order in the Results paragraph. Kept explicit so a
 #: change in step 13's ROI ordering cannot reorder the published numbers.
 TARGET_ROIS = ["Left_NAcc", "Right_NAcc", "Left_dACC_MCC", "Right_dACC_MCC"]
 
 #: fit_id = f"{FIT_ID_PREFIX}_{roi}"; step 22 groups on this prefix.
-FIT_ID_PREFIX = "step17_ps"
+FIT_ID_PREFIX = "step19_ps"
 
 #: Columns of the summary CSV, in order. Table DATA only — no note, no
 #: formatting, no caption.
@@ -140,7 +140,7 @@ def _build_summary(fitted):
     return summary[SUMMARY_COLUMNS]
 
 
-def _step14_n_persons():
+def _step16_n_persons():
     """Number of persons step 14 fitted for these same four ROIs, or None.
 
     None means the question cannot be answered right now (step 14's table is
@@ -195,21 +195,21 @@ def _collect_numbers(summary, verbose=True):
     # defined value and bounds the others.
     nums["ps_specificity_rhat_max"] = float(summary["rhat_max"].max())
 
-    step14_n = _step14_n_persons()
-    nums["ps_specificity_n_persons_step14"] = step14_n
-    nums["ps_specificity_sample_matches_step14"] = (
-        None if step14_n is None else bool(step14_n == n_persons[0])
+    step16_n = _step16_n_persons()
+    nums["ps_specificity_n_persons_step16"] = step16_n
+    nums["ps_specificity_sample_matches_step16"] = (
+        None if step16_n is None else bool(step16_n == n_persons[0])
     )
-    if verbose and step14_n is not None and step14_n != n_persons[0]:
+    if verbose and step16_n is not None and step16_n != n_persons[0]:
         print("  WARNING: sample differs from step 14 for the same four ROIs: "
-              f"{n_persons[0]} persons here vs {step14_n} there. The Results "
+              f"{n_persons[0]} persons here vs {step16_n} there. The Results "
               "paragraph says 'the same four regions'. Re-run step 14 with "
               "--refit if its table is stale; otherwise step 13's ROI values "
               "changed and both steps must be refitted.")
     return nums
 
 
-def run_step17(verbose=True, refit=False):
+def run_step19(verbose=True, refit=False):
     """Fit (or reload) the four pain-to-sleep specificity fits and publish
     the table data and the registry numbers.
 
@@ -285,7 +285,7 @@ def run_step17(verbose=True, refit=False):
     nums = _collect_numbers(summary, verbose=verbose)
 
     from registry import write_numbers
-    numbers_path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step17")
+    numbers_path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step19")
 
     if verbose:
         for _, row in summary.iterrows():
@@ -312,7 +312,7 @@ def main():
                         help="Re-run the four MCMC fits instead of loading "
                              "saved derivatives")
     args = parser.parse_args()
-    run_step17(verbose=not args.quiet, refit=args.refit)
+    run_step19(verbose=not args.quiet, refit=args.refit)
     return 0
 
 

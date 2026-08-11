@@ -27,7 +27,7 @@ mediation. C1/T1 are the clean tests.
 
 Inputs
 ------
-  derivatives/step04_varx_data/step04_processed_long.csv
+  derivatives/step07_varx_data/step07_processed_long.csv
       primary analytic frame — ID, quarter, segment_id, the within/lag columns,
       Age, Sex. Supplies the primary transition count and the person index.
   data/step00_extracted_long.csv            (read-only; preferred location
@@ -89,8 +89,8 @@ STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step10_timevarying_covariates")
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
-                                "step04_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
+                                "step07_processed_long.csv")
 
 #: Where the raw quarterly items live. The fork declares data/ read-only and
 #: step 00 is to write its long frame into derivatives/, but today it still

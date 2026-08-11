@@ -1,6 +1,6 @@
 """Posterior predictive simulation for the VARX(1) coupling model.
 
-The canonical home. Consumed by ``step08_posterior_predictive_check.py`` and by
+The canonical home. Consumed by ``step09_posterior_predictive_check.py`` and by
 ``revision/sandbox/s02_grid.py`` (which now imports this module through a shim).
 Writes nothing on import.
 

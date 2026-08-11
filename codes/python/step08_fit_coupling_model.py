@@ -2,15 +2,15 @@
 Step 04 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 ======================================================================
 
-Input:  derivatives/step04_varx_data/step04_processed_long.csv
+Input:  derivatives/step07_varx_data/step07_processed_long.csv
 Output:
   derivatives/
-    step04_posterior_draws.npz     — raw posterior arrays for downstream steps
-    step04_person_coupling.csv     — per-person lambda_sp / lambda_ps
+    step07_posterior_draws.npz     — raw posterior arrays for downstream steps
+    step07_person_coupling.csv     — per-person lambda_sp / lambda_ps
   results/
-    step04_table4_coupling.csv     — Table 4: population parameters
-    step04_loo_comparison.csv      — LOO-CV pairwise comparisons
-    step04_text_numbers.csv        — every number stated in the text
+    step07_table4_coupling.csv     — Table 4: population parameters
+    step07_loo_comparison.csv      — LOO-CV pairwise comparisons
+    step07_text_numbers.csv        — every number stated in the text
 
 This step fits the bivariate VARX(1) coupling model to the
 within-person deviations produced by Step 02. It then fits three
@@ -43,33 +43,33 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step07_coupling_model")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step08_coupling_model")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step07_coupling_model")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step08_coupling_model")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data", "step04_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data", "step07_processed_long.csv")
 
 # Derivatives
-OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step07_posterior_draws.npz")
-OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step07_person_coupling.csv")
+OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step08_posterior_draws.npz")
+OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step08_person_coupling.csv")
 # The FULL posterior of the primary fit. The NPZ above keeps only the handful of
 # parameters the figures need; the posterior predictive check (step 08) has to
 # re-simulate the whole generative model, so it needs every parameter and the
 # person random effects together with their chain/draw structure.
-OUT_IDATA_NC = os.path.join(STEP_DERIV_DIR, "step07_primary_idata.nc")
+OUT_IDATA_NC = os.path.join(STEP_DERIV_DIR, "step08_primary_idata.nc")
 
 # Results
-OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step07_table4_coupling.csv")
+OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step08_table4_coupling.csv")
 # Intermediate CSVs (inputs to text rendering) live under derivatives/.
-OUT_LOO_CSV = os.path.join(STEP_DERIV_DIR, "step07_loo_comparison.csv")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step07_text_numbers.csv")
-OUT_FIG2 = os.path.join(STEP_RESULTS_DIR, "step07_figure2_ps_coupling.png")
-OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step07_figure3_sp_coupling.png")
+OUT_LOO_CSV = os.path.join(STEP_DERIV_DIR, "step08_loo_comparison.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step08_text_numbers.csv")
+OUT_FIG2 = os.path.join(STEP_RESULTS_DIR, "step08_figure2_ps_coupling.png")
+OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step08_figure3_sp_coupling.png")
 
 
 # =====================================================================
@@ -223,7 +223,7 @@ def _generate_coupling_figure(person_df, pop_mean, pop_ci_lo, pop_ci_hi,
     plt.close(fig)
 
 
-def run_step07(verbose: bool = True, refit: bool = False):
+def run_step08(verbose: bool = True, refit: bool = False):
     """Fit the coupling model and LOO-CV, produce all Step 03 outputs."""
     from coupling_model import (
         fit_bayesian_varx1,
@@ -307,7 +307,7 @@ def run_step07(verbose: bool = True, refit: bool = False):
             model_df, unique_ids, id_map,
             include_agesex=True,
             progressbar=True,
-            fit_id="step07_primary", out_dir=STEP_DERIV_DIR,
+            fit_id="step08_primary", out_dir=STEP_DERIV_DIR,
         )
 
         # ==============================================================
@@ -430,7 +430,7 @@ def run_step07(verbose: bool = True, refit: bool = False):
 
         # The LOO comparison function in coupling_model.py expects a
         # data_dir with a processed CSV. We point it at our derivatives
-        # folder where step03_processed_long.csv lives, but the function
+        # folder where step05_processed_long.csv lives, but the function
         # looks for processed_data_contrast.csv or processed_data.csv.
         # Easiest: symlink or pass the data directly. Instead, we
         # inline the LOO logic here using the same primitives.
@@ -455,7 +455,7 @@ def run_step07(verbose: bool = True, refit: bool = False):
                 idata_kwargs=idata_kwargs,
                 cores=1,
                 progressbar=True,
-                fit_id=f"step07_loo_{name}", out_dir=STEP_DERIV_DIR,
+                fit_id=f"step08_loo_{name}", out_dir=STEP_DERIV_DIR,
             )
             if verbose:
                 print(f"  Computing LOO for {name}...")
@@ -656,7 +656,7 @@ def run_step07(verbose: bool = True, refit: bool = False):
     nums["person_sp_sd"] = float(person_df["beta_sp_mean"].std())
     nums["person_sp_n_credible_neg"] = int((person_df["beta_sp_prob_neg"] > 0.95).sum())
 
-    numbers_path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step07")
+    numbers_path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step08")
     if verbose:
         print(f"  Saved numbers ({len(nums)} keys): {numbers_path}")
 
@@ -689,7 +689,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step07(verbose=not args.quiet, refit=args.refit)
+    run_step08(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

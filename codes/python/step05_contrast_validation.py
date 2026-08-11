@@ -11,10 +11,10 @@ Input:
   data/step00_extracted_long.csv                  — baseline PHQ endorsements
   data/original/participants_wideformat.xlsx     — WOMAC, PHQ, KL grade
 
-Output (results/step03/):
-  step03_figure_endorsement.png  — Figure S1: point-biserial bar chart
-  step03_figure_convergent.png   — Figure S2: scatter plots vs clinical
-  step03_text_numbers.csv           — ANOVA, Tukey, point-biserial (FDR),
+Output (results/step05/):
+  step05_figure_endorsement.png  — Figure S1: point-biserial bar chart
+  step05_figure_convergent.png   — Figure S2: scatter plots vs clinical
+  step05_text_numbers.csv           — ANOVA, Tukey, point-biserial (FDR),
                                      Pearson/Spearman correlations
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
@@ -40,10 +40,10 @@ LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 DATA_DIR = os.path.join(ROOT, "data")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step03_contrast_validation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step05_contrast_validation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step03_contrast_validation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step05_contrast_validation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 IN_SCORED_CSV = os.path.join(DERIV_DIR, "step01_factor_analysis", "step01_scored_long.csv")
@@ -55,7 +55,7 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 
 OUT_FIG_S1 = os.path.join(SUPP_DIR, "figure_endorsement.png")
 OUT_FIG_S2 = os.path.join(SUPP_DIR, "figure_convergent.png")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step03_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step05_text_numbers.csv")
 
 AREA_LABELS = [
     "Hands", "Arms", "Shoulders", "Neck", "Head/Face/Jaw",
@@ -93,8 +93,8 @@ def _resolve_kl_column(df):
 #: in whichever frame happened to be loaded.
 RESTRICT_TO_ANALYTIC = True
 
-IN_ANALYTIC_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
-                               "step04_processed_long.csv")
+IN_ANALYTIC_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
+                               "step07_processed_long.csv")
 
 
 def _load_person_mean_contrast():
@@ -312,7 +312,7 @@ def generate_figure_s2(verbose=True):
 
 def generate_text_numbers(verbose=True):
     """Compute and save all convergent validity statistics to
-    step03_text_numbers.csv:
+    step05_text_numbers.csv:
       - One-way ANOVA of person-mean contrast across pain distribution
         groups (knee-only, knee+others, no-knee) with group Ns/means/SDs
       - Tukey HSD post-hoc pairwise p-values
@@ -493,7 +493,7 @@ def generate_text_numbers(verbose=True):
 # Main
 # =====================================================================
 
-def run_step03(verbose=True, refit=False):
+def run_step05(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
         print("STEP 02 — Contrast factor external validation")
@@ -522,7 +522,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step03(verbose=not args.quiet, refit=args.refit)
+    run_step05(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

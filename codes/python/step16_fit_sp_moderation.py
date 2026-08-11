@@ -2,15 +2,15 @@
 Step 08 — Fit Sleep-to-Pain moderation models (7 ROIs).
 ======================================================================
 
-Input:  derivatives/step04_varx_data/step04_processed_long.csv
-        derivatives/step13_sp_roi_values/step13_sp_roi_values.csv
+Input:  derivatives/step07_varx_data/step07_processed_long.csv
+        derivatives/step14_sp_roi_values/step14_sp_roi_values.csv
 Output:
   derivatives/
-    step14_sp_posterior_draws.npz     — per-ROI posterior draws
+    step16_sp_posterior_draws.npz     — per-ROI posterior draws
   results/
-    step14_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
-    step14_sign_concordance.csv       — sign test results
-    step14_text_numbers.csv           — gamma estimates, p-values, etc.
+    step16_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
+    step16_sign_concordance.csv       — sign test results
+    step16_text_numbers.csv           — gamma estimates, p-values, etc.
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
 each of the 7 SP ROIs (6 Krause + 1 ACC). Extracts gamma_sp and
@@ -35,22 +35,22 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step14_sp_moderation")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step16_sp_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step14_sp_moderation")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step16_sp_moderation")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data", "step04_processed_long.csv")
-IN_ROI_CSV = os.path.join(DERIV_DIR, "step13_sp_roi_values", "step13_sp_roi_values.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data", "step07_processed_long.csv")
+IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values", "step14_sp_roi_values.csv")
 
-OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step14_sp_posterior_draws.npz")
-OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step14_table5_sp_moderation.csv")
-OUT_SIGN_CSV = os.path.join(STEP_DERIV_DIR, "step14_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step14_text_numbers.csv")
+OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step16_sp_posterior_draws.npz")
+OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step16_table5_sp_moderation.csv")
+OUT_SIGN_CSV = os.path.join(STEP_DERIV_DIR, "step16_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step16_text_numbers.csv")
 
 # ROIs included in the Krause sign-concordance test (ACC excluded)
 KRAUSE_ROIS = [
@@ -69,13 +69,13 @@ EXPECTED_SIGNS = {
 }
 
 
-def load_step03_data(csv_path):
+def load_step05_data(csv_path):
     """Thin wrapper around lib.coupling_model.load_varx_frame."""
     from coupling_model import load_varx_frame
     return load_varx_frame(csv_path, verbose=False)
 
 
-def run_step14(verbose=True, refit=False):
+def run_step16(verbose=True, refit=False):
     from coupling_model import fit_bayesian_varx1, extract_results
 
     if verbose:
@@ -106,7 +106,7 @@ def run_step14(verbose=True, refit=False):
         draws_dict = dict(np.load(OUT_DRAWS_NPZ))
     else:
         # ------ FULL MCMC FIT ------
-        df_full, model_df, unique_ids, id_map = load_step03_data(IN_PROCESSED_CSV)
+        df_full, model_df, unique_ids, id_map = load_step05_data(IN_PROCESSED_CSV)
 
         all_rois = roi_df["ROI"].unique()
         if verbose:
@@ -139,7 +139,7 @@ def run_step14(verbose=True, refit=False):
                 include_agesex=True,
                 moderator_direction="sp",
                 progressbar=True,
-                fit_id=f"step14_sp_{roi_name}", out_dir=STEP_DERIV_DIR,
+                fit_id=f"step16_sp_{roi_name}", out_dir=STEP_DERIV_DIR,
             )
 
             n_valid = len(valid_ids)
@@ -283,7 +283,7 @@ def main():
     parser.add_argument("--refit", action="store_true",
                         help="Re-run computation from scratch instead of loading saved derivatives")
     args = parser.parse_args()
-    run_step14(verbose=not args.quiet, refit=args.refit)
+    run_step16(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

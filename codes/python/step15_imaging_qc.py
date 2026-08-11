@@ -31,9 +31,9 @@ so a document number cannot match the wrong sample silently. See the module note
 Input:
   data/original/spm_mats/<ID>/SPM.mat                      (READ ONLY)
   data/original/participants_wideformat.xlsx               (READ ONLY)
-  derivatives/step04_varx_data/step04_processed_long.csv   (step 04)
-  derivatives/step13_sp_roi_values/step13_sp_roi_values.csv (step 13)
-  results/step14_sp_moderation/step14_table5_sp_moderation.csv (step 14)
+  derivatives/step07_varx_data/step07_processed_long.csv   (step 04)
+  derivatives/step14_sp_roi_values/step14_sp_roi_values.csv (step 13)
+  results/step16_sp_moderation/step16_table5_sp_moderation.csv (step 14)
   derivatives/step15_imaging_qc/diagnostics_step15_*.json  (self, written by run_fit)
 
 Output:
@@ -83,12 +83,12 @@ STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step15_imaging_qc")
 # --- inputs ---------------------------------------------------------------
 IN_SPM_DIR = os.path.join(ROOT, "data", "original", "spm_mats")
 IN_WIDE_XLSX = os.path.join(ROOT, "data", "original", "participants_wideformat.xlsx")
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
-                                "step04_processed_long.csv")
-IN_ROI_CSV = os.path.join(DERIV_DIR, "step13_sp_roi_values",
-                          "step13_sp_roi_values.csv")
-IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step14_sp_moderation",
-                             "step14_table5_sp_moderation.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
+                                "step07_processed_long.csv")
+IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values",
+                          "step14_sp_roi_values.csv")
+IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation",
+                             "step16_table5_sp_moderation.csv")
 
 # --- outputs --------------------------------------------------------------
 OUT_MOTION_CSV = os.path.join(STEP_DERIV_DIR, "step15_motion_qc.csv")

@@ -4,10 +4,10 @@ Step 03 — Segment filter, within-between decomposition, lag creation,
 ======================================================================
 
 Input:  new_organization/data/step01_scored_long.csv
-Output: new_organization/data/step03_processed_long.csv
-        new_organization/data/step03_figure1.png
-        new_organization/data/step03_table3_demographics.csv
-        new_organization/data/step03_timepoint_summary.csv
+Output: new_organization/data/step05_processed_long.csv
+        new_organization/data/step05_figure1.png
+        new_organization/data/step05_table3_demographics.csv
+        new_organization/data/step05_timepoint_summary.csv
 
 This step takes the factor-scored long table from Step 01 and
 produces the VARX(1)-ready dataset. Operations in order:
@@ -56,18 +56,18 @@ ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step04_varx_data")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step07_varx_data")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step04_varx_data")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step07_varx_data")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 IN_SCORED_CSV = os.path.join(DERIV_DIR, "step01_factor_analysis", "step01_scored_long.csv")
 
-OUT_PROCESSED_CSV = os.path.join(STEP_DERIV_DIR, "step04_processed_long.csv")
-OUT_FIGURE1 = os.path.join(STEP_RESULTS_DIR, "step04_figure1.png")
-OUT_TABLE3_CSV = os.path.join(STEP_RESULTS_DIR, "step04_table3_demographics.csv")
-OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step04_timepoint_summary.csv")
+OUT_PROCESSED_CSV = os.path.join(STEP_DERIV_DIR, "step07_processed_long.csv")
+OUT_FIGURE1 = os.path.join(STEP_RESULTS_DIR, "step07_figure1.png")
+OUT_TABLE3_CSV = os.path.join(STEP_RESULTS_DIR, "step07_table3_demographics.csv")
+OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step07_timepoint_summary.csv")
 
 
 # =====================================================================
@@ -556,7 +556,7 @@ def generate_figure1(
 # Top-level entry point
 # =====================================================================
 
-def run_step04(verbose: bool = True, refit: bool = False):
+def run_step07(verbose: bool = True, refit: bool = False):
     """Full Step 03 pipeline."""
     if verbose:
         print("=" * 70)
@@ -647,7 +647,7 @@ def run_step04(verbose: bool = True, refit: bool = False):
         {"metric": "min_lags_per_person", "value": int(per_person.min())},
         {"metric": "max_lags_per_person", "value": int(per_person.max())},
     ])
-    OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step04_text_numbers.csv")
+    OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step07_text_numbers.csv")
     text_numbers.to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
         print(f"  Saved: {OUT_TEXT_CSV}")
@@ -673,7 +673,7 @@ def main():
         help="Re-run computation from scratch instead of loading saved derivatives",
     )
     args = parser.parse_args()
-    run_step04(verbose=not args.quiet, refit=args.refit)
+    run_step07(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

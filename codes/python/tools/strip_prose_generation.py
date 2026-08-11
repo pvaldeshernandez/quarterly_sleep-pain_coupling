@@ -3,7 +3,7 @@
 Steps compute numbers, tables and figures. They no longer write manuscript prose.
 
 The reason is not tidiness. The generated paragraphs had already gone stale in exactly the
-way this arrangement guarantees: `step07_text.md` still emitted "Convergence was adequate:
+way this arrangement guarantees: `step08_text.md` still emitted "Convergence was adequate:
 maximum R-hat = 1.01; all effective sample sizes > 7,000" and "4 chains x 2,000 posterior
 draws" — the placeholder a reviewer caught and that the documents no longer contain. Re-running
 the pipeline would have REVERTED the corrections. Because Pedro authors the prose himself,

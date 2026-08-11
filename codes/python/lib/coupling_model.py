@@ -366,7 +366,7 @@ def run_fit(model, fit_id=None, out_dir=None, progressbar=True, **overrides):
 
     Every fit in the pipeline goes through here. `pm.sample` is called nowhere else,
     which is what makes the Methods description of the sampler true by construction
-    instead of by vigilance -- before this existed, step21 sampled at its own
+    instead of by vigilance -- before this existed, step23 sampled at its own
     hardcoded 2000/2000/0.95 while the library said otherwise.
 
     `overrides` are for genuine exceptions and are recorded in the diagnostics, so a
@@ -557,7 +557,7 @@ def sign_concordance_p(n_concordant, n_tested):
 
         p = P(X >= n_concordant | X ~ Binomial(n_tested, 0.5))
 
-    Used by step14 (Krause 6-ROI sign test) and step19 (Lynch 5-ROI
+    Used by step16 (Krause 6-ROI sign test) and step21 (Lynch 5-ROI
     sign tests, fMRI and VBM).
     """
     from math import comb
@@ -570,16 +570,16 @@ def sign_concordance_p(n_concordant, n_tested):
 
 
 # ===================================================================
-# Shared dataframe loader for step07 / step14 / step19 / step21
+# Shared dataframe loader for step08 / step16 / step21 / step23
 # ===================================================================
 
 def load_varx_frame(csv_path, verbose=False):
     """Load the VARX-ready long dataframe and prepare it for any
-    ``fit_bayesian_varx1`` / step21 call.
+    ``fit_bayesian_varx1`` / step23 call.
 
     Centralizes four previously-duplicated loader functions
-    (``step07.load_data``, ``step14.load_step03_data``,
-    ``step19.load_step03_data``, ``step21.load_data``). Performs:
+    (``step08.load_data``, ``step16.load_step05_data``,
+    ``step21.load_step05_data``, ``step23.load_data``). Performs:
 
       1. Read ``csv_path``.
       2. Compute Age_z and Sex_c at the PERSON level (one row per
@@ -662,7 +662,7 @@ def add_bivariate_innovations_likelihood(
     avoids the O(n^3) per-evaluation cost of ``pm.MvNormal`` and
     samples ~100x faster while being mathematically identical (see the
     module docstring). Both the main VARX fit (``fit_bayesian_varx1``)
-    and the severity-joint model (``step21``) attach their likelihood
+    and the severity-joint model (``step23``) attach their likelihood
     through this helper so the speed and priors stay in sync.
 
     Priors (declared here and returned as Deterministics/RVs):

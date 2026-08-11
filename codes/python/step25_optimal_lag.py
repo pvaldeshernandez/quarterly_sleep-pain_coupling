@@ -7,7 +7,7 @@ quarterly interval recovers. Every number in that derivation was arithmetic done
 on Table 4 and typed into the document: it had no pipeline source, so the checker could
 not verify it and a refit could not update it.
 
-This step is that arithmetic, done once, from `step07_table4_coupling.csv`.
+This step is that arithmetic, done once, from `step08_table4_coupling.csv`.
 
 It fits nothing. It reads the primary fit's four transition-matrix coefficients and
 publishes every quantity Section S14, Section S12 and manuscript paragraph 174 quote.
@@ -43,10 +43,10 @@ logarithm of a negative number.
 
 Outputs
 -------
-    results/step23_optimal_lag/step23_optimal_lag.csv    every derived quantity, tidy
-    results/step23_optimal_lag/numbers.json              the registry keys
+    results/step25_optimal_lag/step25_optimal_lag.csv    every derived quantity, tidy
+    results/step25_optimal_lag/numbers.json              the registry keys
 
-Run:  python step23_optimal_lag.py [--refit]
+Run:  python step25_optimal_lag.py [--refit]
 
 `--refit` is accepted for interface consistency and does nothing: there is no fit here
 and the arithmetic is instantaneous, so the step always recomputes.
@@ -66,11 +66,11 @@ sys.path.insert(0, LIB_DIR)
 ROOT = os.path.dirname(os.path.dirname(HERE))
 
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step23_optimal_lag")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step25_optimal_lag")
 
-IN_TABLE4 = os.path.join(RESULTS_DIR, "step07_coupling_model",
-                         "step07_table4_coupling.csv")
-OUT_CSV = os.path.join(STEP_RESULTS_DIR, "step23_optimal_lag.csv")
+IN_TABLE4 = os.path.join(RESULTS_DIR, "step08_coupling_model",
+                         "step08_table4_coupling.csv")
+OUT_CSV = os.path.join(STEP_RESULTS_DIR, "step25_optimal_lag.csv")
 
 #: days per quarter, for reporting the optimal lag in the unit the Discussion uses
 DAYS_PER_QUARTER = 91
@@ -198,7 +198,7 @@ def derive(coeffs, verbose=True):
     return table, nums
 
 
-def run_step23(verbose=True, refit=False):
+def run_step25(verbose=True, refit=False):
     """Derive Section S14's optimal-lag quantities from the primary fit."""
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
     if verbose:
@@ -212,7 +212,7 @@ def run_step23(verbose=True, refit=False):
     table.to_csv(OUT_CSV, index=False, float_format="%.17g")
 
     from registry import write_numbers
-    path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step23")
+    path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step25")
 
     if verbose:
         print(f"  Saved: {os.path.relpath(OUT_CSV, ROOT)}")
@@ -230,7 +230,7 @@ def main():
                     help="accepted for interface consistency; this step never fits")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
-    run_step23(verbose=not args.quiet, refit=args.refit)
+    run_step25(verbose=not args.quiet, refit=args.refit)
     return 0
 
 

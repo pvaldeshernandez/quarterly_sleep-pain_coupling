@@ -24,11 +24,11 @@ path or supplied on the command line. The primary model is Gaussian by Decision 
 (Student-t innovations stay in the sandbox; they retract delta_s), which is asserted here
 rather than assumed.
 
-Input:  derivatives/step07_coupling_model/step07_primary_idata.nc
-        derivatives/step04_varx_data/step04_processed_long.csv
-Output: derivatives/step08_posterior_predictive_check/step08_ppc_replicates.npz
-        results/step08_posterior_predictive_check/step08_table_s5_ppc.csv   -> Table S5
-        results/step08_posterior_predictive_check/numbers.json
+Input:  derivatives/step08_coupling_model/step08_primary_idata.nc
+        derivatives/step07_varx_data/step07_processed_long.csv
+Output: derivatives/step09_posterior_predictive_check/step09_ppc_replicates.npz
+        results/step09_posterior_predictive_check/step09_table_s5_ppc.csv   -> Table S5
+        results/step09_posterior_predictive_check/numbers.json
 
 The CSV carries machine names in its `statistic` column (mean/sd/q05/q95/iqr/kurt/
 corr(pain,sleep)/corr(innov_pain,innov_sleep)). Display labels, the table note and the
@@ -39,7 +39,7 @@ matrices are all persisted, so a standalone `plot_*` script can draw a predictiv
 in seconds without re-simulating anything.
 
 Usage:
-    python step08_posterior_predictive_check.py [--refit] [--quiet]
+    python step09_posterior_predictive_check.py [--refit] [--quiet]
                                                 [--n-rep 200] [--seed 42] [--selftest]
 """
 from __future__ import annotations
@@ -58,16 +58,16 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step08_posterior_predictive_check")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step08_posterior_predictive_check")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step09_posterior_predictive_check")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step09_posterior_predictive_check")
 
-IN_IDATA_NC = os.path.join(DERIV_DIR, "step07_coupling_model",
-                           "step07_primary_idata.nc")
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
-                                "step04_processed_long.csv")
+IN_IDATA_NC = os.path.join(DERIV_DIR, "step08_coupling_model",
+                           "step08_primary_idata.nc")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
+                                "step07_processed_long.csv")
 
-OUT_REPLICATES_NPZ = os.path.join(STEP_DERIV_DIR, "step08_ppc_replicates.npz")
-OUT_TABLE_CSV = os.path.join(STEP_RESULTS_DIR, "step08_table_s5_ppc.csv")
+OUT_REPLICATES_NPZ = os.path.join(STEP_DERIV_DIR, "step09_ppc_replicates.npz")
+OUT_TABLE_CSV = os.path.join(STEP_RESULTS_DIR, "step09_table_s5_ppc.csv")
 
 #: Replicated datasets. Pinned from the sandbox grid (`sandbox/s02_grid.py:116`,
 #: N_REP_PPC) rather than retyped, and quoted in the Methods as "200 datasets
@@ -203,7 +203,7 @@ def load_inputs(verbose=True):
                 f"  Step 08 recomputes nothing and fits nothing; it needs the {what} "
                 f"artifact.\n"
                 f"  Re-run that step with --refit. Note that "
-                f"step07_posterior_draws.npz is NOT a substitute for the saved "
+                f"step08_posterior_draws.npz is NOT a substitute for the saved "
                 f"InferenceData: it stores u_sp/u_ps posterior MEANS and only the a2/a4/"
                 f"b1/b4 draws, while replicating a dataset needs per-draw a0..b4, the "
                 f"four g_* moderators, u_sp, u_ps, sigma_pain, sigma_sleep and rho_innov.")
@@ -334,7 +334,7 @@ def _load_saved():
     return table, meta
 
 
-def run_step08(verbose=True, refit=False, n_rep=N_REP, seed=SEED):
+def run_step09(verbose=True, refit=False, n_rep=N_REP, seed=SEED):
     """Score the primary model's posterior predictive check.
 
     Default path is load-and-report: the saved table and replicates are read back and the
@@ -386,7 +386,7 @@ def run_step08(verbose=True, refit=False, n_rep=N_REP, seed=SEED):
     nums = numbers_from_table(table, meta)
 
     from registry import write_numbers
-    write_numbers(STEP_RESULTS_DIR, nums, prefix="step08")
+    write_numbers(STEP_RESULTS_DIR, nums, prefix="step09")
 
     if verbose:
         print(f"\n  {meta['n_rep']} replicated datasets from {meta['n_posterior_draws']} "
@@ -421,7 +421,7 @@ def main():
         print("PPC SELF-TEST PASSED")
         return 0
 
-    run_step08(verbose=not args.quiet, refit=args.refit,
+    run_step09(verbose=not args.quiet, refit=args.refit,
                n_rep=args.n_rep, seed=args.seed)
     return 0
 

@@ -2,14 +2,14 @@
 Step 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
 ======================================================================
 
-Input:  derivatives/step12_fmri_contrasts_masked/   (LH ROI)
-        derivatives/step12_fmri_contrasts_unmasked/ (all other fMRI ROIs)
+Input:  derivatives/step13_fmri_contrasts_masked/   (LH ROI)
+        derivatives/step13_fmri_contrasts_unmasked/ (all other fMRI ROIs)
         data/original/vbm/, data/atlases/
         MNI152 template (via nilearn, for Figure S6)
 Output:
-  derivatives/step18_ps_roi_values/
-    step18_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
-    step18_ps_vbm_roi_values.csv    — per-subject VBM GM volume z-scored ROI values
+  derivatives/step20_ps_roi_values/
+    step20_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
+    step20_ps_vbm_roi_values.csv    — per-subject VBM GM volume z-scored ROI values
   results/supplementary_materials/
     figure_arousal_rois.png      — Figure S6: arousal ROI brain maps
 
@@ -44,21 +44,21 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step18_ps_roi_values")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step20_ps_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step18_ps_roi_extraction")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step20_ps_roi_extraction")
 SUPP_DIR = os.path.join(RESULTS_DIR, "supplementary_materials")
 os.makedirs(SUPP_DIR, exist_ok=True)
 DATA_DIR = os.path.join(ROOT, "data")
 
-FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step12_fmri_contrasts_masked")
-FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step12_fmri_contrasts_unmasked")
+FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step13_fmri_contrasts_masked")
+FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step13_fmri_contrasts_unmasked")
 VBM_DIR   = os.path.join(ROOT, "data", "original", "vbm")
 ATLAS_DIR = os.path.join(ROOT, "data", "atlases")
 
-OUT_FMRI_CSV = os.path.join(STEP_DERIV_DIR, "step18_ps_fmri_roi_values.csv")
-OUT_VBM_CSV = os.path.join(STEP_DERIV_DIR, "step18_ps_vbm_roi_values.csv")
+OUT_FMRI_CSV = os.path.join(STEP_DERIV_DIR, "step20_ps_fmri_roi_values.csv")
+OUT_VBM_CSV = os.path.join(STEP_DERIV_DIR, "step20_ps_vbm_roi_values.csv")
 OUT_FIG_S6 = os.path.join(SUPP_DIR, "figure_arousal_rois.png")
 
 AROUSAL_ROIS = {
@@ -416,7 +416,7 @@ def generate_figure_s6(verbose=True):
 # =====================================================================
 
 
-def run_step18(verbose=True, refit=False):
+def run_step20(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
         print("STEP 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6")
@@ -475,7 +475,7 @@ def publish_subsample_demographics(verbose=True):
     from analytic_sample import analytic_ids
 
     analytic = analytic_ids(os.path.join(
-        DERIV_DIR, "step04_varx_data", "step04_processed_long.csv"))
+        DERIV_DIR, "step07_varx_data", "step07_processed_long.csv"))
     baseline = pd.read_csv(
         os.path.join(DATA_DIR, "step00_extracted_long.csv"),
         usecols=["ID", "quarter", "age__s1", "gender__s1", "Race__s1"])
@@ -485,8 +485,8 @@ def publish_subsample_demographics(verbose=True):
     nums = {}
     subsamples = {
         "vbm": OUT_VBM_CSV,
-        "fmri": os.path.join(DERIV_DIR, "step13_sp_roi_values",
-                             "step13_sp_roi_values.csv"),
+        "fmri": os.path.join(DERIV_DIR, "step14_sp_roi_values",
+                             "step14_sp_roi_values.csv"),
     }
     for tag, path in subsamples.items():
         if not os.path.exists(path):
@@ -514,7 +514,7 @@ def publish_subsample_demographics(verbose=True):
     if nums:
         os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
         from registry import write_numbers
-        path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step18")
+        path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step20")
         if verbose:
             print(f"  Saved numbers ({len(nums)} keys): "
                   f"{os.path.relpath(path, ROOT)}")
@@ -528,7 +528,7 @@ def main():
     parser.add_argument("--refit", action="store_true",
                         help="Re-extract ROI values from fMRI/VBM images")
     args = parser.parse_args()
-    run_step18(verbose=not args.quiet, refit=args.refit)
+    run_step20(verbose=not args.quiet, refit=args.refit)
 
 
 if __name__ == "__main__":

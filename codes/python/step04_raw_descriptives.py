@@ -9,15 +9,15 @@ raw items and the three factor scores, and the zero-pain floor structure at both
 person-quarter and the participant level.
 
 Input:  data/step00_extracted_long.csv                          (READ ONLY — raw q2-q13 items)
-        derivatives/step04_varx_data/step04_processed_long.csv  (analytic row set + factors)
+        derivatives/step07_varx_data/step07_processed_long.csv  (analytic row set + factors)
 Output:
-  results/step05_raw_descriptives/
-    step05_item_descriptives.csv       — per item, pooled over the described person-quarters
-    step05_by_quarter.csv              — per item per quarter
-    step05_variance_decomposition.csv  — ICC, between-SD, within-SD, within-person SD spread
+  results/step04_raw_descriptives/
+    step04_item_descriptives.csv       — per item, pooled over the described person-quarters
+    step04_by_quarter.csv              — per item per quarter
+    step04_variance_decomposition.csv  — ICC, between-SD, within-SD, within-person SD spread
     numbers.json                       — every scalar this step computed
-  derivatives/step05_raw_descriptives/
-    step05_zero_pain.csv               — zero/no-pain proportions (audit trail)
+  derivatives/step04_raw_descriptives/
+    step04_zero_pain.csv               — zero/no-pain proportions (audit trail)
 
 The CSVs are named for their CONTENT, not for the supplement table they currently feed.
 As of this writing the binding is: item_descriptives -> Panel A, by_quarter -> Panel B,
@@ -33,12 +33,12 @@ NO PROSE, NO FIGURE.
     at each timepoint, not the within-person variability the coupling model consumes, so
     it does not answer the question it appears to answer. The per-quarter table plus the
     ICC / within-SD numbers answer it properly. This is a settled decision, defended in
-    reply R2.20; step05 deliberately emits no PNG.
+    reply R2.20; step04 deliberately emits no PNG.
 
 This step fits no model, so it never touches lib.coupling_model.run_fit.
 
 Usage:
-    python step05_raw_descriptives.py [--refit] [--quiet]
+    python step04_raw_descriptives.py [--refit] [--quiet]
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 5)
 """
@@ -59,10 +59,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step05_raw_descriptives")
+STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step04_raw_descriptives")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 RESULTS_DIR = os.path.join(ROOT, "results")
-STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step05_raw_descriptives")
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step04_raw_descriptives")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 LIB_DIR = os.path.join(HERE, "lib")
@@ -72,16 +72,16 @@ sys.path.insert(0, LIB_DIR)
 IN_LONG_CSV = os.path.join(ROOT, "data", "step00_extracted_long.csv")
 #: the VARX-ready frame; supplies the analytic ID set, the retained (ID, quarter)
 #: pairs, and pain_factor / contrast_factor / sleep_factor.
-IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step04_varx_data",
-                                "step04_processed_long.csv")
+IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
+                                "step07_processed_long.csv")
 
-OUT_ITEM_CSV = os.path.join(STEP_RESULTS_DIR, "step05_item_descriptives.csv")
-OUT_BY_QUARTER_CSV = os.path.join(STEP_RESULTS_DIR, "step05_by_quarter.csv")
-OUT_VARCOMP_CSV = os.path.join(STEP_RESULTS_DIR, "step05_variance_decomposition.csv")
-OUT_ZERO_PAIN_CSV = os.path.join(STEP_DERIV_DIR, "step05_zero_pain.csv")
+OUT_ITEM_CSV = os.path.join(STEP_RESULTS_DIR, "step04_item_descriptives.csv")
+OUT_BY_QUARTER_CSV = os.path.join(STEP_RESULTS_DIR, "step04_by_quarter.csv")
+OUT_VARCOMP_CSV = os.path.join(STEP_RESULTS_DIR, "step04_variance_decomposition.csv")
+OUT_ZERO_PAIN_CSV = os.path.join(STEP_DERIV_DIR, "step04_zero_pain.csv")
 OUT_NUMBERS_JSON = os.path.join(STEP_RESULTS_DIR, "numbers.json")
 
-NUMBERS_PREFIX = "step05"
+NUMBERS_PREFIX = "step04"
 
 
 # =====================================================================
@@ -94,14 +94,14 @@ NUMBERS_PREFIX = "step05"
 # Which raw person-quarters are described?
 #
 #   "byID"    every raw row belonging to an analytic participant (2,748 rows,
-#             including quarter-0 rows and the 463 person-quarters the step04
+#             including quarter-0 rows and the 463 person-quarters the step07
 #             segment filter dropped), each item summarized on its own complete
 #             cases. This is what the sandbox did and what the ACCEPTED text of
 #             manuscript.docx, supplementary_materials.docx and the response
 #             letter currently quote. It is the DEFAULT so that running this step
 #             cannot silently change a published number.
 #
-#   "bypair"  only the (ID, quarter) pairs retained by step04 (2,056 rows), i.e.
+#   "bypair"  only the (ID, quarter) pairs retained by step07 (2,056 rows), i.e.
 #             exactly the person-quarters the coupling model consumes.
 #
 # Switching to "bypair" is defensible — the described base would then be the
@@ -137,7 +137,7 @@ ROW_SET_KEYS = {"byID": ("ID",), "bypair": ("ID", "quarter")}
 #: An (item, quarter) cell with fewer than this many observations is suppressed from the
 #: by-quarter table. Explicit and printed: no cell is suppressed today (the smallest cell
 #: has n = 113), but if attrition deepened, a quarter could vanish from the table with no
-#: warning. run_step05 prints every cell it drops.
+#: warning. run_step04 prints every cell it drops.
 MIN_CELL_N = 20
 
 #: response scale of every q2-q13 item; defines "floor" and "ceiling"
@@ -389,12 +389,12 @@ def _load_saved():
 # Entry point
 # =====================================================================
 
-def run_step05(verbose=True, refit=False):
+def run_step04(verbose=True, refit=False):
     """Compute (or load) the raw quarterly descriptives.
 
     The DEFAULT path loads the saved CSVs and numbers.json and reports them; nothing is
     recomputed and no file is touched. ``--refit`` recomputes from step00's raw long
-    table and step04's processed frame and rewrites every output. There is no MCMC in
+    table and step07's processed frame and rewrites every output. There is no MCMC in
     this step — ``refit`` is accepted for pipeline uniformity and costs about a second.
 
     Returns a dict with the four frames under ``frames`` and every scalar under
@@ -475,7 +475,7 @@ def main():
                          "(no MCMC in this step; takes about a second)")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
-    run_step05(verbose=not args.quiet, refit=args.refit)
+    run_step04(verbose=not args.quiet, refit=args.refit)
     return 0
 
 

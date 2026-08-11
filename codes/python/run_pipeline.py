@@ -7,7 +7,7 @@
     python run_pipeline.py --list
 
 Steps are discovered from the filenames rather than listed here, so inserting
-`step08_posterior_predictive_check.py` makes it part of the pipeline with no edit to
+`step09_posterior_predictive_check.py` makes it part of the pipeline with no edit to
 this file. Numeric order IS execution order — that invariant is what the renumbering
 to 23 steps exists to protect, and `--list` shows it.
 
