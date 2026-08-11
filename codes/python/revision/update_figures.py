@@ -33,7 +33,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 CODE = os.path.dirname(HERE)
 ROOT = os.path.dirname(os.path.dirname(CODE))
-sys.path.insert(0, os.path.join(CODE, "lib"))
+sys.path.insert(0, os.path.join(CODE, "revision"))
 
 RESULTS = os.path.join(ROOT, "results")
 DERIV = os.path.join(ROOT, "derivatives")

@@ -39,7 +39,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 CODE = os.path.dirname(HERE)
 ROOT = os.path.dirname(os.path.dirname(CODE))
-sys.path.insert(0, os.path.join(ROOT, "codes/python/lib"))   # docx_edit lives here
+sys.path.insert(0, os.path.join(ROOT, "codes/python/revision"))   # docx_edit lives here
 
 DOCS_DIR = os.path.join(ROOT, "docs/manuscript_JPAIN_resubmission")
 DOCS = ["manuscript.docx", "supplementary_materials.docx", "Response.docx",
