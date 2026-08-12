@@ -156,6 +156,30 @@ def run_step24(verbose=True, refit=False):
         "divergences_total_all_fits": int(distinct["divergences"].sum()),
         "max_tree_depth_all_fits": int(distinct["max_tree_depth"].max()),
     }
+
+    # Per-GROUP minima, because six table notes quote them and none of them had a name.
+    # Each note says "Across the sixteen adjusted models, R-hat did not exceed X, bulk and
+    # tail effective sample sizes were at least Y and Z" -- numbers computed by hand from
+    # this frame and typed in. Table 5's note was still quoting the previous run's pair
+    # months later, and nothing could have caught it: with no name there is nothing for a
+    # checker to compare against. Published here, one set per note.
+    for prefix, tag in (("step10", "timevarying_six"),
+                        ("step11", "nointerp"),
+                        ("step16", "sp_moderation_eight"),
+                        ("step18", "nuisance_sixteen"),
+                        ("step19", "ps_specificity_four"),
+                        ("step21", "arousal_ten"),
+                        ("step23", "severity_three")):
+        grp = distinct[distinct["fit_id"].astype(str).str.startswith(prefix)]
+        if grp.empty:
+            continue
+        nums.update({
+            f"n_fits_{tag}": int(len(grp)),
+            f"rhat_max_{tag}": float(grp["rhat_max"].max()),
+            f"ess_bulk_min_{tag}": float(grp["ess_bulk_min"].min()),
+            f"ess_tail_min_{tag}": float(grp["ess_tail_min"].min()),
+            f"divergences_total_{tag}": int(grp["divergences"].sum()),
+        })
     if not primary.empty:
         r = primary.iloc[0]
         nums.update({

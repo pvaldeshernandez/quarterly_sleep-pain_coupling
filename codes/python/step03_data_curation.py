@@ -164,23 +164,30 @@ def segment_filter(df: pd.DataFrame) -> pd.DataFrame:
 
 #: baseline sleep instruments, in the order Table 3 lists them. Questionnaires first,
 #: then the derived apnea score, then the nightly diary. Keys are the canonical names in
-#: lib/sleep_instruments; the ISI sub-items are deliberately absent -- they are components
-#: of the ISI total, and a sample description reports the instrument, not its items.
+#: lib/sleep_instruments. All 17 instruments Figure S3 draws are listed, the three ISI
+#: sub-items included: a demographics table that reported 14 of them would be inconsistent
+#: with its own figure, and the reader comparing the two would have to work out why.
 TABLE3_SLEEP = [
+    # questionnaires and the derived apnea score
     ("Insomnia__s1", "Insomnia Severity Index (0-28)"),
     ("PROMIS_Sleep_Tscore__s1", "PROMIS Sleep-Related Impairment (T-score)"),
     ("PSQI_Duration__s1", "PSQI sleep-duration item (0-3)"),
     ("stopbang_total", "STOP-BANG apnea risk (0-8)"),
+    # nightly diary: the subjective ratings, then the continuity measures
     ("sleep_quality", "Diary sleep quality (0-10)"),
     ("sleep_refreshed", "Diary restedness on waking (0-10)"),
     ("sleep_sleep_length", "Diary total hours slept"),
     ("sleep_fall_asleep_length", "Diary sleep-onset latency (min)"),
     ("sleep_awakenings_length", "Diary minutes awake after onset"),
     ("sleep_wake_up_times", "Diary number of awakenings"),
-    ("sleep_nap_times", "Diary number of naps"),
-    ("sleep_length_nap", "Diary nap duration (min)"),
     ("sleep_sleepmeds", "Diary nights using sleep medication"),
-    ("sleep_alcohol_drinks", "Diary alcoholic drinks"),
+]
+
+#: pain measured on the SAME nightly diary form as the sleep items above. Reporting the
+#: sleep half of a form and not the pain half, in a sleep-pain paper, is the omission
+#: this table already had once.
+TABLE3_PAIN_DIARY = [
+    ("sleep_pain_rating", "Diary average pain that day (0-100)"),
 ]
 
 
@@ -212,7 +219,7 @@ def _baseline_sleep(analytic_ids):
 
     ids = set(map(str, analytic_ids))
     out = {}
-    for key, label in TABLE3_SLEEP:
+    for key, label in TABLE3_SLEEP + TABLE3_PAIN_DIARY:
         if key == "stopbang_total":
             s = sbg.scores(ids=ids, wide=wide)
         elif key in values:
@@ -287,6 +294,28 @@ def compute_table3(
         _add(f"{label}, mean (SD)", "",
              f"{vals.mean():.1f} ({vals.std():.1f})")
 
+    # GCPS. Present in the extract and used in Figure S2, but the table omitted them
+    # while listing every other clinical pain measure -- the same inconsistency as the
+    # missing sleep block below, on the pain side.
+    for col, label in [
+        ("gcps_pain_intensity__s1", "GCPS pain intensity (0-100)"),
+        ("gcps_interference__s1", "GCPS pain interference (0-100)"),
+    ]:
+        if col in baseline.columns:
+            vals = baseline[col].dropna()
+            if len(vals):
+                _add(f"{label}, mean (SD)", "",
+                     f"{vals.mean():.1f} ({vals.std():.1f})")
+
+    # Diary pain, from the same nightly form as the diary sleep rows below.
+    sleep_values = _baseline_sleep(analytic_ids)
+    for _key, label in TABLE3_PAIN_DIARY:
+        vals = sleep_values.get(label)
+        if vals is not None and len(vals.dropna()) >= 20:
+            vals = vals.dropna()
+            _add(f"{label}, mean (SD)", "",
+                 f"{vals.mean():.1f} ({vals.std():.1f})")
+
     # PHQ
     for col, label in [
         ("phq_knee_pain_days__s1", "PHQ knee pain days per week"),
@@ -301,18 +330,14 @@ def compute_table3(
     _add("Knee pain rating (0-100), mean (SD)", "",
          f"{vals.mean():.1f} ({vals.std():.1f})")
 
-    # GCPS. Present in the extract and used in Figure S2, but the table omitted them
-    # while listing every other clinical pain measure -- the same inconsistency as the
-    # missing sleep block below, on the pain side.
-    for col, label in [
-        ("gcps_pain_intensity__s1", "GCPS pain intensity (0-100)"),
-        ("gcps_interference__s1", "GCPS pain interference (0-100)"),
-    ]:
-        if col in baseline.columns:
-            vals = baseline[col].dropna()
-            if len(vals):
-                _add(f"{label}, mean (SD)", "",
-                     f"{vals.mean():.1f} ({vals.std():.1f})")
+    # PHQ body-map knee endorsement. table3.docx has printed this row for months with
+    # no pipeline source behind the number, which is exactly the gap the reportable map
+    # exists to close. Area 11 is the knees (step05.KNEE_AREA_COL).
+    knee_col = "phq_pain_areas___11__s1"
+    if knee_col in baseline.columns:
+        knee = pd.to_numeric(baseline[knee_col], errors="coerce").fillna(0)
+        n_knee = int((knee == 1).sum())
+        _add("PHQ endorses knee pain, N (%)", "", f"{n_knee} ({100*n_knee/n:.1f})")
 
     # KL grade
     kl = baseline["KL_Index__s1"].dropna()
@@ -334,7 +359,10 @@ def compute_table3(
     # The values come from lib/sleep_instruments.baseline_frame and lib/stopbang.scores,
     # the same functions Section S4 uses, so a number here cannot disagree with the same
     # number there. Diary items are the mean of the nights a participant completed.
-    for label, values in _baseline_sleep(analytic_ids).items():
+    diary_pain_labels = {lbl for _, lbl in TABLE3_PAIN_DIARY}
+    for label, values in sleep_values.items():
+        if label in diary_pain_labels:
+            continue                       # already emitted with the pain block
         vals = values.dropna()
         if len(vals) < 20:                 # too few to describe; say so rather than omit
             _add(f"{label}, mean (SD)", "", f"n = {len(vals)}, not reported")
