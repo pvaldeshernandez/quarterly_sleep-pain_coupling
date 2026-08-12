@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 import warnings
 from typing import Dict, List, Tuple
 
@@ -44,6 +45,15 @@ warnings.filterwarnings("ignore")
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
 DATA_DIR = os.path.join(ROOT, "data")
+
+# lib/ on the path, as every other step that imports from it does. Without this the
+# registry import below raises ModuleNotFoundError when the step is run on its own --
+# `python step07_prepare_varx_data.py`, the command its own main() documents -- and it
+# dies AFTER writing its two derivative CSVs, so the step half-completes and its seven
+# named values never reach results/. It survived the cold run only because
+# run_pipeline.py inserts lib/ before importing any step.
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from registry import write_numbers  # noqa: E402
 
 DERIV_DIR = os.path.join(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step07_varx_data")
@@ -277,7 +287,6 @@ def run_step07(verbose: bool = True, refit: bool = False):
     # Results, and it lived only in this wide-format CSV in derivatives/, which the
     # value collector cannot read -- it looks for a metric,value schema. Three
     # reported numbers with nothing to check them against.
-    from registry import write_numbers
     write_numbers(STEP_RESULTS_DIR,
                   {k: (int(v) if float(v).is_integer() else float(v))
                    for k, v in summary.iloc[0].items()},

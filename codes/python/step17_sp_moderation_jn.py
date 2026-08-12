@@ -359,6 +359,14 @@ def run_step17(verbose=True, refit=False):
         # Text numbers
         if boundary is not None:
             _t(f"jn_sp_{roi_name}_boundary_raw", f"{boundary:.4f}")
+            # Every boundary, not just the first. For the contralateral S1, the
+            # contralateral middle insula and the right NAcc the credible region is
+            # bounded on BOTH sides, and the panel draws a dotted line at each -- so a
+            # reader sees two numbers where the registry named one. The first keeps its
+            # existing name; any further boundary is _boundary2_raw, _boundary3_raw.
+            for i, extra in enumerate(bds[1:], start=2):
+                _t(f"jn_sp_{roi_name}_boundary{i}_raw", f"{float(extra):.4f}")
+            _t(f"jn_sp_{roi_name}_n_boundaries", str(len(bds)))
             x_grid_z = jn["x_grid_z"]
             obs_z = jn["X_vals_z"]
             sig_at_obs = np.interp(obs_z, x_grid_z, jn["sig"].astype(float))

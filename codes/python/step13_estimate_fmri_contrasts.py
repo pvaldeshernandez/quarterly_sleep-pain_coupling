@@ -54,8 +54,6 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 GLM_DIR   = os.path.join(ROOT, "data", "original", "spm_mats")
 FMRI4D_DIR = os.path.join(ROOT, "data", "original", "fmri_4d")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
-STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step13")
-os.makedirs(STEP_DERIV_DIR, exist_ok=True)
 
 #: One folder per step, subfolders inside it. The two mask variants are two kinds of
 #: output from ONE step, not two steps, so they are subdirectories rather than

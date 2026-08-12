@@ -181,7 +181,16 @@ def generate_figure_s1(verbose=True):
     rpb_df = rpb_df.sort_values("r_pb", ascending=True).reset_index(drop=True)
 
     fig, ax = plt.subplots(figsize=(10, 7))
-    colors = ["#1565C0" if r < 0 else "#D32F2F" for r in rpb_df["r_pb"]]
+    # Colour by AREA, not by the sign of r. The Figure S1 caption states "Blue = knee;
+    # coral = non-knee areas", but this coloured blue when r < 0 and coral otherwise --
+    # and since the knee is the one positively-correlated area, the figure drew the knee
+    # in coral and every other area in blue, exactly inverting its own caption. Encoding
+    # the category is also what the figure is for: the claim is that knee endorsement
+    # behaves differently from the other twelve areas, not that some correlations are
+    # negative.
+    KNEE_LABEL = "Knees"
+    colors = ["#1565C0" if area == KNEE_LABEL else "#D32F2F"
+              for area in rpb_df["area"]]
     ax.barh(range(len(rpb_df)), rpb_df["r_pb"].values, color=colors, alpha=0.7)
     ax.set_yticks(range(len(rpb_df)))
     ax.set_yticklabels(rpb_df["area"].values, fontsize=11)

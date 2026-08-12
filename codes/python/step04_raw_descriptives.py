@@ -207,6 +207,11 @@ def _compute(verbose=True):
     keep = by_quarter_all["n"] >= MIN_CELL_N
     suppressed = by_quarter_all.loc[~keep & (by_quarter_all["n"] > 0),
                                     ["item", "quarter", "n"]]
+    # Cells with n == 0 are dropped by the same filter but were counted nowhere: the
+    # suppressed frame requires n > 0, so an item with no data at all in a quarter left
+    # Panel B silently one row shorter. A cell absent because it was suppressed and a
+    # cell absent because it was never collected are different facts about the study.
+    n_empty_cells = int((by_quarter_all["n"] == 0).sum())
     by_quarter = by_quarter_all.loc[keep].reset_index(drop=True)
 
     # ---- zero-pain / floor structure -----------------------------------
@@ -321,6 +326,13 @@ def _numbers(frames, n_participants, n_described, n_by_id, n_by_pair,
         "min_item_quarter_max": float(byq["max"].min()),
         "max_item_quarter_min": float(byq["min"].max()),
         "n_item_quarter_cells_suppressed": int(n_suppressed),
+        # Derived from the table itself rather than passed in, so the reload path
+        # reports it too. A cell missing because the item had NO data that quarter
+        # was counted nowhere -- `suppressed` requires n > 0 -- so Panel B could
+        # come up a row short with nothing saying why.
+        "n_item_quarter_cells_empty": int(
+            byq["item"].nunique() * byq["quarter"].nunique()
+            - len(byq) - int(n_suppressed)),
         "min_item_quarter_n": int(byq["n"].min()),
         "pain_item_quarter_pct_zero_max": float(pain_q["pct_at_floor"].max()),
 
