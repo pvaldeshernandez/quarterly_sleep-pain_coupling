@@ -305,8 +305,8 @@ Step 11 — Sensitivity of the coupling estimates to interpolated observations.
 - `flag_interpolated_transitions(df_full, model_df)` — Audit every transition for interpolated endpoints and return the clean subset.
 - `_conform(df, arm, n_obs, n_persons)` — Force a summary frame onto SUMMARY_COLUMNS so both arms share one schema.
 - `_lookup_number(numbers, name)` — Read one value out of a registry numbers.json, whatever prefix it carries.
-- `primary_counts(model_df, unique_ids, verbose)` — The primary fit's transition and person counts, cross-checked against step 07.
-- `load_primary_arm(n_obs, n_persons, verbose)` — The primary fit's posterior summary, from step 07's published outputs.
+- `primary_counts(model_df, unique_ids, verbose)` — The primary fit's transition and person counts, cross-checked against step 08.
+- `load_primary_arm(n_obs, n_persons, verbose)` — The primary fit's posterior summary, from step 08's published outputs.
 - `fit_nointerp_arm(clean, clean_ids, verbose)` — Fit the PRIMARY specification to the interpolation-free transitions.
 - `_cell(summary, arm, param)` — One parameter's row for one arm, or None if the arm does not carry it.
 - `estimate_numbers(summary, verbose)` — Every Table S7 cell, plus the two derived ratios the supplement states.

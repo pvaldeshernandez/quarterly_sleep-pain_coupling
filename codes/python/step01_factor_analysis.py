@@ -2,9 +2,9 @@
 Step 01 — Factor analysis and interpolation on the extracted long data.
 ======================================================================
 
-Input:  new_organization/data/extracted_long.csv
-Output: new_organization/data/scored_long.csv
-        new_organization/data/factor_model.json
+Input:  data/step00_extracted_long.csv
+Output: derivatives/step01_factor_analysis/step01_scored_long.csv
+        derivatives/step01_factor_analysis/step01_factor_model.json
 
 This step runs the 2-factor principal-axis factor analysis on the
 eight pain items (q2-q5 knee, q7-q10 body) using a polychoric
@@ -12,8 +12,8 @@ correlation matrix, scores every person-quarter via Bartlett
 factor scoring, z-scores the q13 sleep item, and then linearly
 interpolates single interior gaps in the three factor scores. It
 is the direct successor to Step 00 (data extraction) and the
-predecessor to Step 02 (segment filtering + within-between
-decomposition + lag creation + Figure 1).
+predecessor to step 03 (segment filtering, Figure 1 and Table 3);
+the within-between decomposition and the lags are built in step 07.
 
 The code in this file is a direct port of the factor-analysis and
 interpolation stages of the legacy
@@ -44,7 +44,7 @@ Functions in this file (modular, one responsibility each):
 
 The script is runnable directly::
 
-    python new_organization/codes/step01_factor_analysis.py
+    python step01_factor_analysis.py
 
 It reads Step 00's output and writes the two output files.
 

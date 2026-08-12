@@ -11,7 +11,7 @@ the coupling parameters. Three models:
 Input:  derivatives/step07_varx_data/step07_processed_long.csv
 Output:
   results/step23_severity_moderation/
-    step23_table_s2_severity.csv   — Table S2
+    table_s2_severity.csv          — Table S2
     step23_text_numbers.csv        — estimates for manuscript text
 
 Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)

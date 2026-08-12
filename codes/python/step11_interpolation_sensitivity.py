@@ -10,7 +10,7 @@ transition can carry an interpolated value at its outcome end (t), at its predic
 (t-1), or both. This step refits the PRIMARY specification to the transitions that carry
 NO interpolated value at EITHER endpoint, and places that fit beside the primary fit.
 
-The primary ("all transitions") column is READ from step 07, never refitted here. Two
+The primary ("all transitions") column is READ from step 08, never refitted here. Two
 executions of the same code with the same seed do not land on the same third decimal, and
 a local refit of the primary model is how a supplement table drifts away from Table 4
 without anyone noticing. One fit runs in this step: the interpolation-free arm.
@@ -24,7 +24,7 @@ Input:
   derivatives/step07_varx_data/step07_processed_long.csv
       ID, quarter, interpolated, the within/lag columns, Age, Sex
   derivatives/step08_coupling_model/step08_posterior_summary.csv   (preferred)
-      the primary fit's tidy summary, if step 07 publishes one
+      the primary fit's tidy summary, if step 08 publishes one
   results/step08_coupling_model/step08_table4_coupling.csv         (fallback estimates)
   derivatives/step08_coupling_model/diagnostics_step08_primary_by_param.csv
       per-parameter R-hat / bulk ESS of the primary fit, written by lib.write_diagnostics
@@ -83,16 +83,16 @@ STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step11_interpolation_sensitivity")
 # --- inputs (data/ and data/original/ are never touched by this step) ---
 IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
                                 "step07_processed_long.csv")
-STEP07_DERIV_DIR = os.path.join(DERIV_DIR, "step08_coupling_model")
-STEP07_RESULTS_DIR = os.path.join(RESULTS_DIR, "step08_coupling_model")
+STEP08_DERIV_DIR = os.path.join(DERIV_DIR, "step08_coupling_model")
+STEP08_RESULTS_DIR = os.path.join(RESULTS_DIR, "step08_coupling_model")
 #: preferred source for the primary arm — one tidy frame carrying estimates AND
-#: diagnostics. Read it if step 07 publishes it; otherwise the two files below.
-IN_STEP07_SUMMARY = os.path.join(STEP07_DERIV_DIR, "step08_posterior_summary.csv")
-IN_STEP07_TABLE4 = os.path.join(STEP07_RESULTS_DIR, "step08_table4_coupling.csv")
-IN_STEP07_BYPARAM = os.path.join(STEP07_DERIV_DIR,
+#: diagnostics. Read it if step 08 publishes it; otherwise the two files below.
+IN_STEP08_SUMMARY = os.path.join(STEP08_DERIV_DIR, "step08_posterior_summary.csv")
+IN_STEP08_TABLE4 = os.path.join(STEP08_RESULTS_DIR, "step08_table4_coupling.csv")
+IN_STEP08_BYPARAM = os.path.join(STEP08_DERIV_DIR,
                                  "diagnostics_step08_primary_by_param.csv")
-IN_STEP07_NUMBERS = os.path.join(STEP07_RESULTS_DIR, "numbers.json")
-IN_STEP07_PERSON = os.path.join(STEP07_DERIV_DIR, "step08_person_coupling.csv")
+IN_STEP08_NUMBERS = os.path.join(STEP08_RESULTS_DIR, "numbers.json")
+IN_STEP08_PERSON = os.path.join(STEP08_DERIV_DIR, "step08_person_coupling.csv")
 
 # --- outputs ---
 OUT_NI_IDATA = os.path.join(STEP_DERIV_DIR, "step11_nointerp_idata.nc")
@@ -119,7 +119,7 @@ ALL_ARM_FIT_ID = "step08_primary"
 
 #: One row per arm x population-level parameter. `rhat` and `ess_bulk` describe the fit
 #: that produced the row: for `nointerp` they come from this step's fit, for `all` from
-#: step 07's per-parameter diagnostics table.
+#: step 08's per-parameter diagnostics table.
 SUMMARY_COLUMNS = ["arm", "param", "mean", "sd", "ci_lo_2.5", "ci_hi_97.5",
                    "P_neg", "rhat", "ess_bulk", "n_obs", "n_persons"]
 
@@ -239,29 +239,29 @@ def _lookup_number(numbers, name):
 
 
 def primary_counts(model_df, unique_ids, verbose=True):
-    """The primary fit's transition and person counts, cross-checked against step 07.
+    """The primary fit's transition and person counts, cross-checked against step 08.
 
-    The counts are recomputed here from step 07's frame and then asserted equal to what
-    step 07 published. If they ever disagree, the "all transitions" column is describing
+    The counts are recomputed here from step 08's frame and then asserted equal to what
+    step 08 published. If they ever disagree, the "all transitions" column is describing
     a different analytic sample than the one being compared against, and the step stops
     rather than publishing a comparison of two different datasets.
     """
     n_obs, n_persons = int(len(model_df)), int(len(unique_ids))
 
     published = {}
-    if os.path.exists(IN_STEP07_NUMBERS):
-        with open(IN_STEP07_NUMBERS) as fh:
+    if os.path.exists(IN_STEP08_NUMBERS):
+        with open(IN_STEP08_NUMBERS) as fh:
             published = json.load(fh)
     ref_obs = _lookup_number(published, "n_transitions")
     ref_persons = _lookup_number(published, "n_persons")
 
-    if ref_persons is None and os.path.exists(IN_STEP07_PERSON):
-        # step 07 writes one row per person in the primary fit; a weaker check than
+    if ref_persons is None and os.path.exists(IN_STEP08_PERSON):
+        # step 08 writes one row per person in the primary fit; a weaker check than
         # its numbers.json, but it is a real one and it exists today.
-        ref_persons = int(len(pd.read_csv(IN_STEP07_PERSON, float_precision="round_trip")))
+        ref_persons = int(len(pd.read_csv(IN_STEP08_PERSON, float_precision="round_trip")))
         if verbose:
             print(f"  step08 numbers.json absent — person count cross-checked "
-                  f"against {os.path.relpath(IN_STEP07_PERSON, ROOT)}")
+                  f"against {os.path.relpath(IN_STEP08_PERSON, ROOT)}")
 
     mismatches = []
     if ref_obs is not None and int(ref_obs) != n_obs:
@@ -276,58 +276,58 @@ def primary_counts(model_df, unique_ids, verbose=True):
         )
     if ref_obs is None and verbose:
         print("  WARNING: step08 published no n_transitions; the all-transitions "
-              "column header is taken from step 07's frame without cross-check.")
+              "column header is taken from step 08's frame without cross-check.")
     return n_obs, n_persons
 
 
 def load_primary_arm(n_obs, n_persons, verbose=True):
-    """The primary fit's posterior summary, from step 07's published outputs.
+    """The primary fit's posterior summary, from step 08's published outputs.
 
     Preference order:
       1. step08_posterior_summary.csv — the tidy summary, estimates and diagnostics
-         in one frame (this is what step 07 should publish; see lib_changes_needed).
+         in one frame (this is what step 08 should publish; see lib_changes_needed).
       2. step08_table4_coupling.csv (estimates) merged with
          diagnostics_step08_primary_by_param.csv (per-parameter R-hat and bulk ESS).
-         The per-parameter diagnostics are recoverable only from that file: step 07's
+         The per-parameter diagnostics are recoverable only from that file: step 08's
          saved draws are flattened with no chain dimension, so R-hat cannot be
          recomputed downstream.
 
     A missing diagnostics source leaves `rhat`/`ess_bulk` NaN for the `all` arm and says
     so out loud — it never triggers a local refit of the primary model.
     """
-    if os.path.exists(IN_STEP07_SUMMARY):
-        summ = pd.read_csv(IN_STEP07_SUMMARY, float_precision="round_trip")
+    if os.path.exists(IN_STEP08_SUMMARY):
+        summ = pd.read_csv(IN_STEP08_SUMMARY, float_precision="round_trip")
         if "arm" in summ.columns:
             summ = summ.drop(columns=["arm"])
         if verbose:
             print(f"  all-transitions arm read from "
-                  f"{os.path.relpath(IN_STEP07_SUMMARY, ROOT)}")
+                  f"{os.path.relpath(IN_STEP08_SUMMARY, ROOT)}")
         return _conform(summ, ARM_ALL, n_obs, n_persons)
 
-    if not os.path.exists(IN_STEP07_TABLE4):
+    if not os.path.exists(IN_STEP08_TABLE4):
         raise FileNotFoundError(
-            f"neither {IN_STEP07_SUMMARY} nor {IN_STEP07_TABLE4} exists; run "
+            f"neither {IN_STEP08_SUMMARY} nor {IN_STEP08_TABLE4} exists; run "
             "step08_fit_coupling_model.py --refit before this step"
         )
-    tab = pd.read_csv(IN_STEP07_TABLE4, float_precision="round_trip").rename(columns={
+    tab = pd.read_csv(IN_STEP08_TABLE4, float_precision="round_trip").rename(columns={
         "Parameter": "param", "Estimate": "mean", "SD": "sd",
         "CrI_lo": "ci_lo_2.5", "CrI_hi": "ci_hi_97.5",
     })[["param", "mean", "sd", "ci_lo_2.5", "ci_hi_97.5", "P_neg"]]
 
-    if os.path.exists(IN_STEP07_BYPARAM):
-        diag = pd.read_csv(IN_STEP07_BYPARAM, index_col=0, float_precision="round_trip")
+    if os.path.exists(IN_STEP08_BYPARAM):
+        diag = pd.read_csv(IN_STEP08_BYPARAM, index_col=0, float_precision="round_trip")
         diag = diag.rename(columns={"r_hat": "rhat"})
         diag = diag[[c for c in ("rhat", "ess_bulk") if c in diag.columns]]
         diag.index.name = "param"
         tab = tab.merge(diag.reset_index(), on="param", how="left")
     elif verbose:
         print("  WARNING: no per-parameter diagnostics for the primary fit "
-              f"({os.path.relpath(IN_STEP07_BYPARAM, ROOT)} missing); the "
+              f"({os.path.relpath(IN_STEP08_BYPARAM, ROOT)} missing); the "
               "all-transitions arm carries estimates only.")
 
     if verbose:
         print(f"  all-transitions arm read from "
-              f"{os.path.relpath(IN_STEP07_TABLE4, ROOT)}")
+              f"{os.path.relpath(IN_STEP08_TABLE4, ROOT)}")
     return _conform(tab, ARM_ALL, n_obs, n_persons)
 
 
@@ -338,7 +338,7 @@ def load_primary_arm(n_obs, n_persons, verbose=True):
 def fit_nointerp_arm(clean, clean_ids, verbose=True):
     """Fit the PRIMARY specification to the interpolation-free transitions.
 
-    Same call as step 07's primary fit — same model graph, same priors, same sampler.
+    Same call as step 08's primary fit — same model graph, same priors, same sampler.
     Sampling is delegated to ``lib.coupling_model.run_fit`` through
     ``fit_bayesian_varx1``; this step names no sampler setting anywhere, so it cannot
     drift from the settings the Methods describes, and its diagnostics are written for
@@ -445,7 +445,7 @@ def count_numbers(flags, n_obs, n_persons, n_interp_rows):
     clean_flags = flags[~flags["contaminated"]]
     n_clean_persons = int(clean_flags["ID"].nunique())
     return {
-        # the primary fit's sample, named the same way step 07 and step 10 name it
+        # the primary fit's sample, named the same way step 08 and step 10 name it
         "n_transitions_primary": int(n_obs),
         "n_persons_primary": int(n_persons),
         # deliberately NOT `n_rows_interpolated`: step 01 publishes that name for the
@@ -634,13 +634,13 @@ def run_step11(verbose: bool = True, refit: bool = False):
                   f"(lost {counts['n_persons_dropped']} persons)")
             print(f"  Saved transition flags: {OUT_FLAGS_CSV}")
 
-        # Read the all-transitions arm BEFORE sampling: if step 07's outputs are
+        # Read the all-transitions arm BEFORE sampling: if step 08's outputs are
         # missing, fail in a second rather than after an hour of MCMC.
         all_arm = load_primary_arm(n_obs, n_persons, verbose=verbose)
 
         if verbose:
             print("\n  Fitting the interpolation-free arm "
-                  "(the all-transitions arm is READ from step 07, never refitted)...")
+                  "(the all-transitions arm is READ from step 08, never refitted)...")
         ni = fit_nointerp_arm(clean, clean_ids, verbose=verbose)
         summary = pd.concat([all_arm, ni], ignore_index=True)
         summary.to_csv(OUT_SUMMARY_CSV, index=False)

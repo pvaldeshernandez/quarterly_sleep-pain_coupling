@@ -37,13 +37,10 @@ Input:
 Output:
   derivatives/step15_imaging_qc/
     step15_motion_qc.csv                  — per-participant framewise displacement
-    step15_nuisance_gamma_draws.npz       — gamma_sp draws + adjusted moderators, 16 fits
-    step15_diagnostics.csv                — the 16 run_fit diagnostics records
   results/step15_imaging_qc/
     step15_motion_correlations.csv        — mean FD vs evoked pain and vs each ROI
     step15_evokedpain_correlations.csv    — evoked pain vs each ROI
     step15_site_differences.csv           — per-ROI Welch test by scanner site
-    step15_tableS8_nuisance_sensitivity.csv — Table S8 DATA (no note, no caption)
     numbers.json                          — every quantity, via registry.write_numbers
 
 This step writes no prose: no *_text.md, no table notes, no captions (Decision 3).

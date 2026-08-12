@@ -94,14 +94,14 @@ NUMBERS_PREFIX = "step04"
 # Which raw person-quarters are described?
 #
 #   "byID"    every raw row belonging to an analytic participant (2,748 rows,
-#             including quarter-0 rows and the 463 person-quarters the step07
+#             including quarter-0 rows and the 463 person-quarters the step 03
 #             segment filter dropped), each item summarized on its own complete
 #             cases. This is what the sandbox did and what the ACCEPTED text of
 #             manuscript.docx, supplementary_materials.docx and the response
 #             letter currently quote. It is the DEFAULT so that running this step
 #             cannot silently change a published number.
 #
-#   "bypair"  only the (ID, quarter) pairs retained by step07 (2,056 rows), i.e.
+#   "bypair"  only the (ID, quarter) pairs retained by step 03 (2,056 rows), i.e.
 #             exactly the person-quarters the coupling model consumes.
 #
 # Switching to "bypair" is defensible — the described base would then be the
