@@ -35,7 +35,9 @@ def tabular(root):
     """{relative path: absolute path} for every CSV under `root`."""
     out = {}
     for dirpath, _, files in os.walk(root):
-        if "revision" in dirpath.split(os.sep):
+        # Skip anything archived. Superseded outputs are kept for reference and
+        # comparing against them would report every one of them as a difference.
+        if "archive" in dirpath.split(os.sep):
             continue
         for fn in files:
             if fn.endswith(".csv"):

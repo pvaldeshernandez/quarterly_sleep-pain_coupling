@@ -5,7 +5,7 @@ strength, with the non-significant cells marked" — not around one figure. It t
 aligned frames and a list of column labels, so the same function draws Figure S3's
 17 x 12 grid or any other grid of the same shape.
 
-Factored out of `revision/a10d_render_heatmap.py`, which was the only thing that could
+Factored out of `archive/revision_20260811/a10d_render_heatmap.py`, which was the only thing that could
 draw Figure S3 and was never migrated when the sandbox became the pipeline: step 06
 computed the grid but nothing rendered it, so the figure in the document had no source.
 

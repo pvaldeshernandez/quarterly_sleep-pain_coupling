@@ -27,7 +27,7 @@ Feeds Supplementary Table S2 (congruence by sampling) and Supplementary Section 
 No prose, no table notes and no captions are generated here (fork Decision 3): the CSVs
 carry the table data and `numbers.json` carries every scalar the text quotes.
 
-Three deliberate departures from the sandbox script (`revision/a04b_efa_clustering.py`),
+Three deliberate departures from the sandbox script (`archive/revision_20260811/a04b_efa_clustering.py`),
 each of which moves numbers and so must not be silent:
 
   * ESTIMATOR. The sandbox carried a FORK of the project's EFA — a plain unrotated

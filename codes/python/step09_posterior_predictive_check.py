@@ -9,7 +9,7 @@ and the realized same-quarter correlation of the innovations. Every posterior pr
 p-value is P(T_rep >= T_obs); 0.5 is ideal, 0 or 1 is misfit.
 
 THIS STEP NEVER FITS. `pm.sample`, `run_fit` and `fit_bayesian_varx1` do not appear here.
-The sandbox ancestor (`revision/a02_diagnostics.py:113-125`) refit the primary model purely
+The sandbox ancestor (`archive/revision_20260811/a02_diagnostics.py:113-125`) refit the primary model purely
 to obtain an InferenceData, and mutated the library's sampler constants to do it; that is
 deleted. Step 08 reads step 07's saved posterior, so the PPC is guaranteed to describe the
 fit the paper reports rather than a same-specification re-run.

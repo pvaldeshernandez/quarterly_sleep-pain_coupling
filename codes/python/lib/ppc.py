@@ -1,12 +1,12 @@
 """Posterior predictive simulation for the VARX(1) coupling model.
 
 The canonical home. Consumed by ``step09_posterior_predictive_check.py`` and by
-``revision/sandbox/s02_grid.py`` (which now imports this module through a shim).
+``archive/revision_20260811/sandbox/s02_grid.py`` (which now imports this module through a shim).
 Writes nothing on import.
 
 WHY THIS FILE EXISTS
 --------------------
-``revision/a02_diagnostics.py:52`` already has a ``simulate_replicates()``
+``archive/revision_20260811/a02_diagnostics.py:52`` already has a ``simulate_replicates()``
 that re-implements the generative model from the posterior draws. It is
 hard-wired to GAUSSIAN innovations:
 
@@ -314,13 +314,24 @@ def _toy_idata_and_frame(seed=0, n_obs=137, n_persons=11, n_chains=2,
 
 
 def verify_gaussian_identity(verbose=True):
-    """max |delta| between this module's Gaussian path and a02's must be 0."""
-    sys.dont_write_bytecode = True   # do not drop a .pyc into revision/
-    # lib/ -> codes/python/ -> codes/python/revision/, where a02 still lives.
-    # a02 is NOT edited: it backs numbers already in the manuscript, and it is
-    # the reference this identity check exists to compare against.
-    sys.path.insert(0, os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "revision"))
+    """max |delta| between this module's Gaussian path and a02's must be 0.
+
+    A one-time rewire check, not a pipeline step: it proved that factoring
+    ``simulate_replicates`` out of the sandbox changed no number. Its reference,
+    ``a02_diagnostics``, was archived with the rest of the revision scaffolding on
+    11 Aug 2026, so the check now SKIPS rather than fails when the archive is
+    absent. Keeping it callable matters -- if the Gaussian path is ever edited,
+    this is what says whether the edit was safe.
+    """
+    sys.dont_write_bytecode = True   # do not drop a .pyc into the archive
+    code = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ref_dir = os.path.join(code, "archive", "revision_20260811")
+    if not os.path.exists(os.path.join(ref_dir, "a02_diagnostics.py")):
+        if verbose:
+            print(f"  skipped: reference a02_diagnostics.py not found under "
+                  f"{os.path.relpath(ref_dir, code)}")
+        return None
+    sys.path.insert(0, ref_dir)
     import a02_diagnostics as a02
 
     idata, md = _toy_idata_and_frame()

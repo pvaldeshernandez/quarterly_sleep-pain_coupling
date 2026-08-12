@@ -46,5 +46,10 @@ Thumbs.db
 # Jupyter
 .ipynb_checkpoints/
 
-# Revision sandbox (JPAIN resubmission) — exploratory tests, not part of the pipeline
+# Document tooling and spent scaffolding. This repository generates results; anything
+# that reads or writes a .docx lives with the documents, under docs/tools/, and the
+# one-shot revision scripts were archived on 11 Aug 2026 to codes/python/archive/.
+# Both are already covered by the archive/ and docs/ rules above; named here so it is
+# obvious the omission is deliberate rather than an oversight.
+codes/python/archive/
 codes/python/revision/

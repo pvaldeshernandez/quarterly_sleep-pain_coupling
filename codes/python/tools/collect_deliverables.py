@@ -16,7 +16,7 @@ shifted six figure numbers, and splitting Section S9 yesterday shifted four more
 So the numbering lives in exactly one place: MANUSCRIPT and SUPPLEMENT below. Renumber
 the documents and only this file moves. Everything downstream then works by NAME --
 `figureS6.png` is Figure S6, with nothing to look up -- which is why
-`revision/update_figures.py` needs no map of its own.
+`docs/tools/update_figures.py` needs no map of its own.
 
 THE THIRD OUTPUT is `reported_values.csv`: every value the pipeline names, merged from
 each step's `numbers.json` and `step*_text_numbers.csv`. Figures and tables are not the
