@@ -162,6 +162,69 @@ def segment_filter(df: pd.DataFrame) -> pd.DataFrame:
 # Table 3 — Demographics of the analytic sample
 # =====================================================================
 
+#: baseline sleep instruments, in the order Table 3 lists them. Questionnaires first,
+#: then the derived apnea score, then the nightly diary. Keys are the canonical names in
+#: lib/sleep_instruments; the ISI sub-items are deliberately absent -- they are components
+#: of the ISI total, and a sample description reports the instrument, not its items.
+TABLE3_SLEEP = [
+    ("Insomnia__s1", "Insomnia Severity Index (0-28)"),
+    ("PROMIS_Sleep_Tscore__s1", "PROMIS Sleep-Related Impairment (T-score)"),
+    ("PSQI_Duration__s1", "PSQI sleep-duration item (0-3)"),
+    ("stopbang_total", "STOP-BANG apnea risk (0-8)"),
+    ("sleep_quality", "Diary sleep quality (0-10)"),
+    ("sleep_refreshed", "Diary restedness on waking (0-10)"),
+    ("sleep_sleep_length", "Diary total hours slept"),
+    ("sleep_fall_asleep_length", "Diary sleep-onset latency (min)"),
+    ("sleep_awakenings_length", "Diary minutes awake after onset"),
+    ("sleep_wake_up_times", "Diary number of awakenings"),
+    ("sleep_nap_times", "Diary number of naps"),
+    ("sleep_length_nap", "Diary nap duration (min)"),
+    ("sleep_sleepmeds", "Diary nights using sleep medication"),
+    ("sleep_alcohol_drinks", "Diary alcoholic drinks"),
+]
+
+
+def _baseline_sleep(analytic_ids):
+    """{label -> Series of person-level values} for every baseline sleep instrument.
+
+    Delegates to lib/sleep_instruments.baseline_frame and lib/stopbang.scores, which are
+    what Section S4 uses, so Table 3 and Section S4 cannot report different numbers for
+    the same instrument. Returns an empty dict, with a warning, if the wide export or the
+    data dictionary is unavailable -- the demographics table is still worth producing
+    without its sleep block, but silently dropping it is what left the gap in the first
+    place.
+    """
+    import sleep_instruments as si
+    import stopbang as sbg
+
+    wide_path = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
+    dict_path = os.path.join(DATA_DIR, "original", "UPLOAD2_Data_Dictionary.xlsx")
+    for p in (wide_path, dict_path):
+        if not os.path.exists(p):
+            print(f"    WARNING: {os.path.basename(p)} not found; Table 3 will have no "
+                  f"sleep rows. They are NOT optional -- fix the path.")
+            return {}
+
+    wide = pd.read_excel(wide_path)
+    dd = pd.read_excel(dict_path)
+    wide["ID"] = wide["ID"].astype(str)
+    values, _meta = si.baseline_frame(wide, dd, min_nights=si.MIN_NIGHTS)
+
+    ids = set(map(str, analytic_ids))
+    out = {}
+    for key, label in TABLE3_SLEEP:
+        if key == "stopbang_total":
+            s = sbg.scores(ids=ids, wide=wide)
+        elif key in values:
+            s = values[key]
+            s = s[s.index.astype(str).isin(ids)]
+        else:
+            print(f"    WARNING: baseline sleep measure {key!r} unavailable")
+            continue
+        out[label] = s
+    return out
+
+
 def compute_table3(
     df_processed: pd.DataFrame, df_full: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -238,6 +301,19 @@ def compute_table3(
     _add("Knee pain rating (0-100), mean (SD)", "",
          f"{vals.mean():.1f} ({vals.std():.1f})")
 
+    # GCPS. Present in the extract and used in Figure S2, but the table omitted them
+    # while listing every other clinical pain measure -- the same inconsistency as the
+    # missing sleep block below, on the pain side.
+    for col, label in [
+        ("gcps_pain_intensity__s1", "GCPS pain intensity (0-100)"),
+        ("gcps_interference__s1", "GCPS pain interference (0-100)"),
+    ]:
+        if col in baseline.columns:
+            vals = baseline[col].dropna()
+            if len(vals):
+                _add(f"{label}, mean (SD)", "",
+                     f"{vals.mean():.1f} ({vals.std():.1f})")
+
     # KL grade
     kl = baseline["KL_Index__s1"].dropna()
     n_kl = len(kl)
@@ -248,6 +324,22 @@ def compute_table3(
              f"{count} ({100*count/n_kl:.1f})")
     if n_missing_kl > 0:
         _add("Kellgren-Lawrence grade", "missing", str(n_missing_kl))
+
+    # ---- baseline SLEEP ---------------------------------------------------
+    # The table described how the sample HURT at baseline and said nothing about how it
+    # SLEPT, in a paper about sleep-pain coupling. Every baseline instrument the study
+    # collected is reported here, so the table is the sample description it claims to be
+    # rather than the pain half of one.
+    #
+    # The values come from lib/sleep_instruments.baseline_frame and lib/stopbang.scores,
+    # the same functions Section S4 uses, so a number here cannot disagree with the same
+    # number there. Diary items are the mean of the nights a participant completed.
+    for label, values in _baseline_sleep(analytic_ids).items():
+        vals = values.dropna()
+        if len(vals) < 20:                 # too few to describe; say so rather than omit
+            _add(f"{label}, mean (SD)", "", f"n = {len(vals)}, not reported")
+            continue
+        _add(f"{label}, mean (SD)", "", f"{vals.mean():.1f} ({vals.std():.1f})")
 
     table3 = pd.DataFrame(rows)
     print(f"    {len(rows)} rows generated for N = {n}")

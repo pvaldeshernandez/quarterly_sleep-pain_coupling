@@ -228,6 +228,16 @@ def baseline_frame(wide, dd, min_nights=MIN_NIGHTS):
             # `select` would drop it anyway.
             continue
         block = wide[cols].apply(pd.to_numeric, errors="coerce")
+        # REDCap missing codes, averaged in as if they were data. The nightly diary
+        # carries -99 ("not answered") and -88 ("not applicable"), and none of these
+        # items -- counts of naps and awakenings, minutes, hours slept, drinks -- can
+        # legitimately be negative. Averaging them produced person-level values like
+        # -75 naps and -61 hours slept, and those values reached the Section S4
+        # correlations for minutes awake after onset, sleep-onset latency and total
+        # hours slept. Treated as missing, which is what they are; a participant left
+        # with fewer than `min_nights` usable nights then drops out by the rule below,
+        # rather than being kept with a contaminated mean.
+        block = block.mask(block < 0)
         n_nights = block.notna().sum(axis=1)
         avg = block.mean(axis=1).where(n_nights >= min_nights)
         values[stem] = pd.Series(avg.values, index=ids)

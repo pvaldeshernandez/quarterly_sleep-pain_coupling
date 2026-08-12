@@ -194,6 +194,7 @@ Step 02 — Measurement checks on the published two-factor pain solution.
 Step 03 — Data curation: who is in the analytic sample.
 
 - `segment_filter(df)` — Identify and retain segments of >= MIN_SEGMENT consecutive quarters.
+- `_baseline_sleep(analytic_ids)` — {label -> Series of person-level values} for every baseline sleep instrument.
 - `compute_table3(df_processed, df_full)` — Compute Table 3 demographics for the analytic sample.
   - `_add(variable, level, value)` — *(undocumented)*
 - `generate_figure1(df_processed, df_full, out_path)` — Generate Figure 1: data availability grid.

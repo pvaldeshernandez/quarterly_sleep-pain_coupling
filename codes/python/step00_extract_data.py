@@ -150,6 +150,16 @@ BASELINE_VARS = [
     # QST knee pain rating (Table 2 + Figure S2)
     "qst_knee_pain_rating__s1",
 
+    # Baseline sleep instruments (Table 3). The paper's sleep measure is the
+    # QUARTERLY item q13; these characterize how the sample slept at baseline, which a
+    # sleep-pain paper's demographics table has to state. Names are the canonical ones
+    # in lib/sleep_instruments.py, so this table and the Section S4 correlations refer
+    # to the same variables. STOP-BANG is not here because it is DERIVED from eight
+    # components rather than exported as a column; lib/stopbang.py scores it.
+    "Insomnia__s1",
+    "PROMIS_Sleep_Tscore__s1",
+    "PSQI_Duration__s1",
+
     # GCPS — Graded Chronic Pain Scale (baseline, scaled 0-100)
     "gcps_pain_intensity__s1",
     "gcps_interference__s1",
