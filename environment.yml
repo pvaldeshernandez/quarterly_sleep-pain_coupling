@@ -14,4 +14,10 @@ dependencies:
   - pillow=11.3.0
   - scikit-learn=1.7.1
   - pytensor
-  - nibabel>=5.2
+  - nibabel=5.3.2
+  # Imported by the pipeline but previously undeclared, so an environment built from this
+  # file could not run it: nilearn resamples the atlases in steps 14 and 20, statsmodels
+  # supplies the FDR correction in step 05, and xarray backs the ArviZ posterior objects.
+  - nilearn=0.13.0
+  - statsmodels=0.14.6
+  - xarray=2026.2.0
