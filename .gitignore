@@ -29,11 +29,29 @@ derivatives/
 results/
 figures/
 
-# Archive and non-code docs
+# Dated snapshots of those, kept while a rerun is being compared against the
+# previous one. Same content, same reason to stay out.
+*_precold_*/
+derivatives_*/
+results_*/
+
+# Archive and literature
 archive/
 literature/
-docs/
 MANUSCRIPT_CORRECTIONS.md
+
+# Documents, and everything used to fill or check them.
+#
+# The repository is the code that produces derivatives and results, and it stops
+# there. How a number gets from `results/` into a manuscript -- the submission
+# files, the plans, the reportable map, and the tooling under `docs/tools/` that
+# writes and verifies them -- is authoring, not pipeline, and stays local.
+#
+# `docs/tools/*.py` IS code, and ignoring code looks like an oversight. It is not:
+# those scripts open .docx files and edit prose. Do not add an un-ignore rule for
+# them. Nothing tracked here opens a document -- the steps name Tables and Figures
+# in their docstrings to say what their output feeds, and write only to `results/`.
+docs/
 
 # OS
 .DS_Store
