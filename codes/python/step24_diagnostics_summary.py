@@ -47,8 +47,8 @@ STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step24_diagnostics")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step24_diagnostics")
 
 OUT_ALL = os.path.join(STEP_DERIV_DIR, "step24_all_fits.csv")
-OUT_FAMILY = os.path.join(STEP_DERIV_DIR, "step24_by_family.csv")
-OUT_SAMPLER = os.path.join(STEP_DERIV_DIR, "step24_sampler.csv")
+OUT_FAMILY = os.path.join(STEP_RESULTS_DIR, "step24_by_family.csv")
+OUT_SAMPLER = os.path.join(STEP_RESULTS_DIR, "step24_sampler.csv")
 
 #: the primary model, whose per-parameter table becomes Table S3
 PRIMARY = "step08_primary"

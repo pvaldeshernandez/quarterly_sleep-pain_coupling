@@ -55,7 +55,7 @@ SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FIG_S7 = os.path.join(SUPP_DIR, "figure_fmri_arousal_jn.png")
 OUT_FIG_S8 = os.path.join(SUPP_DIR, "figure_vbm_arousal_jn.png")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step22_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step22_text_numbers.csv")
 
 
 # =====================================================================

@@ -49,7 +49,7 @@ IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
                                 "step07_processed_long.csv")
 
 OUT_TABLE_CSV = os.path.join(SUPP_DIR, "table_s2_severity.csv")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "text_numbers_severity.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step23_text_numbers.csv")
 
 
 def load_data(csv_path):

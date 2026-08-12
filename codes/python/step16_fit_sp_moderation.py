@@ -49,8 +49,8 @@ IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values", "step14_sp_roi_valu
 
 OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step16_sp_posterior_draws.npz")
 OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step16_table5_sp_moderation.csv")
-OUT_SIGN_CSV = os.path.join(STEP_DERIV_DIR, "step16_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step16_text_numbers.csv")
+OUT_SIGN_CSV = os.path.join(STEP_RESULTS_DIR, "step16_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step16_text_numbers.csv")
 
 # ROIs included in the Krause sign-concordance test (ACC excluded)
 KRAUSE_ROIS = [

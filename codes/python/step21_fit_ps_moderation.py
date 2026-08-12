@@ -59,8 +59,8 @@ SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FMRI_TABLE = os.path.join(SUPP_DIR, "table_s1_fmri_arousal.csv")
 OUT_VBM_TABLE = os.path.join(SUPP_DIR, "table_s1_vbm_arousal.csv")
-OUT_VBM_SIGN = os.path.join(STEP_DERIV_DIR, "step21_vbm_sign_concordance.csv")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step21_text_numbers.csv")
+OUT_VBM_SIGN = os.path.join(STEP_RESULTS_DIR, "step21_vbm_sign_concordance.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step21_text_numbers.csv")
 
 
 def load_step05_data(csv_path):

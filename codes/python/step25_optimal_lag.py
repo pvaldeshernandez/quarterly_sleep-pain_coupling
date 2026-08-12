@@ -171,6 +171,13 @@ def derive(coeffs, verbose=True):
         "amplification_at_one_quarter": float(f_quarterly),
         "amplification_at_optimum": float(f_peak),
         "pct_of_peak_captured_quarterly": float(pct_of_peak),
+        # Section S15 states that the dominant eigenvalue "exceeds phi_p by 23%". That
+        # percentage was computed by hand and had no name, so nothing could tell whether
+        # it had followed the refit. Both the ratio and the excess are published because
+        # the document phrases it as an excess.
+        "eigenvalue_1_over_phi_p": float(l1 / phi_p) if phi_p else float("nan"),
+        "eigenvalue_1_excess_over_phi_p_pct": float((l1 / phi_p - 1) * 100)
+                                              if phi_p else float("nan"),
     }
 
     rows = [{"quantity": k, "value": v} for k, v in nums.items()]

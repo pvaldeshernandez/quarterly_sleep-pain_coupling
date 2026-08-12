@@ -105,7 +105,7 @@ IN_LONG_CSV = s1.IN_LONG_CSV
 IN_MODEL_JSON = s1.OUT_MODEL_JSON
 
 OUT_LOADINGS_CSV = os.path.join(STEP_DERIV_DIR, "step02_efa_loadings.csv")
-OUT_CONGRUENCE_CSV = os.path.join(STEP_DERIV_DIR, "step02_congruence.csv")
+OUT_CONGRUENCE_CSV = os.path.join(STEP_RESULTS_DIR, "step02_congruence.csv")
 OUT_ITEM_DESC_CSV = os.path.join(STEP_DERIV_DIR, "step02_item_descriptives.csv")
 OUT_DOMINANCE_CSV = os.path.join(STEP_DERIV_DIR, "step02_knee_body_dominance.csv")
 

@@ -58,7 +58,7 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 
 OUT_FIG_S1 = os.path.join(SUPP_DIR, "figure_endorsement.png")
 OUT_FIG_S2 = os.path.join(SUPP_DIR, "figure_convergent.png")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step05_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step05_text_numbers.csv")
 
 AREA_LABELS = [
     "Hands", "Arms", "Shoulders", "Neck", "Head/Face/Jaw",
@@ -351,6 +351,14 @@ def generate_text_numbers(verbose=True):
         non_knee_cols = [c for c in available_area_cols if c != KNEE_AREA_COL]
         bdf["n_other_areas"] = bdf[non_knee_cols].fillna(0).sum(axis=1)
         bdf["knee_endorsed"] = bdf[KNEE_AREA_COL].fillna(0).astype(int)
+
+        # "the PHQ body map allows endorsement of multiple pain areas simultaneously
+        # (mean = 3.2 areas, SD = 2.5)" -- the Results state both and neither had a name.
+        # Counted over all 13 areas, knee included, which is what the sentence describes.
+        n_areas_total = bdf[available_area_cols].fillna(0).sum(axis=1)
+        _t("phq_areas_mean", f"{n_areas_total.mean():.2f}")
+        _t("phq_areas_sd", f"{n_areas_total.std():.2f}")
+        _t("phq_areas_n", str(int(n_areas_total.notna().sum())))
 
         def classify(row):
             if row["knee_endorsed"] == 1 and row["n_other_areas"] == 0:

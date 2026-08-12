@@ -574,6 +574,12 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
 
     out = long.copy()
     out["interpolated"] = False
+    # Per-score flags, persisted so that step 03 can count them AFTER curation. The
+    # Results report the breakdown for the RETAINED sample (105 / 105 / 113), which is
+    # five fewer per score than the whole cohort; only step 03 knows who was retained,
+    # and a bare `interpolated` boolean cannot say which score was filled.
+    for _c in ("pain_factor", "contrast_factor", "sleep_factor"):
+        out[f"interpolated_{_c}"] = False
     # Cells actually FILLED on this row. Kept per-row because the summary below used
     # to count every non-missing cell on an interpolated row instead, which counts
     # values that were observed, not imputed.
@@ -583,6 +589,7 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
 
     n_filled_total = 0
     n_rows_affected = 0
+    by_col = {}
 
     for pid, grp in out.groupby("ID"):
         q_mask = grp["quarter"] >= 1
@@ -610,7 +617,9 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
                     out.loc[qgrp.index[newly_filled], col] = filled[newly_filled]
                     out.loc[qgrp.index[newly_filled], "interpolated"] = True
                     out.loc[qgrp.index[newly_filled], "n_cells_filled"] += 1
+                    out.loc[qgrp.index[newly_filled], f"interpolated_{col}"] = True
                     n_filled_total += int(newly_filled.sum())
+                    by_col[col] = by_col.get(col, 0) + int(newly_filled.sum())
                 continue
             isna = before.isna().values
             singleton = np.zeros(len(isna), dtype=bool)
@@ -624,13 +633,21 @@ def interpolate_factor_scores(long: pd.DataFrame) -> pd.DataFrame:
                 out.loc[qgrp.index[newly_filled], col] = filled[newly_filled]
                 out.loc[qgrp.index[newly_filled], "interpolated"] = True
                 out.loc[qgrp.index[newly_filled], "n_cells_filled"] += 1
+                out.loc[qgrp.index[newly_filled], f"interpolated_{col}"] = True
                 n_filled_total += int(newly_filled.sum())
+                by_col[col] = by_col.get(col, 0) + int(newly_filled.sum())
 
     n_rows_affected = int(out["interpolated"].sum())
     print(
         f"    Interpolation filled {n_filled_total} factor-score cells "
         f"across {n_rows_affected} person-quarter rows"
     )
+    # Per-score breakdown. The Results sentence gives all three ("105 pain intensity,
+    # 105 knee-body contrast, and 113 self-reported sleep quality") and only the total
+    # was published, so those three had no name to be checked against.
+    out.attrs["interpolated_cells_by_score"] = {
+        col: int(by_col.get(col, 0)) for col in factor_cols
+    }
 
     return out
 
@@ -707,6 +724,9 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
 
     # Interpolate single gaps
     scored = interpolate_factor_scores(scored)
+    # Captured here, not later: `attrs` does not survive most pandas operations, and
+    # `scored` is written and re-read downstream.
+    interp_by_score = dict(scored.attrs.get("interpolated_cells_by_score", {}))
 
     # Persist outputs
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -843,7 +863,7 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
     # loadings table (Table 1) and PA thresholds.
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
-    OUT_RESULTS_CSV = os.path.join(STEP_DERIV_DIR, "step01_factor_results.csv")
+    OUT_RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step01_factor_results.csv")
 
     result_rows = []
 
@@ -882,6 +902,11 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
 
     _r("n_interpolated_rows", str(n_interpolated_rows))
     _r("n_interpolated_cells", str(n_interpolated_cells))
+    # The Results names all three separately; only the total had a name before.
+    for _col, _label in (("pain_factor", "pain"),
+                         ("contrast_factor", "contrast"),
+                         ("sleep_factor", "sleep")):
+        _r(f"n_interpolated_cells_{_label}", str(interp_by_score.get(_col, 0)))
 
     results_df = pd.DataFrame(result_rows)
     results_df.to_csv(OUT_RESULTS_CSV, index=False)

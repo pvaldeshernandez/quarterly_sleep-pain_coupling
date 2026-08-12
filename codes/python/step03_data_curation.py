@@ -420,7 +420,11 @@ def run_step03(verbose: bool = True, refit: bool = False):
 
     keep = ["ID", "quarter", "segment_id",
             "pain_factor", "contrast_factor", "sleep_factor",
-            "interpolated", "Age", "Sex"]
+            "interpolated",
+            # carried so the per-score interpolation counts can be taken AFTER curation
+            "interpolated_pain_factor", "interpolated_contrast_factor",
+            "interpolated_sleep_factor",
+            "Age", "Sex"]
     df_out = df[[c for c in keep if c in df.columns]].copy()
 
     df_out.to_csv(OUT_CURATED_CSV, index=False)
@@ -452,6 +456,20 @@ def run_step03(verbose: bool = True, refit: bool = False):
     }
     if "interpolated" in df_out.columns:
         nums["n_interpolated_rows_retained"] = int(df_out["interpolated"].sum())
+    # Per-score cell counts, RETAINED sample only. The Results give all three ("105 pain
+    # intensity, 105 knee-body contrast, and 113 self-reported sleep quality") and their
+    # total. Step 01 counts across the whole cohort and gets five more per score, because
+    # curation has not happened yet there -- only this step knows who was retained.
+    per_score = {}
+    for col, label in (("pain_factor", "pain"),
+                       ("contrast_factor", "contrast"),
+                       ("sleep_factor", "sleep")):
+        flag = f"interpolated_{col}"
+        if flag in df_out.columns:
+            per_score[label] = int(df_out[flag].sum())
+            nums[f"n_interpolated_cells_retained_{label}"] = per_score[label]
+    if per_score:
+        nums["n_interpolated_cells_retained"] = int(sum(per_score.values()))
     path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step03")
     if verbose:
         print(f"  Wrote {len(nums)} numbers: {path}")

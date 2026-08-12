@@ -10,7 +10,7 @@ Output:
   results/
     step07_table4_coupling.csv     — Table 4: population parameters
     step07_loo_comparison.csv      — LOO-CV pairwise comparisons
-    step07_text_numbers.csv        — every number stated in the text
+    step08_text_numbers.csv        — every number stated in the text
 
 This step fits the bivariate VARX(1) coupling model to the
 within-person deviations produced by Step 02. It then fits three
@@ -66,8 +66,8 @@ OUT_IDATA_NC = os.path.join(STEP_DERIV_DIR, "step08_primary_idata.nc")
 # Results
 OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step08_table4_coupling.csv")
 # Intermediate CSVs (inputs to text rendering) live under derivatives/.
-OUT_LOO_CSV = os.path.join(STEP_DERIV_DIR, "step08_loo_comparison.csv")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step08_text_numbers.csv")
+OUT_LOO_CSV = os.path.join(STEP_RESULTS_DIR, "step08_loo_comparison.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step08_text_numbers.csv")
 OUT_FIG2 = os.path.join(STEP_RESULTS_DIR, "step08_figure2_ps_coupling.png")
 OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step08_figure3_sp_coupling.png")
 
@@ -620,7 +620,8 @@ def run_step08(verbose: bool = True, refit: bool = False):
     # exists only inside the fit branch, and reading the frame here is a CSV read of
     # ~2,000 rows -- cheap, and it keeps the published count defined by the data
     # rather than by which branch happened to run.
-    n_transitions = len(load_data(IN_PROCESSED_CSV)[1])
+    analytic_frame = load_data(IN_PROCESSED_CSV)[1]
+    n_transitions = len(analytic_frame)
 
     nums = {
         "n_persons": int(len(person_df)),
@@ -647,14 +648,50 @@ def run_step08(verbose: bool = True, refit: bool = False):
         nums[f"{stem}_se"] = float(row["se"])
         nums[f"{stem}_ratio"] = float(row["delta_over_se"])
 
-    nums["person_ps_min"] = float(person_df["beta_ps_mean"].min())
-    nums["person_ps_max"] = float(person_df["beta_ps_mean"].max())
-    nums["person_ps_sd"] = float(person_df["beta_ps_mean"].std())
-    nums["person_ps_n_credible_neg"] = int((person_df["beta_ps_prob_neg"] > 0.95).sum())
-    nums["person_sp_min"] = float(person_df["beta_sp_mean"].min())
-    nums["person_sp_max"] = float(person_df["beta_sp_mean"].max())
-    nums["person_sp_sd"] = float(person_df["beta_sp_mean"].std())
-    nums["person_sp_n_credible_neg"] = int((person_df["beta_sp_prob_neg"] > 0.95).sum())
+    # mean, median and the quartiles are published because FIGURES 2 AND 3 PRINT THEM
+    # in their statistics box. A number a reader can read off a figure is a reported
+    # value like any other, and until now these four were computed inside the plotting
+    # function and published nowhere, so nothing could check them.
+    for d in ("ps", "sp"):
+        v = person_df[f"beta_{d}_mean"]
+        nums[f"person_{d}_min"] = float(v.min())
+        nums[f"person_{d}_max"] = float(v.max())
+        nums[f"person_{d}_mean"] = float(v.mean())
+        nums[f"person_{d}_median"] = float(v.median())
+        nums[f"person_{d}_q25"] = float(v.quantile(0.25))
+        nums[f"person_{d}_q75"] = float(v.quantile(0.75))
+        nums[f"person_{d}_sd"] = float(v.std())
+        nums[f"person_{d}_n_credible_neg"] = int(
+            (person_df[f"beta_{d}_prob_neg"] > 0.95).sum())
+
+    # Standardized coupling, quoted in Section S13 against the Orth et al. (2024)
+    # benchmarks. `analytic_frame`, not `model_df`: the latter exists only inside the
+    # fit branch, so using it here would raise NameError on a reload -- the same
+    # warm/cold asymmetry that broke three steps during the restructure.
+    sd_pain = float(analytic_frame["pain_within"].std())
+    sd_sleep = float(analytic_frame["sleep_within"].std())
+    nums["lambda_ps_standardized"] = float(nums["lambda_ps_mean"]) * sd_pain / sd_sleep
+    nums["lambda_sp_standardized"] = float(nums["lambda_sp_mean"]) * sd_sleep / sd_pain
+
+    # The per-person posterior spread, published as the raw ingredient of Section S13's
+    # shrinkage discussion rather than as the summary itself.
+    #
+    # S13 states that "approximately 12-21% of each person-specific estimate derives
+    # from that participant's own data", attributing it to a comparison of each
+    # participant's posterior SD with tau. That figure does NOT reproduce from these
+    # quantities under any standard definition -- the precision-weighted shrinkage
+    # tau^2/(tau^2 + se^2) gives 47-86%, and 1 - postvar/tau^2 goes NEGATIVE for some
+    # participants because the person-specific posterior carries tau's own uncertainty
+    # and can be wider than tau. Publishing a differently-defined number under that
+    # claim would change a published statement silently, so the claim is left
+    # unsupported here and flagged in the reportable map for a decision.
+    for d in ("ps", "sp"):
+        post_sd = ((person_df[f"beta_{d}_ci_hi"].astype(float)
+                    - person_df[f"beta_{d}_ci_lo"].astype(float))
+                   / (2 * 1.959963984540054))
+        nums[f"person_{d}_posterior_sd_min"] = float(post_sd.min())
+        nums[f"person_{d}_posterior_sd_median"] = float(post_sd.median())
+        nums[f"person_{d}_posterior_sd_max"] = float(post_sd.max())
 
     numbers_path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step08")
     if verbose:

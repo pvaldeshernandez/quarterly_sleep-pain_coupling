@@ -67,7 +67,7 @@ OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step12_figure4_jn_localization_ps.png
 SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 OUT_FIG_S3 = os.path.join(SUPP_DIR, "figure_jn_localization_sp.png")
-OUT_TEXT_CSV = os.path.join(STEP_DERIV_DIR, "step12_text_numbers.csv")
+OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step12_text_numbers.csv")
 
 
 # =====================================================================
