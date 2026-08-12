@@ -116,7 +116,7 @@ def _load_person_mean_contrast():
         if not os.path.exists(IN_ANALYTIC_CSV):
             raise FileNotFoundError(
                 f"{IN_ANALYTIC_CSV} does not exist, so the analytic sample is "
-                f"unknown. Run step 04 first, or set RESTRICT_TO_ANALYTIC = False "
+                f"unknown. Run step 03 first, or set RESTRICT_TO_ANALYTIC = False "
                 f"to validate on everyone with a contrast score.")
         from analytic_sample import analytic_ids
         ki = ki[ki["ID"].isin(analytic_ids(IN_ANALYTIC_CSV))].reset_index(drop=True)

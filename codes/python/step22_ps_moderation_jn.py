@@ -278,7 +278,7 @@ def run_jn_for_modality(modality_name, draws_path, table_path, verbose=True):
         # on each side to avoid extrapolating the JN band into sparse tails
         # where the credible-region boundaries are unstable. Deliberate
         # choice for the neuroimaging moderators (Lynch ROI BOLD / VBM);
-        # the contrast-factor JN (step 05) uses (0, 100) because that
+        # the contrast-factor JN (step 12) uses (0, 100) because that
         # moderator is already z-scored and tightly bounded. Not mentioned
         # in the manuscript.
         jn = compute_jn_curve(b1_draws, gamma_ps_draws, X_vals,

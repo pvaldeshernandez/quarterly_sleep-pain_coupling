@@ -9,7 +9,7 @@
 Steps are discovered from the filenames rather than listed here, so inserting
 `step09_posterior_predictive_check.py` makes it part of the pipeline with no edit to
 this file. Numeric order IS execution order — that invariant is what the renumbering
-to 23 steps exists to protect, and `--list` shows it.
+to 26 steps exists to protect, and `--list` shows it.
 
 Every step exposes `run_stepNN(verbose=..., refit=...)`; step 00 predates that
 convention and exposes `main()`.

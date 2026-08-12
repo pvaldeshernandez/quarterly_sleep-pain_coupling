@@ -384,9 +384,18 @@ def _fit_joint_model(model_df, unique_ids, id_map,
         pneg = float(np.mean(draws < 0))
         return mean, lo, hi, two_tail_p(pneg)
 
+    # Same parameter set as everywhere else, or the number means something different
+    # from the two beside it. `pain_alone_rhat_max` and `sleep_alone_rhat_max` come
+    # from the shared extract_results, which drops the non-centered offsets (names
+    # ending "_z" or containing "_z[") and keeps the interpretable parameters. Taking
+    # the max over every variable in the idata instead included those offsets, so
+    # joint_rhat_max was a maximum over a strictly larger set than its two neighbours
+    # in the same published file.
     rhat_vals = az.rhat(idata)
-    rhat_max = float(max(rhat_vals[v].values.max() for v in rhat_vals
-                         if hasattr(rhat_vals[v], "values")))
+    rhat_max = float(max(
+        rhat_vals[v].values.max() for v in rhat_vals
+        if hasattr(rhat_vals[v], "values")
+        and not (str(v).endswith("_z") or "_z[" in str(v))))
 
     for var, label, direction in [
         ("gamma_sp_pain", "Mean Pain Severity", "SP"),

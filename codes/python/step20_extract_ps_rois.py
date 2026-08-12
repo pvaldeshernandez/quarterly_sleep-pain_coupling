@@ -158,6 +158,7 @@ def extract_fmri_arousal(verbose=True):
     brain_mask = np.isfinite(ref_img.get_fdata())
 
     roi_weights = {}
+    voxel_rows = []
     for roi_name, cfg in AROUSAL_ROIS.items():
         atlas_path = os.path.join(ATLAS_DIR, ATLAS_FILES[roi_name])
         if not os.path.isfile(atlas_path):
@@ -180,6 +181,12 @@ def extract_fmri_arousal(verbose=True):
             weights = resampled.get_fdata().clip(0, 1)
 
         n_brain = int(np.sum((weights * brain_mask) > 0))
+        # Recorded, not just printed. The Figure S7 caption quotes this ("3 brain
+        # voxels at 3 mm fMRI resolution" for the PBN), so it is a reported value and
+        # needs a name. Written to results/ as a metric,value CSV, which persists
+        # across the reload path -- this loop only runs under --refit.
+        voxel_rows.append({"metric": f"n_brain_voxels_fmri_{roi_name}",
+                           "value": n_brain, "note": cfg["label"]})
         if verbose:
             print(f"    {cfg['label']}: {n_brain} brain voxels at fMRI resolution")
         if n_brain < 1:
@@ -211,6 +218,11 @@ def extract_fmri_arousal(verbose=True):
                     "expected_sign_ps": AROUSAL_ROIS[roi_name]["expected_sign_ps"],
                     "raw_value": float(np.nansum(data * w) / wsum),
                 })
+
+    if voxel_rows:
+        os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
+        pd.DataFrame(voxel_rows).to_csv(
+            os.path.join(STEP_RESULTS_DIR, "step20_text_numbers.csv"), index=False)
 
     df = pd.DataFrame(all_rows)
     for roi_name in df["ROI"].unique():

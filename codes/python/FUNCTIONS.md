@@ -185,8 +185,8 @@ Step 02 — Measurement checks on the published two-factor pain solution.
 - `_dominance_row(level, diff)` — Descriptives of one knee-minus-body difference distribution.
 - `knee_body_dominance(df)` — Knee-mean minus body-mean, per person-quarter and per participant.
 - `compute(verbose)` — Re-estimate the four solutions and build the four tables.
-- `assemble_numbers(loadings_df, congruence_df, dominance_df)` — Every scalar Section S3 and Table S2 quote, derived from the saved tables.
-- `run_step02(verbose, refit)` — Measurement checks on the two-factor solution (Table S2, Section S3).
+- `assemble_numbers(loadings_df, congruence_df, dominance_df)` — Every scalar the measurement-checks section and the congruence table quote, derived from the saved tables.
+- `run_step02(verbose, refit)` — Measurement checks on the two-factor solution (the congruence table, the measurement-checks section).
 - `main()` — *(undocumented)*
 
 ### `step03_data_curation.py`

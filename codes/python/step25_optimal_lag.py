@@ -10,7 +10,7 @@ not verify it and a refit could not update it.
 This step is that arithmetic, done once, from `step08_table4_coupling.csv`.
 
 It fits nothing. It reads the primary fit's four transition-matrix coefficients and
-publishes every quantity Section S15, Section S15 and manuscript paragraph 174 quote.
+publishes every quantity Section S15 and manuscript paragraph 174 quote.
 
 WHAT IS DERIVED
 ---------------
@@ -89,7 +89,7 @@ def read_transition_matrix(path=IN_TABLE4):
     if not os.path.exists(path):
         raise FileNotFoundError(
             f"{path} does not exist. Section S15 derives from the primary fit; "
-            f"run step 07 first.")
+            f"run step 08 first.")
     t = pd.read_csv(path, float_precision="round_trip").set_index("Parameter")
     missing = [k for k in COEFFS if k not in t.index]
     if missing:

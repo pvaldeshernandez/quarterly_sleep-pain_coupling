@@ -66,7 +66,7 @@ OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step12_figure4_jn_localization_ps.png
 #: results/supplementary_materials/ under their document-facing names.
 SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
-OUT_FIG_S3 = os.path.join(SUPP_DIR, "figure_jn_localization_sp.png")
+OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_jn_localization_sp.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step12_text_numbers.csv")
 
 
@@ -362,7 +362,7 @@ def run_step12(verbose: bool = True, refit: bool = False):
     if verbose:
         print(f"  Saved Figure 4: {OUT_FIG4}")
 
-    # ---- Sleep-to-Pain (SP) direction: Figure S3 ----
+    # ---- Sleep-to-Pain (SP) direction: Figure S4 ----
     jn_sp = compute_jn_curve(a2_draws, a4_draws, contrast_vals,
                              clip_pct=(0, 100))
     slopes_sp = compute_simple_slopes(a2_draws, a4_draws, x_positions)
@@ -394,11 +394,11 @@ def run_step12(verbose: bool = True, refit: bool = False):
                   legend_loc="lower right", info_loc="upper left",
                   person_dots={"x": obs_contrast, "y": obs_sp})
     ax.set_xlim(jn_sp["x_grid"][0], jn_sp["x_grid"][-1])
-    os.makedirs(os.path.dirname(OUT_FIG_S3), exist_ok=True)
-    fig.savefig(OUT_FIG_S3, dpi=300, bbox_inches="tight")
+    os.makedirs(os.path.dirname(OUT_FIG_S4), exist_ok=True)
+    fig.savefig(OUT_FIG_S4, dpi=300, bbox_inches="tight")
     plt.close(fig)
     if verbose:
-        print(f"  Saved Figure S3: {OUT_FIG_S3}")
+        print(f"  Saved Figure S4: {OUT_FIG_S4}")
 
     # ==================================================================
     # Save JN grid results (derivative)

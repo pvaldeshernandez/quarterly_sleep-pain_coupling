@@ -105,7 +105,7 @@ OUT_FIGURE = os.path.join(STEP_RESULTS_DIR,
 OUT_NUMBERS = os.path.join(STEP_RESULTS_DIR, "numbers.json")
 
 #: the fit this step runs. `lib.coupling_model.run_fit` writes its diagnostics under
-#: this id, and step 22 aggregates them.
+#: this id, and step 24 aggregates them.
 FIT_ID = "step11_nointerp"
 IN_NI_DIAGNOSTICS = os.path.join(STEP_DERIV_DIR, f"diagnostics_{FIT_ID}.json")
 
@@ -181,14 +181,14 @@ def flag_interpolated_transitions(df_full, model_df):
     """
     if "interpolated" not in df_full.columns:
         raise RuntimeError(
-            f"no 'interpolated' flag in {IN_PROCESSED_CSV}; step 04 must carry it "
+            f"no 'interpolated' flag in {IN_PROCESSED_CSV}; step 07 must carry it "
             "forward from step 01 or this sensitivity analysis cannot be defined"
         )
 
     keyed = df_full.set_index(["ID", "quarter"])["interpolated"].astype(bool)
     if keyed.index.has_duplicates:
         raise RuntimeError(
-            "(ID, quarter) is not unique in the step 04 frame; the interpolation flag "
+            "(ID, quarter) is not unique in the step 07 frame; the interpolation flag "
             "cannot be attributed to a transition endpoint"
         )
     lookup = keyed.to_dict()
@@ -241,7 +241,7 @@ def _lookup_number(numbers, name):
 def primary_counts(model_df, unique_ids, verbose=True):
     """The primary fit's transition and person counts, cross-checked against step 07.
 
-    The counts are recomputed here from step 04's frame and then asserted equal to what
+    The counts are recomputed here from step 07's frame and then asserted equal to what
     step 07 published. If they ever disagree, the "all transitions" column is describing
     a different analytic sample than the one being compared against, and the step stops
     rather than publishing a comparison of two different datasets.
@@ -276,7 +276,7 @@ def primary_counts(model_df, unique_ids, verbose=True):
         )
     if ref_obs is None and verbose:
         print("  WARNING: step08 published no n_transitions; the all-transitions "
-              "column header is taken from step 04's frame without cross-check.")
+              "column header is taken from step 07's frame without cross-check.")
     return n_obs, n_persons
 
 
@@ -342,7 +342,7 @@ def fit_nointerp_arm(clean, clean_ids, verbose=True):
     Sampling is delegated to ``lib.coupling_model.run_fit`` through
     ``fit_bayesian_varx1``; this step names no sampler setting anywhere, so it cannot
     drift from the settings the Methods describes, and its diagnostics are written for
-    step 22 without this step remembering to do it.
+    step 24 without this step remembering to do it.
     """
     from coupling_model import fit_bayesian_varx1, summarize_posterior
 

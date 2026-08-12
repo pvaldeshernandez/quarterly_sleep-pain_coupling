@@ -21,7 +21,7 @@ Output:
 
 The CSVs are named for their CONTENT, not for the supplement table they currently feed.
 As of this writing the binding is: item_descriptives -> Panel A, by_quarter -> Panel B,
-variance_decomposition -> Panel C of the raw-descriptives table (today Table S1; it was
+variance_decomposition -> Panel C of the raw-descriptives table (today Table S2; it was
 Table S3 before the supplement was renumbered). Table and panel numbering is authored
 prose and moves; filenames must not follow it.
 
@@ -394,7 +394,7 @@ def run_step04(verbose=True, refit=False):
 
     The DEFAULT path loads the saved CSVs and numbers.json and reports them; nothing is
     recomputed and no file is touched. ``--refit`` recomputes from step00's raw long
-    table and step07's processed frame and rewrites every output. There is no MCMC in
+    table and step 03's curated frame and rewrites every output. There is no MCMC in
     this step — ``refit`` is accepted for pipeline uniformity and costs about a second.
 
     Returns a dict with the four frames under ``frames`` and every scalar under

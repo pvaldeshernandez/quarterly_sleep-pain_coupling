@@ -88,7 +88,7 @@ IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values",
                           "step14_sp_roi_values.csv")
 #: step 14's table, used only to verify that this control ran on the same
 #: persons as the sleep-to-pain fits it is a control for. Never written.
-IN_STEP14_TABLE = os.path.join(RESULTS_DIR, "step16_sp_moderation",
+IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation",
                                "step16_table5_sp_moderation.csv")
 
 OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step19_ps_specificity_draws.npz")
@@ -147,9 +147,9 @@ def _step16_n_persons():
     absent, or it does not itself use one sample for the four), not that the
     samples agree.
     """
-    if not os.path.exists(IN_STEP14_TABLE):
+    if not os.path.exists(IN_TABLE5_CSV):
         return None
-    table = pd.read_csv(IN_STEP14_TABLE, float_precision="round_trip")
+    table = pd.read_csv(IN_TABLE5_CSV, float_precision="round_trip")
     if "ROI" not in table.columns or "N" not in table.columns:
         return None
     rows = table[table["ROI"].isin(TARGET_ROIS)]

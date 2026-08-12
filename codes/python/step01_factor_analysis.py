@@ -689,8 +689,18 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
         if verbose:
             print(f"  Loaded saved solution: {OUT_SCORED_CSV}")
             print(f"                         {OUT_MODEL_JSON}")
-            print("  (pass --refit to re-estimate; the polychoric EFA is not "
-                  "bit-reproducible)")
+            # The EFA IS bit-reproducible now -- the polychoric correlation is computed
+            # in closed form through Owen's T (lib/measurement.bvn_cdf), replacing
+            # scipy's randomized-QMC bivariate normal CDF. The solution is reloaded to
+            # save the minute it takes, not because rerunning would change it.
+            print("  (pass --refit to re-estimate; the saved solution is reproducible)")
+        # This branch returns before the block that writes step01_factor_results.csv,
+        # so the named values are published only by a --refit. Harmless while they
+        # cannot change without one, but a missing file would otherwise be silent.
+        results_csv = os.path.join(STEP_RESULTS_DIR, "step01_factor_results.csv")
+        if verbose and not os.path.exists(results_csv):
+            print(f"  NOTE: {os.path.basename(results_csv)} has never been written. "
+                  f"Run with --refit to publish this step's named values.")
         return scored, model
 
     if verbose:

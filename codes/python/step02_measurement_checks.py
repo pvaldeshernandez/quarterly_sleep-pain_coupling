@@ -23,7 +23,7 @@ Two questions, both about the eight pain items and neither about the coupling mo
    The knee-minus-body difference is described at the person-quarter and the
    participant level, against the theoretical span of the difference score.
 
-Feeds Supplementary Table S2 (congruence by sampling) and Supplementary Section S3.
+Feeds Supplementary the congruence table (congruence by sampling) and Supplementary the measurement-checks section.
 No prose, no table notes and no captions are generated here (fork Decision 3): the CSVs
 carry the table data and `numbers.json` carries every scalar the text quotes.
 
@@ -47,7 +47,7 @@ each of which moves numbers and so must not be silent:
     (F2), which is why POOLED is kept as a control row rather than dropped.
 
   * REFERENCE. The sandbox compared each sampling against its own locally re-estimated
-    POOLED solution. Table S2's caption says "with the published solution", so the
+    POOLED solution. the congruence table's caption says "with the published solution", so the
     reference here is the published loadings loaded from step 01's saved factor model.
     The sandbox's pooled-reference values are retained as extra rows of the congruence
     CSV so the change of reference stays auditable.
@@ -60,7 +60,7 @@ solutions fitted to slightly different row sets. That is inherent to the design.
 Input:  <step01_factor_analysis.IN_LONG_CSV>   (step 00's long-format extract)
         derivatives/step01_factor_analysis/step01_factor_model.json  (published solution)
 Output: derivatives/step02_measurement_checks/step02_efa_loadings.csv
-        derivatives/step02_measurement_checks/step02_congruence.csv      -> Table S2
+        results/step02_measurement_checks/step02_congruence.csv      -> the congruence table
         derivatives/step02_measurement_checks/step02_item_descriptives.csv
         derivatives/step02_measurement_checks/step02_knee_body_dominance.csv
         results/step02_measurement_checks/numbers.json
@@ -119,8 +119,8 @@ REGION = {c: ("knee" if c in KNEE_ITEMS else "body") for c in PAIN_ITEMS}
 #: order in which the four samplings are estimated and reported
 SAMPLINGS = ("POOLED", "WITHIN", "BETWEEN", "BASELINE")
 
-#: the three rows of Table S2. POOLED is the estimator control, not a table row.
-TABLE_S2_SAMPLINGS = ("WITHIN", "BETWEEN", "BASELINE")
+#: the three rows of the congruence table. POOLED is the estimator control, not a table row.
+REPORTED_SAMPLINGS = ("WITHIN", "BETWEEN", "BASELINE")
 
 #: reference labels used in the congruence CSV
 PUBLISHED_REF = "published"
@@ -183,7 +183,7 @@ def build_samplings(df):
     """Four samplings of the same eight items, each as a DataFrame.
 
     DataFrames, not arrays: `calibrate_factor_model` selects its items by column name.
-    Each frame carries ID so rows and participants can both be counted — Table S2's
+    Each frame carries ID so rows and participants can both be counted — the congruence table's
     "Rows" column is person-quarters for WITHIN but participants for BETWEEN and
     BASELINE, and neither number should be typed by hand.
     """
@@ -222,7 +222,7 @@ def estimate_two_factor(sampling, frame, target_items):
     sds = X.std(axis=0)
     if not np.all(np.isfinite(sds)) or float(sds.min()) <= 0.0:
         # A raise, not a `continue`: silently skipping a sampling would silently
-        # drop a row of Table S2.
+        # drop a row of the congruence table.
         dead = [c for c in PAIN_ITEMS if not np.isfinite(sds[c]) or sds[c] <= 0]
         raise ValueError(f"{sampling}: zero-variance item(s) {dead}")
 
@@ -265,7 +265,7 @@ def _dominance_row(level, diff):
 def knee_body_dominance(df):
     """Knee-mean minus body-mean, per person-quarter and per participant.
 
-    Section S3 quotes eight numbers from this; the sandbox only printed them.
+    the measurement-checks section quotes eight numbers from this; the sandbox only printed them.
     """
     diff_pq = df[KNEE_ITEMS].mean(axis=1) - df[BODY_ITEMS].mean(axis=1)
     person = df.groupby("ID")[PAIN_ITEMS].mean()
@@ -329,7 +329,7 @@ def compute(verbose=True):
     loadings_df = pd.DataFrame(loading_rows)
 
     # Congruence, long format: every sampling against the published solution (what
-    # Table S2 reports), and the three non-pooled samplings against the pooled
+    # the congruence table reports), and the three non-pooled samplings against the pooled
     # re-estimate as well (what the sandbox reported, kept for auditability).
     pooled = fitted["POOLED"]["loadings"]
     cong_rows = []
@@ -357,7 +357,7 @@ def compute(verbose=True):
 # =====================================================================
 
 def assemble_numbers(loadings_df, congruence_df, dominance_df):
-    """Every scalar Section S3 and Table S2 quote, derived from the saved tables.
+    """Every scalar the measurement-checks section and the congruence table quote, derived from the saved tables.
 
     Both the refit path and the load path go through this one function, so a reloaded
     run cannot report different numbers from the run that produced the CSVs.
@@ -393,9 +393,9 @@ def assemble_numbers(loadings_df, congruence_df, dominance_df):
         key = name.lower()
         nums[f"congruence_{key}_f1"] = float(published.loc[name, "congruence_F1"])
         nums[f"congruence_{key}_f2"] = float(published.loc[name, "congruence_F2"])
-    # The "X or above" sentence covers Table S2's three rows only; POOLED is the
+    # The "X or above" sentence covers the congruence table's three rows only; POOLED is the
     # estimator control and is reported separately as congruence_pooled_f1/f2.
-    table_s2 = published.loc[list(TABLE_S2_SAMPLINGS), ["congruence_F1", "congruence_F2"]]
+    table_s2 = published.loc[list(REPORTED_SAMPLINGS), ["congruence_F1", "congruence_F2"]]
     nums["congruence_min_across_samplings"] = float(np.min(table_s2.values))
     nums["congruence_threshold"] = float(CONGRUENCE_THRESHOLD)
 
@@ -423,7 +423,7 @@ def assemble_numbers(loadings_df, congruence_df, dominance_df):
 # =====================================================================
 
 def run_step02(verbose=True, refit=False):
-    """Measurement checks on the two-factor solution (Table S2, Section S3).
+    """Measurement checks on the two-factor solution (the congruence table, the measurement-checks section).
 
     Default path loads the saved CSVs and re-emits numbers.json. `--refit`
     re-estimates the four solutions from the item data.
@@ -435,7 +435,7 @@ def run_step02(verbose=True, refit=False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 02 — Measurement checks (Table S2, Section S3)")
+        print("STEP 02 — Measurement checks (the congruence table, the measurement-checks section)")
         print("=" * 70)
 
     saved = [OUT_LOADINGS_CSV, OUT_CONGRUENCE_CSV, OUT_ITEM_DESC_CSV, OUT_DOMINANCE_CSV]
@@ -472,12 +472,12 @@ def run_step02(verbose=True, refit=False):
               f"(threshold {CONGRUENCE_THRESHOLD:.2f}):")
         for name in SAMPLINGS:
             key = name.lower()
-            tag = "" if name in TABLE_S2_SAMPLINGS else "   (estimator control)"
+            tag = "" if name in REPORTED_SAMPLINGS else "   (estimator control)"
             print(f"    {name:<9} F1 {nums[f'congruence_{key}_f1']:.4f}   "
                   f"F2 {nums[f'congruence_{key}_f2']:.4f}"
                   f"   n={nums[f'n_rows_{key}']:,} rows / "
                   f"{nums[f'n_persons_{key}']} participants{tag}")
-        print(f"  minimum across Table S2 rows: "
+        print(f"  minimum across the congruence table rows: "
               f"{nums['congruence_min_across_samplings']:.4f}")
         print(f"  knee minus body: mean {nums['knee_minus_body_mean']:+.2f}, "
               f"SD {nums['knee_minus_body_sd']:.2f}, range "

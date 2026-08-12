@@ -4,7 +4,7 @@ This module owns two things that were previously re-typed in several places:
 
 1. **The item lists.** ``KNEE_ITEMS``/``BODY_ITEMS``/``PAIN_ITEMS``/``SLEEP_ITEM``
    used to be defined in ``step01_factor_analysis`` and imported from there by
-   step 02, while step 05 held its own copy. One home now; step 01 imports from
+   step 02, while step 04 held its own copy. One home now; step 01 imports from
    here, so there is exactly one place where "the eight pain items" is decided.
 
 2. **The descriptive concepts** — per-item summaries, the one-way ICC from
@@ -92,7 +92,7 @@ def item_descriptives(df, items, scale=ITEM_SCALE, floor=None, ceiling=None,
     sample : str, optional
         A label for the row set described. When given, a ``sample`` column is
         emitted, so descriptives computed on different samples (step 02's
-        calibration sample and step 05's analytic sample) can be concatenated
+        calibration sample and step 04's analytic sample) can be concatenated
         without ambiguity.
 
     Returns

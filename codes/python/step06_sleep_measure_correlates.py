@@ -24,10 +24,10 @@ sixteen it is ranked against -- it comes out of the same call to
 Every correlation in this step -- including STOP-BANG's -- goes through
 `lib.baseline_stability.correlate`. There is no second Pearson in the step.
 
-Compute only. This step draws NOTHING; `plot_step06_sleep_stability.py` reads
-`step06_figureS3_grid.csv` and renders the heatmap. The grid CSV carries an explicit
-integer `rank` column so the figure's row order (by |Mean r|, the ordering both the
-caption and Section S4's ranking claim depend on) is data, not a re-sort.
+The heatmap is rendered HERE, from the grid, on both the refit and the reload path --
+there is no separate plotting script. The grid CSV carries an explicit integer `rank`
+column so the figure's row order (by |Mean r|, the ordering both the caption and the
+section's ranking claim depend on) is data, not a re-sort.
 
 Restricted UNCONDITIONALLY to the N=229 coupling analytic sample, so no n in any
 table exceeds the N reported elsewhere in the paper.
@@ -47,6 +47,7 @@ Output:
     step06_stopbang_summary.csv          — one row: distribution, endorsement, association
     step06_figureS3_grid.csv             — tidy 17 x 12 grid, sorted, with `rank`
   results/step06_sleep_measure_correlates/
+    figure_sleep_stability_heatmap.png   — the per-quarter stability heatmap
     numbers.json                         — every quantity the documents quote
 
 Aggregates only; no participant-level output. No prose.
@@ -147,7 +148,7 @@ def _load_inputs(verbose=True):
     in_long = _first_existing(IN_LONG_CANDIDATES, "step 00 long export")
     for path, what in ((IN_WIDE, "participants export"),
                        (IN_DICT, "data dictionary"),
-                       (IN_ANALYTIC, "step 04 analytic sample")):
+                       (IN_ANALYTIC, "step 03 analytic sample")):
         if not os.path.exists(path):
             raise FileNotFoundError(f"{what}: {path}")
 
