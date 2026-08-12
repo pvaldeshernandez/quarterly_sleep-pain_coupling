@@ -47,6 +47,7 @@ RESULTS_DIR = os.path.join(ROOT, "results")
 #: A step writes into its OWN results folder. tools/collect_deliverables.py
 #: copies what the documents need into results/manuscript/ and
 #: results/supplementary_materials/ under their document-facing names.
+STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step14_sp_roi_extraction")
 SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 

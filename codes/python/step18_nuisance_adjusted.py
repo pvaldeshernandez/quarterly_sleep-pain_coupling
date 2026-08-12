@@ -221,6 +221,8 @@ def run_step18(verbose=True, refit=False):
     nums = {k: v for k, v in ctx["nums"].items() if k.startswith("n_resid_sample_")}
     roi_maps = ctx["roi_maps"]
     site_map, pain_map, fd_map = ctx["site_map"], ctx["pain_map"], ctx["fd_map"]
+    model_df, unique_ids = ctx["model_df"], ctx["unique_ids"]
+    id_map, motion = ctx["id_map"], ctx["motion"]
 
     # ------------------------------------------------------------------
     # The 16 nuisance-adjusted fits

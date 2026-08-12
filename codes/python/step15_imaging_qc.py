@@ -306,7 +306,13 @@ def prepare_inputs(verbose=True, refit=False):
     else:
         if verbose:
             print("  Loading saved motion QC (re-run with --refit to rescan SPM.mat).")
-        motion = pd.read_csv(OUT_MOTION_CSV)
+        # float_precision="round_trip": pandas' default parser is off by 1 ULP, and
+        # framewise displacement goes on to be a MODEL COVARIATE. Before the split the
+        # motion table was computed and used within one step; now step 18 reads it back
+        # from disk, and a last-bit difference was enough to move the motion-adjusted and
+        # all-three-adjusted gammas in the fourth decimal while site- and pain-adjusted
+        # -- which do not use it -- stayed identical.
+        motion = pd.read_csv(OUT_MOTION_CSV, float_precision="round_trip")
         motion["ID"] = motion["ID"].astype(str)
         n_failures = n_spm_dirs - len(motion)
 
