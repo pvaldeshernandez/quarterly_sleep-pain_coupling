@@ -323,7 +323,7 @@ def collect_diagnostics(verbose=True):
     if rows:
         return pd.DataFrame(rows)
     if os.path.exists(OUT_DIAG_CSV):
-        return pd.read_csv(OUT_DIAG_CSV)
+        return pd.read_csv(OUT_DIAG_CSV, float_precision="round_trip")
     if verbose:
         print("  WARNING: no per-fit diagnostics found; the six-fit convergence "
               "numbers will be omitted from numbers.json. Run with --refit.")
@@ -485,7 +485,7 @@ def run_step10(verbose=True, refit=False):
     raw_cols = ["ID", "quarter"]
     for block in BLOCKS:
         raw_cols += list(block["covars"])
-    raw_long_df = pd.read_csv(raw_long_path, usecols=raw_cols)
+    raw_long_df = pd.read_csv(raw_long_path, usecols=raw_cols, float_precision="round_trip")
     if verbose:
         print(f"  raw items: {os.path.relpath(raw_long_path, ROOT)}")
 
@@ -501,8 +501,8 @@ def run_step10(verbose=True, refit=False):
         if verbose:
             print("  Loading saved derivatives (no sampling).")
             print("  If upstream data or code changed, re-run with --refit.")
-        summary = pd.read_csv(OUT_SUMMARY_CSV)
-        design = pd.read_csv(OUT_DESIGN_CSV)
+        summary = pd.read_csv(OUT_SUMMARY_CSV, float_precision="round_trip")
+        design = pd.read_csv(OUT_DESIGN_CSV, float_precision="round_trip")
     else:
         # ------ FULL: six MCMC fits ------
         from coupling_model import load_varx_frame

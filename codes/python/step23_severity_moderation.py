@@ -1,5 +1,5 @@
 """
-Step 13 — Person-mean severity moderation of coupling (Table S2).
+Step 23 — Person-mean severity moderation of coupling (Table S2).
 ======================================================================
 
 Tests whether person-mean pain severity or sleep quality moderate
@@ -85,7 +85,7 @@ def run_step23(verbose=True, refit=False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 13 — Person-mean severity moderation (Table S2)")
+        print("STEP 23 — Person-mean severity moderation (Table S2)")
         print("=" * 70)
 
     # Check whether saved derivatives exist
@@ -410,7 +410,7 @@ def _fit_joint_model(model_df, unique_ids, id_map,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 13 — Person-mean severity moderation (Table S2)."
+        description="Step 23 — Person-mean severity moderation (Table S2)."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

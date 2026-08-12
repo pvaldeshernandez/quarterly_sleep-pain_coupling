@@ -1,5 +1,5 @@
 """
-Step 04 — Contrast moderation analysis (Johnson-Neyman).
+Step 12 — Contrast moderation analysis (Johnson-Neyman).
 ======================================================================
 
 Input:  derivatives/step08_coupling_model/step08_posterior_draws.npz
@@ -8,20 +8,20 @@ Output:
     step12_jn_localization_results.csv — full JN grid for both directions
   results/
     step12_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
-    step12_figure_jn_localization_sp.png — Figure S3: SP direction JN (null)
+    figure_jn_localization_sp.png — Figure S4: SP direction JN (null)
     step12_text_numbers.csv                — JN boundary, simple slopes, etc.
 
 Note: contrast moderation parameters (delta_p, omega_sp, delta_s, omega_ps)
-are in Table 4 (results/step08/step08_table4_coupling.csv), not a separate table.
+are in Table 4 (results/step08_coupling_model/step08_table4_coupling.csv), not a separate table.
 
-This step reads the posterior draws from the VARX(1) fit (Step 03)
+This step reads the posterior draws from the VARX(1) fit (step 08)
 and runs the Bayesian Johnson-Neyman analysis on the contrast
 moderation terms (omega_sp, omega_ps). It determines the range of
 within-person pain localization values (K^w) over which the
 conditional coupling is credibly different from zero.
 
 The model code for ``compute_jn_curve`` lives in
-``codes/lib/coupling_model.py``.
+``codes/python/lib/coupling_model.py``.
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
 """
@@ -220,12 +220,12 @@ def draw_jn_panel(ax, jn, panel_label, direction_label, slopes_dict,
     if np.any(jn["sig_negative"]):
         sig_lo = x_grid[jn["sig_negative"]][0]
         sig_hi = x_grid[jn["sig_negative"]][-1]
-        pct_sig = float(((obs_vals >= sig_lo) & (obs_vals <= sig_hi)).mean() * 100)
+        pct_sig = jn["pct_in_credible_region"]   # computed once, in johnson_neyman
         jn_text_parts.append(f"{pct_sig:.1f}% of observations in credible region")
     elif np.any(jn["sig_positive"]):
         sig_lo = x_grid[jn["sig_positive"]][0]
         sig_hi = x_grid[jn["sig_positive"]][-1]
-        pct_sig = float(((obs_vals >= sig_lo) & (obs_vals <= sig_hi)).mean() * 100)
+        pct_sig = jn["pct_in_credible_region"]   # computed once, in johnson_neyman
         jn_text_parts.append(f"{pct_sig:.1f}% of observations in credible region")
     if not jn["jn_boundaries"]:
         if np.all(sig):
@@ -277,7 +277,7 @@ def run_step12(verbose: bool = True, refit: bool = False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 04 — Contrast moderation (Johnson-Neyman)")
+        print("STEP 12 — Contrast moderation (Johnson-Neyman)")
         print("=" * 70)
         print(f"  Input: {IN_DRAWS_NPZ}")
 
@@ -431,8 +431,11 @@ def run_step12(verbose: bool = True, refit: bool = False):
     if ps_boundary is not None:
         _t("jn_ps_boundary_K", f"{ps_boundary:.4f}")
         _t("jn_ps_boundary_sd", f"{ps_boundary/c_sd:.2f}")
-        pct_cred = float((contrast_vals > ps_boundary).mean() * 100)
-        _t("jn_ps_pct_credible", f"{pct_cred:.1f}")
+        # From the JN result, not recomputed. This line used to take the fraction on
+        # the credible side of the boundary while Figure 4 took the fraction between
+        # the credible grid edges -- 83.88% against 83.66%, i.e. the sentence said
+        # 83.9% and the figure beside it drew 83.7%.
+        _t("jn_ps_pct_credible", f"{jn_ps['pct_in_credible_region']:.1f}")
     else:
         _t("jn_ps_boundary", "none")
 
@@ -457,13 +460,13 @@ def run_step12(verbose: bool = True, refit: bool = False):
     if verbose:
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
         print("\n" + "=" * 70)
-        print("STEP 04 COMPLETE")
+        print("STEP 12 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 04 — contrast moderation Johnson-Neyman analysis."
+        description="Step 12 — contrast moderation Johnson-Neyman analysis."
     )
     parser.add_argument(
         "--quiet", action="store_true",

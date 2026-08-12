@@ -285,7 +285,7 @@ def compute(verbose=True):
     from measurement import tucker_congruence
     from descriptives import item_descriptives
 
-    long = pd.read_csv(IN_LONG_CSV, usecols=["ID", "quarter"] + PAIN_ITEMS)
+    long = pd.read_csv(IN_LONG_CSV, usecols=["ID", "quarter"] + PAIN_ITEMS, float_precision="round_trip")
     df = calibration_sample(long)
     if verbose:
         print(f"  calibration sample: {len(df):,} person-quarters, "

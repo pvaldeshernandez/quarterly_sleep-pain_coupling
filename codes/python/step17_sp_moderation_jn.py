@@ -1,5 +1,5 @@
 """
-Step 09 — Johnson-Neyman analysis for SP moderation ROIs.
+Step 17 — Johnson-Neyman analysis for SP moderation ROIs.
 ======================================================================
 
 Input:  derivatives/step16/step16_sp_posterior_draws.npz
@@ -252,7 +252,7 @@ def run_step17(verbose=True, refit=False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 09 — SP moderation Johnson-Neyman analysis")
+        print("STEP 17 — SP moderation Johnson-Neyman analysis")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -266,7 +266,7 @@ def run_step17(verbose=True, refit=False):
             print("  If you have changed upstream data or code, re-run with --refit.")
 
     d = np.load(IN_DRAWS_NPZ)
-    table5 = pd.read_csv(IN_TABLE5_CSV)
+    table5 = pd.read_csv(IN_TABLE5_CSV, float_precision="round_trip")
 
     import matplotlib
     matplotlib.use("Agg")
@@ -501,13 +501,13 @@ def run_step17(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 09 COMPLETE")
+        print("STEP 17 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 09 — SP moderation JN analysis."
+        description="Step 17 — SP moderation JN analysis."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

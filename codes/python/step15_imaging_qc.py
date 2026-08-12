@@ -253,7 +253,7 @@ def prepare_inputs(verbose=True, refit=False):
     # ------------------------------------------------------------------
     # Samples: the ROI table, the analytic frame, and their intersection
     # ------------------------------------------------------------------
-    roi_df = pd.read_csv(IN_ROI_CSV)
+    roi_df = pd.read_csv(IN_ROI_CSV, float_precision="round_trip")
     roi_df["ID"] = roi_df["ID"].astype(str)
     present = set(roi_df["ROI"].unique())
     unexpected = sorted(present - set(ALL_SP_ROIS))

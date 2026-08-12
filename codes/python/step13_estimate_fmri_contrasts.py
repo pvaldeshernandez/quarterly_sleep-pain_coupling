@@ -1,5 +1,5 @@
 """
-Step 05 — Re-estimate first-level fMRI contrasts (masked and unmasked).
+Step 13 — Re-estimate first-level fMRI contrasts (masked and unmasked).
 ======================================================================
 
 Inputs:
@@ -241,7 +241,7 @@ def run_step13(overwrite: bool = False, verbose: bool = True, refit: bool = Fals
 
     if verbose:
         print("=" * 70)
-        print("STEP 05 — Re-estimate fMRI contrasts (masked + unmasked)")
+        print("STEP 13 — Re-estimate fMRI contrasts (masked + unmasked)")
         print("=" * 70)
         print(f"  GLM dir:      {GLM_DIR}")
         print(f"  4D fMRI dir:  {FMRI4D_DIR}")
@@ -279,7 +279,7 @@ def run_step13(overwrite: bool = False, verbose: bool = True, refit: bool = Fals
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 05 — Re-estimate fMRI contrasts (masked + unmasked)."
+        description="Step 13 — Re-estimate fMRI contrasts (masked + unmasked)."
     )
     parser.add_argument("--overwrite", action="store_true",
                         help="Re-estimate even if output files already exist.")

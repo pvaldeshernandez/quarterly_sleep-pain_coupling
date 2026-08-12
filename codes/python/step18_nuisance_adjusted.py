@@ -243,11 +243,11 @@ def run_step18(verbose=True, refit=False):
         if verbose:
             print("  WARNING: Running in load mode -- using saved posterior draws.")
             print("  If you have changed upstream data or code, re-run with --refit.")
-        table_s8 = pd.read_csv(OUT_TABLE_S8_CSV)
+        table_s8 = pd.read_csv(OUT_TABLE_S8_CSV, float_precision="round_trip")
         draws = dict(np.load(OUT_DRAWS_NPZ, allow_pickle=False))
     else:
         # ------ FULL MCMC: 4 ROIs x 4 schemes ------
-        pub = pd.read_csv(IN_TABLE5_CSV).set_index("ROI")
+        pub = pd.read_csv(IN_TABLE5_CSV, float_precision="round_trip").set_index("ROI")
         draws, table_rows = {}, []
         for roi in TABLE_S8_ROIS:
             mod = roi_maps[roi]
@@ -347,7 +347,7 @@ def run_step18(verbose=True, refit=False):
     # ------------------------------------------------------------------
     diag = read_diagnostics(STEP_DERIV_DIR, fit_id_prefix="step18_")
     if (diag is None or len(diag) == 0) and os.path.exists(OUT_DIAG_CSV):
-        diag = pd.read_csv(OUT_DIAG_CSV)
+        diag = pd.read_csv(OUT_DIAG_CSV, float_precision="round_trip")
     if diag is not None and len(diag):
         diag.to_csv(OUT_DIAG_CSV, index=False)
         # "all-parameter" flavor: run_fit's rhat_max/ess_* are computed over every

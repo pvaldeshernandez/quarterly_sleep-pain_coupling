@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 08 — Posterior predictive check of the primary coupling model (Table S5, Section S5).
+Step 09 — Posterior predictive check of the primary coupling model (Table S5, Section S5).
 
 Simulates replicated datasets from the posterior step 07 already saved and scores the
 discrepancy statistics: for pain and for sleep separately the mean, SD, 5th and 95th
@@ -346,7 +346,7 @@ def run_step09(verbose=True, refit=False, n_rep=N_REP, seed=SEED):
 
     if verbose:
         print("=" * 70)
-        print("STEP 08 — Posterior predictive check of the primary model (Table S5)")
+        print("STEP 09 — Posterior predictive check of the primary model (Table S5)")
         print("=" * 70)
 
     table, meta = (None, None) if refit else _load_saved()
@@ -402,7 +402,7 @@ def run_step09(verbose=True, refit=False, n_rep=N_REP, seed=SEED):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Step 08 — posterior predictive check of the primary coupling model.")
+        description="Step 09 — posterior predictive check of the primary coupling model.")
     ap.add_argument("--refit", action="store_true",
                     help="re-simulate from step 07's saved posterior instead of loading "
                          "the saved replicates (this step never fits a model)")

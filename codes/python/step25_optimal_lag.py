@@ -1,7 +1,7 @@
 """
-Step 23 — The optimal measurement interval implied by the fitted coupling matrix.
+Step 25 — The optimal measurement interval implied by the fitted coupling matrix.
 
-Section S14 of the supplement derives, from Dormann & Griffin (2015), the lag at which
+Section S15 of the supplement derives, from Dormann & Griffin (2015), the lag at which
 a cross-lagged effect is maximally observable, and reports what fraction of that peak a
 quarterly interval recovers. Every number in that derivation was arithmetic done by hand
 on Table 4 and typed into the document: it had no pipeline source, so the checker could
@@ -10,7 +10,7 @@ not verify it and a refit could not update it.
 This step is that arithmetic, done once, from `step08_table4_coupling.csv`.
 
 It fits nothing. It reads the primary fit's four transition-matrix coefficients and
-publishes every quantity Section S14, Section S12 and manuscript paragraph 174 quote.
+publishes every quantity Section S15, Section S15 and manuscript paragraph 174 quote.
 
 WHAT IS DERIVED
 ---------------
@@ -88,9 +88,9 @@ def read_transition_matrix(path=IN_TABLE4):
     """
     if not os.path.exists(path):
         raise FileNotFoundError(
-            f"{path} does not exist. Section S14 derives from the primary fit; "
+            f"{path} does not exist. Section S15 derives from the primary fit; "
             f"run step 07 first.")
-    t = pd.read_csv(path).set_index("Parameter")
+    t = pd.read_csv(path, float_precision="round_trip").set_index("Parameter")
     missing = [k for k in COEFFS if k not in t.index]
     if missing:
         raise KeyError(f"Table 4 has no row(s) {missing}; cannot build A")
@@ -130,7 +130,7 @@ def unidirectional_optimum(phi_p, phi_s):
 
 
 def derive(coeffs, verbose=True):
-    """Every quantity Section S14 reports. Returns (tidy DataFrame, numbers dict)."""
+    """Every quantity Section S15 reports. Returns (tidy DataFrame, numbers dict)."""
     phi_p, phi_s = coeffs["phi_p"], coeffs["phi_s"]
     lambda_sp, lambda_ps = coeffs["lambda_sp"], coeffs["lambda_ps"]
 
@@ -200,17 +200,17 @@ def derive(coeffs, verbose=True):
             print(f"  quarterly measurement captures {pct_of_peak:.0f}% of the peak")
         else:
             print("  Eq. S3 omega_opt    UNDEFINED — an autoregression is not "
-                  "positive, so ln(phi) does not exist. Section S14 has no "
+                  "positive, so ln(phi) does not exist. Section S15 has no "
                   "optimal-lag estimate under this fit.")
     return table, nums
 
 
 def run_step25(verbose=True, refit=False):
-    """Derive Section S14's optimal-lag quantities from the primary fit."""
+    """Derive Section S15's optimal-lag quantities from the primary fit."""
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
     if verbose:
         print("=" * 70)
-        print("STEP 23 — Optimal measurement interval (Section S14)")
+        print("STEP 25 — Optimal measurement interval (Section S15)")
         print("=" * 70)
 
     coeffs = read_transition_matrix()
@@ -225,7 +225,7 @@ def run_step25(verbose=True, refit=False):
         print(f"  Saved: {os.path.relpath(OUT_CSV, ROOT)}")
         print(f"  Saved numbers ({len(nums)} keys): {os.path.relpath(path, ROOT)}")
         print("=" * 70)
-        print("STEP 23 COMPLETE")
+        print("STEP 25 COMPLETE")
         print("=" * 70)
     return table, nums
 

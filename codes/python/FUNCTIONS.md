@@ -202,7 +202,7 @@ Step 03 — Data curation: who is in the analytic sample.
 
 ### `step04_raw_descriptives.py`
 
-Step 05 — Raw quarterly descriptive statistics.
+Step 04 — Raw quarterly descriptive statistics.
 
 - `load_frames(verbose)` — Return (raw_long, processed) as (DataFrame, DataFrame), IDs typed as str.
 - `_compute(verbose)` — Everything this step knows. Returns (frames, numbers, suppressed).
@@ -215,7 +215,7 @@ Step 05 — Raw quarterly descriptive statistics.
 
 ### `step05_contrast_validation.py`
 
-Step 02 — External validation of the contrast factor.
+Step 05 — External validation of the contrast factor.
 
 - `_resolve_kl_column(df)` — Return the name of the KL-grade column present in `df`, or None.
 - `_load_person_mean_contrast()` — Return DataFrame with columns [ID, K_i] from step01 scored output.
@@ -254,7 +254,7 @@ Step 07 — Build the VARX(1) frame: centering, lags, interaction terms.
 
 ### `step08_fit_coupling_model.py`
 
-Step 04 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
+Step 08 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 
 - `load_data(csv_path)` — Thin wrapper around lib.coupling_model.load_varx_frame.
 - `_generate_coupling_figure(person_df, pop_mean, pop_ci_lo, pop_ci_hi, col_mean, col_ci_lo, col_ci_hi, col_prob, direction_label, out_path, prob_neg)` — Draw a 2-panel coupling figure (boxstrip + forest) and save.
@@ -264,7 +264,7 @@ Step 04 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 
 ### `step09_posterior_predictive_check.py`
 
-Step 08 — Posterior predictive check of the primary coupling model (Table S5, Section S5).
+Step 09 — Posterior predictive check of the primary coupling model (Table S5, Section S5).
 
 - `_key_stem(variable, statistic)` — Registry key stem for one table row, e.g. 'pain_kurt', 'joint_corr_innov'.
 - `numbers_from_table(table, meta)` — Every quantity Table S5 and Section S5 quote, under a stable key.
@@ -300,7 +300,7 @@ Step 10 — Time-varying covariates: fatigue/mood and treatment activity.
 
 ### `step11_interpolation_sensitivity.py`
 
-Step 09 — Sensitivity of the coupling estimates to interpolated observations.
+Step 11 — Sensitivity of the coupling estimates to interpolated observations.
 
 - `flag_interpolated_transitions(df_full, model_df)` — Audit every transition for interpolated endpoints and return the clean subset.
 - `_conform(df, arm, n_obs, n_persons)` — Force a summary frame onto SUMMARY_COLUMNS so both arms share one schema.
@@ -320,7 +320,7 @@ Step 09 — Sensitivity of the coupling estimates to interpolated observations.
 
 ### `step12_contrast_moderation.py`
 
-Step 04 — Contrast moderation analysis (Johnson-Neyman).
+Step 12 — Contrast moderation analysis (Johnson-Neyman).
 
 - `compute_simple_slopes(intercept_draws, slope_draws, x_positions)` — Compute posterior simple slopes at specified moderator values.
 - `draw_jn_panel(ax, jn, panel_label, direction_label, slopes_dict, level_labels, level_x_vals, xlabel, body_knee_labels, legend_loc, info_loc, person_dots)` — Draw a JN panel with full annotations (person dots, rug, labels, info box).
@@ -331,7 +331,7 @@ Step 04 — Contrast moderation analysis (Johnson-Neyman).
 
 ### `step13_estimate_fmri_contrasts.py`
 
-Step 05 — Re-estimate first-level fMRI contrasts (masked and unmasked).
+Step 13 — Re-estimate first-level fMRI contrasts (masked and unmasked).
 
 - `_load_spm(spm_path)` — Load SPM.mat and return a flat dict of the key arrays.
 - `_find_4d(subj_id)` — Find the 4D NIfTI for a subject in the BIDS fmri_4d tree.
@@ -342,7 +342,7 @@ Step 05 — Re-estimate first-level fMRI contrasts (masked and unmasked).
 
 ### `step14_extract_sp_rois.py`
 
-Step 07 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
+Step 14 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
 
 - `build_spherical_mask(mni_center, radius_mm, affine, shape)` — Create a boolean 3D mask for a sphere at MNI coordinates.
 - `load_stim_side_map(verbose)` — Return {ID -> 'left' or 'right'} with the hemisphere CONTRALATERAL to
@@ -370,7 +370,7 @@ Step 15 — Imaging quality control of the fMRI subsample (Section S9).
 
 ### `step16_fit_sp_moderation.py`
 
-Step 08 — Fit Sleep-to-Pain moderation models (7 ROIs).
+Step 16 — Fit Sleep-to-Pain moderation models (8 ROIs).
 
 - `load_step05_data(csv_path)` — Thin wrapper around lib.coupling_model.load_varx_frame.
 - `run_step16(verbose, refit)` — *(undocumented)*
@@ -379,7 +379,7 @@ Step 08 — Fit Sleep-to-Pain moderation models (7 ROIs).
 
 ### `step17_sp_moderation_jn.py`
 
-Step 09 — Johnson-Neyman analysis for SP moderation ROIs.
+Step 17 — Johnson-Neyman analysis for SP moderation ROIs.
 
 - `draw_jn_panel(ax, jn, direction_label, slopes_dict, level_labels, level_x_vals, xlabel, legend_loc, info_loc, person_dots, left_label_inside)` — Draw a full JN panel with person dots, rug, annotated simple slopes,
 - `run_step17(verbose, refit)` — *(undocumented)*
@@ -401,7 +401,7 @@ Step 18 — Nuisance-adjusted sleep-to-pain fMRI moderation (Section S11, Table 
 
 ### `step19_ps_specificity.py`
 
-Step 17 — Directional-specificity control for the sleep-to-pain fMRI ROIs.
+Step 19 — Directional-specificity control for the sleep-to-pain fMRI ROIs.
 
 - `_build_summary(fitted)` — Select and rename ``fit_roi_moderation_set``'s columns into the
 - `_step16_n_persons()` — Number of persons step 14 fitted for these same four ROIs, or None.
@@ -411,7 +411,7 @@ Step 17 — Directional-specificity control for the sleep-to-pain fMRI ROIs.
 
 ### `step20_extract_ps_rois.py`
 
-Step 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
+Step 20 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
 
 - `extract_fmri_arousal(verbose)` — Extract probability-weighted mean BOLD per subject per ROI.
 - `extract_vbm_arousal(verbose)` — Extract probability-weighted GM volume per subject per ROI.
@@ -427,7 +427,7 @@ Step 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
 
 ### `step21_fit_ps_moderation.py`
 
-Step 11 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
+Step 21 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
 
 - `load_step05_data(csv_path)` — Thin wrapper around lib.coupling_model.load_varx_frame.
 - `fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map, verbose)` — Fit moderation models for all ROIs in one modality (fMRI or VBM).
@@ -437,7 +437,7 @@ Step 11 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
 
 ### `step22_ps_moderation_jn.py`
 
-Step 12 — Johnson-Neyman analysis for PS arousal moderation ROIs.
+Step 22 — Johnson-Neyman analysis for PS arousal moderation ROIs.
 
 - `draw_jn_panel(ax, jn, direction_label, slopes_dict, level_labels, level_x_vals, xlabel, legend_loc, info_loc, person_dots, left_label_inside)` — Draw a full JN panel with person dots, rug, annotated simple slopes,
 - `run_jn_for_modality(modality_name, draws_path, table_path, verbose)` — Run JN for all ROIs in one modality. Returns JN grid rows, text rows,
@@ -448,7 +448,7 @@ Step 12 — Johnson-Neyman analysis for PS arousal moderation ROIs.
 
 ### `step23_severity_moderation.py`
 
-Step 13 — Person-mean severity moderation of coupling (Table S2).
+Step 23 — Person-mean severity moderation of coupling (Table S2).
 
 - `load_data(csv_path)` — Thin wrapper around lib.coupling_model.load_varx_frame.
 - `run_step23(verbose, refit)` — *(undocumented)*
@@ -459,7 +459,7 @@ Step 13 — Person-mean severity moderation of coupling (Table S2).
 
 ### `step24_diagnostics_summary.py`
 
-Step 22 — Collect the diagnostics of every fit in the paper.
+Step 24 — Collect the diagnostics of every fit in the paper.
 
 - `collect(verbose)` — Every per-fit diagnostics record the pipeline wrote.
 - `by_family(verbose)` — Table S3: convergence by parameter family, for the primary model.
@@ -468,14 +468,14 @@ Step 22 — Collect the diagnostics of every fit in the paper.
 
 ### `step25_optimal_lag.py`
 
-Step 23 — The optimal measurement interval implied by the fitted coupling matrix.
+Step 25 — The optimal measurement interval implied by the fitted coupling matrix.
 
 - `read_transition_matrix(path)` — The four coefficients of A, from the primary fit's published Table 4.
 - `eigenvalues(phi_p, phi_s, lambda_sp, lambda_ps)` — (lambda_1, lambda_2, discriminant) of the bivariate transition matrix.
 - `amplification(omega, phi_p, phi_s)` — f(omega), the cross-lagged amplification at lag omega, normalized so f(1) = 1.
 - `unidirectional_optimum(phi_p, phi_s)` — Eq. S3's omega_opt, in quarters; NaN when the logarithms do not exist.
-- `derive(coeffs, verbose)` — Every quantity Section S14 reports. Returns (tidy DataFrame, numbers dict).
-- `run_step25(verbose, refit)` — Derive Section S14's optimal-lag quantities from the primary fit.
+- `derive(coeffs, verbose)` — Every quantity Section S15 reports. Returns (tidy DataFrame, numbers dict).
+- `run_step25(verbose, refit)` — Derive Section S15's optimal-lag quantities from the primary fit.
 - `main()` — *(undocumented)*
 
 ## Tools — `tools/`

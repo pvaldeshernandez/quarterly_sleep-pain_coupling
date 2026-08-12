@@ -1,5 +1,5 @@
 """
-Step 12 — Johnson-Neyman analysis for PS arousal moderation ROIs.
+Step 22 — Johnson-Neyman analysis for PS arousal moderation ROIs.
 ======================================================================
 
 Input:  derivatives/step21/step21_ps_fmri_posterior_draws.npz
@@ -250,7 +250,7 @@ def run_jn_for_modality(modality_name, draws_path, table_path, verbose=True):
     from coupling_model import compute_jn_curve
 
     d = np.load(draws_path)
-    table = pd.read_csv(table_path)
+    table = pd.read_csv(table_path, float_precision="round_trip")
 
     jn_rows = []
     text_rows = []
@@ -445,7 +445,7 @@ def _make_merged_figure(jn_results, slopes_all, d, table, modality_label,
 def run_step22(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 12 — PS arousal moderation Johnson-Neyman analysis")
+        print("STEP 22 — PS arousal moderation Johnson-Neyman analysis")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -503,13 +503,13 @@ def run_step22(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 12 COMPLETE")
+        print("STEP 22 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 12 — PS arousal moderation JN analysis."
+        description="Step 22 — PS arousal moderation JN analysis."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

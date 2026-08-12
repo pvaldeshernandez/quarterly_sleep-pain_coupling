@@ -1,5 +1,5 @@
 """
-Step 02 — External validation of the contrast factor.
+Step 05 — External validation of the contrast factor.
 ======================================================================
 
 Validates that the contrast factor (F2: Contrast) from the factor
@@ -107,7 +107,7 @@ def _load_person_mean_contrast():
     every number this step publishes describes the same participants as every
     other number in the paper.
     """
-    scored = pd.read_csv(IN_SCORED_CSV)
+    scored = pd.read_csv(IN_SCORED_CSV, float_precision="round_trip")
     ki = scored.groupby("ID")["contrast_factor"].mean().reset_index()
     ki.columns = ["ID", "K_i"]
     ki["ID"] = ki["ID"].astype(str)
@@ -144,7 +144,7 @@ def generate_figure_s1(verbose=True):
         print("  Figure S1: Factor endorsement validation")
 
     ki = _load_person_mean_contrast()
-    extracted = pd.read_csv(IN_EXTRACTED_CSV)
+    extracted = pd.read_csv(IN_EXTRACTED_CSV, float_precision="round_trip")
 
     # Baseline endorsements (quarter 0)
     baseline = extracted[extracted["quarter"] == 0].copy()
@@ -331,7 +331,7 @@ def generate_text_numbers(verbose=True):
         print("  Text numbers: convergent validity statistics")
 
     ki = _load_person_mean_contrast()
-    extracted = pd.read_csv(IN_EXTRACTED_CSV)
+    extracted = pd.read_csv(IN_EXTRACTED_CSV, float_precision="round_trip")
 
     text_rows = []
 
@@ -507,7 +507,7 @@ def generate_text_numbers(verbose=True):
 def run_step05(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 02 — Contrast factor external validation")
+        print("STEP 05 — Contrast factor external validation")
         print("=" * 70)
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -519,13 +519,13 @@ def run_step05(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 02 COMPLETE")
+        print("STEP 05 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 02 — External validation of the contrast factor."
+        description="Step 05 — External validation of the contrast factor."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument(

@@ -153,7 +153,7 @@ def _load_inputs(verbose=True):
 
     ids = analytic_ids(IN_ANALYTIC)
 
-    long = pd.read_csv(in_long, usecols=["ID", "quarter", "q13_sleep"])
+    long = pd.read_csv(in_long, usecols=["ID", "quarter", "q13_sleep"], float_precision="round_trip")
     long["ID"] = long["ID"].astype(str)
     long = long[long["ID"].isin(ids)]
 
@@ -526,8 +526,14 @@ def run_step06(verbose=True, refit=False):
         # --refit. Two runs of the same step must not report different numbers.
         person_mean = pd.read_csv(OUT_MEAN_CSV, float_precision="round_trip")
         per_quarter = pd.read_csv(OUT_QUARTER_CSV, float_precision="round_trip")
-        stopbang = pd.read_csv(OUT_STOPBANG_CSV,
-                               float_precision="round_trip").iloc[0].to_dict()
+        # `.iloc[0]` on a mixed int/float row unifies the WHOLE row to float64, so the
+        # five counts came back as 221.0 / 229.0 / 221.0 / 53.0 / 76.0 and were copied
+        # straight into the registry -- the reload path publishing 221.0 where --refit
+        # publishes 221, under the same names. round_trip does not help: the loss is
+        # dtype unification, not precision. Read the row as a dict of columns instead,
+        # so each column keeps the dtype it was written with.
+        _sb = pd.read_csv(OUT_STOPBANG_CSV, float_precision="round_trip")
+        stopbang = {c: _sb[c].iloc[0].item() for c in _sb.columns}
         grid = pd.read_csv(OUT_GRID_CSV, float_precision="round_trip")
 
     # ---- Figure S3 ---------------------------------------------------------

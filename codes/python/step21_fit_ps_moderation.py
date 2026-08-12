@@ -1,5 +1,5 @@
 """
-Step 11 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
+Step 21 — Fit Pain-to-Sleep moderation models (arousal relay ROIs).
 ======================================================================
 
 Input:  derivatives/step07_varx_data/step07_processed_long.csv
@@ -74,7 +74,7 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
     """Fit moderation models for all ROIs in one modality (fMRI or VBM)."""
     from coupling_model import fit_bayesian_varx1, extract_results
 
-    roi_df = pd.read_csv(roi_csv_path)
+    roi_df = pd.read_csv(roi_csv_path, float_precision="round_trip")
     all_rois = roi_df["ROI"].unique()
     if verbose:
         print(f"\n  {modality_name}: {len(all_rois)} ROIs to fit")
@@ -155,7 +155,7 @@ def fit_modality(modality_name, roi_csv_path, model_df, unique_ids, id_map,
 def run_step21(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 11 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
+        print("STEP 21 — Fit Pain-to-Sleep moderation (arousal relay ROIs)")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -176,9 +176,9 @@ def run_step21(verbose=True, refit=False):
         if verbose:
             print("  WARNING: Running in replot mode -- loading saved derivatives.")
             print("  If you have changed upstream data or code, re-run with --refit.")
-        fmri_table = pd.read_csv(OUT_FMRI_TABLE)
+        fmri_table = pd.read_csv(OUT_FMRI_TABLE, float_precision="round_trip")
         fmri_draws = dict(np.load(OUT_FMRI_DRAWS))
-        vbm_table = pd.read_csv(OUT_VBM_TABLE)
+        vbm_table = pd.read_csv(OUT_VBM_TABLE, float_precision="round_trip")
         vbm_draws = dict(np.load(OUT_VBM_DRAWS))
     else:
         # ------ FULL MCMC FIT ------
@@ -252,13 +252,13 @@ def run_step21(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 11 COMPLETE")
+        print("STEP 21 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 11 — fit PS moderation (arousal relay ROIs)."
+        description="Step 21 — fit PS moderation (arousal relay ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

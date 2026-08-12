@@ -38,7 +38,7 @@ def analytic_ids(source, id_col="ID"):
     if isinstance(source, pd.DataFrame):
         frame = source
     else:
-        frame = pd.read_csv(source, usecols=[id_col])
+        frame = pd.read_csv(source, usecols=[id_col], float_precision="round_trip")
     if id_col not in frame.columns:
         raise KeyError(f"{id_col!r} absent from the analytic frame")
     return set(frame[id_col].astype(str))

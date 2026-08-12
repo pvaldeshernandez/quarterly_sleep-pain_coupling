@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 17 — Directional-specificity control for the sleep-to-pain fMRI ROIs.
+Step 19 — Directional-specificity control for the sleep-to-pain fMRI ROIs.
 ======================================================================
 
 Reviewer 1's only analytic request: test the NAcc and dACC/MCC ROIs as
@@ -149,7 +149,7 @@ def _step16_n_persons():
     """
     if not os.path.exists(IN_STEP14_TABLE):
         return None
-    table = pd.read_csv(IN_STEP14_TABLE)
+    table = pd.read_csv(IN_STEP14_TABLE, float_precision="round_trip")
     if "ROI" not in table.columns or "N" not in table.columns:
         return None
     rows = table[table["ROI"].isin(TARGET_ROIS)]
@@ -219,7 +219,7 @@ def run_step19(verbose=True, refit=False):
     """
     if verbose:
         print("=" * 70)
-        print("STEP 17 — Directional-specificity control (pain-to-sleep)")
+        print("STEP 19 — Directional-specificity control (pain-to-sleep)")
         print("=" * 70)
 
     saved_exist = os.path.exists(OUT_SUMMARY_CSV) and os.path.exists(OUT_DRAWS_NPZ)
@@ -233,7 +233,7 @@ def run_step19(verbose=True, refit=False):
         if verbose:
             print("  WARNING: Running in load mode -- using saved derivatives.")
             print("  If you have changed upstream data or code, re-run with --refit.")
-        summary = pd.read_csv(OUT_SUMMARY_CSV)
+        summary = pd.read_csv(OUT_SUMMARY_CSV, float_precision="round_trip")
         missing = [c for c in SUMMARY_COLUMNS if c not in summary.columns]
         if missing:
             raise ValueError(
@@ -251,7 +251,7 @@ def run_step19(verbose=True, refit=False):
         df_full, model_df, unique_ids, id_map = load_varx_frame(
             IN_PROCESSED_CSV, verbose=verbose)
 
-        roi_df = pd.read_csv(IN_ROI_CSV)
+        roi_df = pd.read_csv(IN_ROI_CSV, float_precision="round_trip")
         available = set(roi_df["ROI"].unique())
         missing = [r for r in TARGET_ROIS if r not in available]
         if missing:
@@ -305,7 +305,7 @@ def run_step19(verbose=True, refit=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 17 — pain-to-sleep specificity control (4 fMRI ROIs)."
+        description="Step 19 — pain-to-sleep specificity control (4 fMRI ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

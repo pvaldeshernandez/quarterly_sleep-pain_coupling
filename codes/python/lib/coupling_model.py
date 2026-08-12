@@ -458,7 +458,10 @@ def load_data(data_dir, synthetic=False):
             f"No processed data found in {data_dir!r}. Tried: {candidates}"
         )
 
-    df = pd.read_csv(csv_path)
+    # round_trip: the default parser is off by one ULP, and this frame is the MODEL
+    # INPUT for steps 08, 09, 10 and 11. A last-bit difference here moves every
+    # posterior mean in the pipeline.
+    df = pd.read_csv(csv_path, float_precision="round_trip")
 
     # Required columns for the VARX(1) model: current outcomes and all lags
     required = [
@@ -602,7 +605,10 @@ def load_varx_frame(csv_path, verbose=False):
     id_map : dict
         Mapping {subject_ID: integer_index}.
     """
-    df = pd.read_csv(csv_path)
+    # round_trip: the default parser is off by one ULP, and this frame is the MODEL
+    # INPUT for steps 08, 09, 10 and 11. A last-bit difference here moves every
+    # posterior mean in the pipeline.
+    df = pd.read_csv(csv_path, float_precision="round_trip")
 
     person_demo = (
         df.groupby("ID").first()[["Age", "Sex"]].reset_index()
@@ -1563,6 +1569,34 @@ def compute_jn_curve(intercept_draws, slope_draws, X_vals,
         obs_raw = X_vals
         jn_boundaries = jn_boundaries_z
 
+    # "% of observations in the credible region", computed ONCE, here.
+    #
+    # It used to be computed twice: the plotting code took the fraction between the
+    # first and last credible GRID POINT, and the registry took the fraction on the
+    # credible side of the INTERPOLATED boundary. Those are different numbers -- for the
+    # localization moderation, 83.66% and 83.88%, which print as 83.7% and 83.9%. The
+    # figure and the sentence beside it therefore disagreed by construction, and no
+    # amount of updating one would fix the other.
+    #
+    # The region is the resolved one: bounded by the interpolated boundary where the
+    # grid crosses, and by the end of the observed range where it does not. Interpolated
+    # because a grid edge is an artifact of grid resolution, and the boundary is the
+    # quantity the document actually quotes.
+    pct_in_credible_region = float("nan")
+    if np.any(sig):
+        idx = np.flatnonzero(sig)
+        lo_i, hi_i = idx[0], idx[-1]
+        lo = x_grid[lo_i]
+        hi = x_grid[hi_i]
+        # Replace a grid edge with the interpolated crossing when one lies just outside.
+        for b in jn_boundaries:
+            if lo_i > 0 and abs(b - lo) <= abs(x_grid[1] - x_grid[0]):
+                lo = min(lo, b)
+            if hi_i < len(x_grid) - 1 and abs(b - hi) <= abs(x_grid[1] - x_grid[0]):
+                hi = max(hi, b)
+        pct_in_credible_region = float(
+            ((obs_raw >= lo) & (obs_raw <= hi)).mean() * 100)
+
     return {
         "x_grid": x_grid,
         "x_grid_z": x_grid_z,
@@ -1580,6 +1614,8 @@ def compute_jn_curve(intercept_draws, slope_draws, X_vals,
         "slope_mean": slope_draws.mean(),
         "raw_mean": raw_mean,
         "raw_sd": raw_sd,
+        # the single source for both the figure annotation and the registry
+        "pct_in_credible_region": pct_in_credible_region,
     }
 
 

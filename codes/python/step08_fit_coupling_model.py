@@ -1,19 +1,19 @@
 """
-Step 04 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
+Step 08 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 ======================================================================
 
 Input:  derivatives/step07_varx_data/step07_processed_long.csv
 Output:
   derivatives/
-    step07_posterior_draws.npz     — raw posterior arrays for downstream steps
-    step07_person_coupling.csv     — per-person lambda_sp / lambda_ps
+    step08_posterior_draws.npz     — raw posterior arrays for downstream steps
+    step08_person_coupling.csv     — per-person lambda_sp / lambda_ps
   results/
-    step07_table4_coupling.csv     — Table 4: population parameters
-    step07_loo_comparison.csv      — LOO-CV pairwise comparisons
+    step08_table4_coupling.csv     — Table 4: population parameters
+    step08_loo_comparison.csv      — LOO-CV pairwise comparisons
     step08_text_numbers.csv        — every number stated in the text
 
 This step fits the bivariate VARX(1) coupling model to the
-within-person deviations produced by Step 02. It then fits three
+within-person deviations produced by step 07. It then fits three
 additional nested models (no_PS, no_SP, null) for the LOO-CV
 model comparison reported in Results §3.1.
 
@@ -58,7 +58,7 @@ IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data", "step07_processed
 OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step08_posterior_draws.npz")
 OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step08_person_coupling.csv")
 # The FULL posterior of the primary fit. The NPZ above keeps only the handful of
-# parameters the figures need; the posterior predictive check (step 08) has to
+# parameters the figures need; the posterior predictive check (step 09) has to
 # re-simulate the whole generative model, so it needs every parameter and the
 # person random effects together with their chain/draw structure.
 OUT_IDATA_NC = os.path.join(STEP_DERIV_DIR, "step08_primary_idata.nc")
@@ -234,7 +234,7 @@ def run_step08(verbose: bool = True, refit: bool = False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 03 — Fit Bayesian VARX(1) coupling model + LOO-CV")
+        print("STEP 08 — Fit Bayesian VARX(1) coupling model + LOO-CV")
         print("=" * 70)
         print(f"  Input: {IN_PROCESSED_CSV}")
 
@@ -260,10 +260,19 @@ def run_step08(verbose: bool = True, refit: bool = False):
             print("  WARNING: Running in replot mode -- loading saved derivatives.")
             print("  If you have changed upstream data or code, re-run with --refit.")
 
-        person_df = pd.read_csv(OUT_PERSON_CSV)
-        table4 = pd.read_csv(OUT_TABLE4_CSV)
-        loo_df = pd.read_csv(OUT_LOO_CSV)
-        text_df = pd.read_csv(OUT_TEXT_CSV)
+        # round_trip on all four: these values are republished verbatim into
+        # numbers.json and drawn into Figures 2 and 3, so without it the reload path
+        # reports different numbers from the run that produced them.
+        person_df = pd.read_csv(OUT_PERSON_CSV, float_precision="round_trip")
+        table4 = pd.read_csv(OUT_TABLE4_CSV, float_precision="round_trip")
+        # keep_default_na: one of the four compared models is called "null", which
+        # pandas' default na_values turns into NaN. The registry key is built from that
+        # string, so the reload path was publishing loo_no_SP_vs_nan_delta where the fit
+        # path publishes loo_no_SP_vs_null_delta -- the same quantity under two names,
+        # and a name-keyed check finds nothing on whichever path did not run last.
+        loo_df = pd.read_csv(OUT_LOO_CSV, keep_default_na=False,
+                             float_precision="round_trip")
+        text_df = pd.read_csv(OUT_TEXT_CSV, float_precision="round_trip")
 
         # Reconstruct results dict from Table 4 for figure generation
         results = {}
@@ -709,13 +718,13 @@ def run_step08(verbose: bool = True, refit: bool = False):
         print(f"    rho = {results['rho_innov_mean']:+.4f}")
         print(f"    R-hat max: {results['rhat_max']:.3f}")
         print("\n" + "=" * 70)
-        print("STEP 03 COMPLETE")
+        print("STEP 08 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 04 — fit the Bayesian VARX(1) coupling model + LOO-CV."
+        description="Step 08 — fit the Bayesian VARX(1) coupling model + LOO-CV."
     )
     parser.add_argument(
         "--quiet", action="store_true",

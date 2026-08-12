@@ -109,7 +109,7 @@ def person_covariate(path, column, id_columns=("subject_id", "ID")):
     if str(path).lower().endswith((".xlsx", ".xls")):
         w = pd.read_excel(path, usecols=lambda c: c in wanted)
     else:
-        w = pd.read_csv(path, usecols=lambda c: c in wanted)
+        w = pd.read_csv(path, usecols=lambda c: c in wanted, float_precision="round_trip")
 
     idcol = next((c for c in id_columns if c in w.columns), None)
     if idcol is None:

@@ -683,7 +683,7 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
     # that were supposed to change nothing -- the ANOVA F of step 03 moved 17.00 -> 16.52
     # exactly this way. Recomputing is now something you ask for.
     if not refit and os.path.exists(OUT_SCORED_CSV) and os.path.exists(OUT_MODEL_JSON):
-        scored = pd.read_csv(OUT_SCORED_CSV)
+        scored = pd.read_csv(OUT_SCORED_CSV, float_precision="round_trip")
         with open(OUT_MODEL_JSON) as fh:
             model = json.load(fh)
         if verbose:
@@ -696,7 +696,7 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
     if verbose:
         print(f"  Input:  {IN_LONG_CSV}")
 
-    long = pd.read_csv(IN_LONG_CSV)
+    long = pd.read_csv(IN_LONG_CSV, float_precision="round_trip")
     if verbose:
         n_subjects = long["ID"].nunique()
         n_q = (long["quarter"] >= 1).sum()

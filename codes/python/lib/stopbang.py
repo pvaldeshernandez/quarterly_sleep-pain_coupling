@@ -184,7 +184,7 @@ def test_reproduces_published(q13_person_mean=None, ids=None, wide=None):
     """
     if q13_person_mean is None:
         long = pd.read_csv(os.path.join(REPO, "data/step00_extracted_long.csv"),
-                           usecols=["ID", "q13_sleep"])
+                           usecols=["ID", "q13_sleep"], float_precision="round_trip")
         long["ID"] = long["ID"].astype(str)
         q13_person_mean = long.groupby("ID")["q13_sleep"].mean()
     got = summary(q13_person_mean=q13_person_mean, ids=ids, wide=wide)

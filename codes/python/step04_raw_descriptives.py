@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 05 — Raw quarterly descriptive statistics.
+Step 04 — Raw quarterly descriptive statistics.
 ======================================================================
 
 The raw data behind the model: per-item pooled descriptives, the same items broken
@@ -165,7 +165,7 @@ def load_frames(verbose=False):
     from coupling_model import load_varx_frame
 
     processed = load_varx_frame(IN_PROCESSED_CSV, verbose=verbose)[0].copy()
-    raw_long = pd.read_csv(IN_LONG_CSV)
+    raw_long = pd.read_csv(IN_LONG_CSV, float_precision="round_trip")
     raw_long["ID"] = raw_long["ID"].astype(str)
     processed["ID"] = processed["ID"].astype(str)
     return raw_long, processed
@@ -374,10 +374,10 @@ SAVED_OUTPUTS = (OUT_ITEM_CSV, OUT_BY_QUARTER_CSV, OUT_VARCOMP_CSV,
 def _load_saved():
     """Read back what a previous run wrote. Returns (frames, numbers)."""
     frames = {
-        "item_descriptives": pd.read_csv(OUT_ITEM_CSV),
-        "by_quarter": pd.read_csv(OUT_BY_QUARTER_CSV),
-        "variance_decomposition": pd.read_csv(OUT_VARCOMP_CSV),
-        "zero_pain": pd.read_csv(OUT_ZERO_PAIN_CSV),
+        "item_descriptives": pd.read_csv(OUT_ITEM_CSV, float_precision="round_trip"),
+        "by_quarter": pd.read_csv(OUT_BY_QUARTER_CSV, float_precision="round_trip"),
+        "variance_decomposition": pd.read_csv(OUT_VARCOMP_CSV, float_precision="round_trip"),
+        "zero_pain": pd.read_csv(OUT_ZERO_PAIN_CSV, float_precision="round_trip"),
     }
     with open(OUT_NUMBERS_JSON) as fh:
         raw = json.load(fh)
@@ -402,7 +402,7 @@ def run_step04(verbose=True, refit=False):
     """
     if verbose:
         print("=" * 70)
-        print("STEP 05 — Raw quarterly descriptive statistics")
+        print("STEP 04 — Raw quarterly descriptive statistics")
         print("=" * 70)
 
     saved_exist = all(os.path.exists(p) for p in SAVED_OUTPUTS)
@@ -468,7 +468,7 @@ def _report(frames, numbers, suppressed):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Step 05 — Raw quarterly descriptive statistics."
+        description="Step 04 — Raw quarterly descriptive statistics."
     )
     ap.add_argument("--refit", action="store_true",
                     help="Recompute from the raw data instead of loading saved outputs "

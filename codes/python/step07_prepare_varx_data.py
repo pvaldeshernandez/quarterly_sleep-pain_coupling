@@ -273,6 +273,16 @@ def run_step07(verbose: bool = True, refit: bool = False):
     summary = compute_timepoint_summary(df_out)
     summary.to_csv(OUT_SUMMARY_CSV, index=False)
 
+    # Publish them under names. "median 9 per participant, range 2-10" is in the
+    # Results, and it lived only in this wide-format CSV in derivatives/, which the
+    # value collector cannot read -- it looks for a metric,value schema. Three
+    # reported numbers with nothing to check them against.
+    from registry import write_numbers
+    write_numbers(STEP_RESULTS_DIR,
+                  {k: (int(v) if float(v).is_integer() else float(v))
+                   for k, v in summary.iloc[0].items()},
+                  prefix="step07")
+
     if verbose:
         print(f"\n  Saved: {OUT_PROCESSED_CSV}")
         print(f"    Shape: {df_out.shape}")

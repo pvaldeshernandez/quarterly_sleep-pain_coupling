@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 22 — Collect the diagnostics of every fit in the paper.
+Step 24 — Collect the diagnostics of every fit in the paper.
 
 Runs LAST, and that is the whole reason it is a separate step. Per-fit diagnostics are
 written by `lib.coupling_model.run_fit` at each fit, so there is nothing to compute in
@@ -13,8 +13,8 @@ This step recomputes nothing. It reads what the fits already recorded.
 Input:  derivatives/step*/diagnostics_*.json            (one per fit)
         derivatives/step*/diagnostics_*_by_param.csv    (per-parameter, per fit)
 Output: derivatives/step24_diagnostics/step24_all_fits.csv
-        derivatives/step24_diagnostics/step24_by_family.csv     -> Table S3
-        derivatives/step24_diagnostics/step24_sampler.csv       -> Table S4
+        results/step24_diagnostics/step24_by_family.csv     -> Table S3
+        results/step24_diagnostics/step24_sampler.csv       -> Table S4
         results/step24_diagnostics/numbers.json
 
 Two fits are ALIASES of the primary model rather than separate models: the full model of
@@ -95,7 +95,7 @@ def by_family(verbose=True):
         if verbose:
             print(f"  no per-parameter table for {PRIMARY}; run step08 --refit first")
         return None
-    d = pd.read_csv(hits[0], index_col=0)
+    d = pd.read_csv(hits[0], index_col=0, float_precision="round_trip")
     rows, used = [], []
     for label, belongs in FAMILIES:
         names = [n for n in d.index if belongs(str(n))]
@@ -126,7 +126,7 @@ def run_step24(verbose=True, refit=False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 22 — Diagnostics summary (aggregates; recomputes nothing)")
+        print("STEP 24 — Diagnostics summary (aggregates; recomputes nothing)")
         print("=" * 70)
 
     allfits = collect(verbose)

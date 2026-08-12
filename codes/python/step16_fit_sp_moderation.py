@@ -1,5 +1,5 @@
 """
-Step 08 — Fit Sleep-to-Pain moderation models (7 ROIs).
+Step 16 — Fit Sleep-to-Pain moderation models (8 ROIs).
 ======================================================================
 
 Input:  derivatives/step07_varx_data/step07_processed_long.csv
@@ -13,7 +13,7 @@ Output:
     step16_text_numbers.csv           — gamma estimates, p-values, etc.
 
 Fits fit_bayesian_varx1 with X_person = z-scored ROI value for
-each of the 7 SP ROIs (6 Krause + 1 ACC). Extracts gamma_sp and
+each of the 7 SP ROIs (6 Krause + 2 ACC). Extracts gamma_sp and
 gamma_ps posterior summaries. Runs the 6-ROI Krause sign
 concordance test.
 
@@ -80,7 +80,7 @@ def run_step16(verbose=True, refit=False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 08 — Fit Sleep-to-Pain moderation (7 ROIs)")
+        print("STEP 16 — Fit Sleep-to-Pain moderation (8 ROIs)")
         print("=" * 70)
 
     os.makedirs(DERIV_DIR, exist_ok=True)
@@ -88,7 +88,7 @@ def run_step16(verbose=True, refit=False):
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-    roi_df = pd.read_csv(IN_ROI_CSV)
+    roi_df = pd.read_csv(IN_ROI_CSV, float_precision="round_trip")
 
     # Check whether saved derivatives exist
     saved_exist = os.path.exists(OUT_DRAWS_NPZ) and os.path.exists(OUT_TABLE5_CSV)
@@ -102,7 +102,7 @@ def run_step16(verbose=True, refit=False):
         if verbose:
             print("  WARNING: Running in replot mode -- loading saved derivatives.")
             print("  If you have changed upstream data or code, re-run with --refit.")
-        table5 = pd.read_csv(OUT_TABLE5_CSV)
+        table5 = pd.read_csv(OUT_TABLE5_CSV, float_precision="round_trip")
         draws_dict = dict(np.load(OUT_DRAWS_NPZ))
     else:
         # ------ FULL MCMC FIT ------
@@ -271,13 +271,13 @@ def run_step16(verbose=True, refit=False):
 
     if verbose:
         print("\n" + "=" * 70)
-        print("STEP 08 COMPLETE")
+        print("STEP 16 COMPLETE")
         print("=" * 70)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 08 — fit SP moderation models (7 ROIs)."
+        description="Step 16 — fit SP moderation models (8 ROIs)."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

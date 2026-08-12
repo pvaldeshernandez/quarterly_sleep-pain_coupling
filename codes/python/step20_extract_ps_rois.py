@@ -1,5 +1,5 @@
 """
-Step 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
+Step 20 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
 ======================================================================
 
 Input:  derivatives/step13_fmri_contrasts/masked/   (LH ROI)
@@ -422,7 +422,7 @@ def generate_figure_s6(verbose=True):
 def run_step20(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 10 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6")
+        print("STEP 20 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6")
         print("=" * 70)
 
     if not refit and os.path.exists(OUT_FMRI_CSV) and os.path.exists(OUT_VBM_CSV):
@@ -481,7 +481,7 @@ def publish_subsample_demographics(verbose=True):
         DERIV_DIR, "step07_varx_data", "step07_processed_long.csv"))
     baseline = pd.read_csv(
         os.path.join(DATA_DIR, "step00_extracted_long.csv"),
-        usecols=["ID", "quarter", "age__s1", "gender__s1", "Race__s1"])
+        usecols=["ID", "quarter", "age__s1", "gender__s1", "Race__s1"], float_precision="round_trip")
     baseline = baseline[baseline["quarter"] == 0].copy()
     baseline["ID"] = baseline["ID"].astype(str)
 
@@ -494,7 +494,7 @@ def publish_subsample_demographics(verbose=True):
     for tag, path in subsamples.items():
         if not os.path.exists(path):
             continue
-        ids = set(pd.read_csv(path, usecols=["ID"])["ID"].astype(str)) & analytic
+        ids = set(pd.read_csv(path, usecols=["ID"], float_precision="round_trip")["ID"].astype(str)) & analytic
         s = baseline[baseline["ID"].isin(ids)]
         if s.empty:
             continue
@@ -525,7 +525,7 @@ def publish_subsample_demographics(verbose=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 10 — extract PS arousal relay ROI values + Figure S6."
+        description="Step 20 — extract PS arousal relay ROI values + Figure S6."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 09 — Sensitivity of the coupling estimates to interpolated observations.
+Step 11 — Sensitivity of the coupling estimates to interpolated observations.
 ======================================================================
 
 Feeds Table S7 and supplement Section S7.
@@ -258,7 +258,7 @@ def primary_counts(model_df, unique_ids, verbose=True):
     if ref_persons is None and os.path.exists(IN_STEP07_PERSON):
         # step 07 writes one row per person in the primary fit; a weaker check than
         # its numbers.json, but it is a real one and it exists today.
-        ref_persons = int(len(pd.read_csv(IN_STEP07_PERSON)))
+        ref_persons = int(len(pd.read_csv(IN_STEP07_PERSON, float_precision="round_trip")))
         if verbose:
             print(f"  step08 numbers.json absent — person count cross-checked "
                   f"against {os.path.relpath(IN_STEP07_PERSON, ROOT)}")
@@ -296,7 +296,7 @@ def load_primary_arm(n_obs, n_persons, verbose=True):
     so out loud — it never triggers a local refit of the primary model.
     """
     if os.path.exists(IN_STEP07_SUMMARY):
-        summ = pd.read_csv(IN_STEP07_SUMMARY)
+        summ = pd.read_csv(IN_STEP07_SUMMARY, float_precision="round_trip")
         if "arm" in summ.columns:
             summ = summ.drop(columns=["arm"])
         if verbose:
@@ -309,13 +309,13 @@ def load_primary_arm(n_obs, n_persons, verbose=True):
             f"neither {IN_STEP07_SUMMARY} nor {IN_STEP07_TABLE4} exists; run "
             "step08_fit_coupling_model.py --refit before this step"
         )
-    tab = pd.read_csv(IN_STEP07_TABLE4).rename(columns={
+    tab = pd.read_csv(IN_STEP07_TABLE4, float_precision="round_trip").rename(columns={
         "Parameter": "param", "Estimate": "mean", "SD": "sd",
         "CrI_lo": "ci_lo_2.5", "CrI_hi": "ci_hi_97.5",
     })[["param", "mean", "sd", "ci_lo_2.5", "ci_hi_97.5", "P_neg"]]
 
     if os.path.exists(IN_STEP07_BYPARAM):
-        diag = pd.read_csv(IN_STEP07_BYPARAM, index_col=0)
+        diag = pd.read_csv(IN_STEP07_BYPARAM, index_col=0, float_precision="round_trip")
         diag = diag.rename(columns={"r_hat": "rhat"})
         diag = diag[[c for c in ("rhat", "ess_bulk") if c in diag.columns]]
         diag.index.name = "param"
@@ -581,7 +581,7 @@ def run_step11(verbose: bool = True, refit: bool = False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 09 — Interpolation sensitivity of the coupling estimates")
+        print("STEP 11 — Interpolation sensitivity of the coupling estimates")
         print("=" * 70)
 
     saved_exist = (os.path.exists(OUT_SUMMARY_CSV)
@@ -597,7 +597,7 @@ def run_step11(verbose: bool = True, refit: bool = False):
         if verbose:
             print("  Loading saved derivatives (replot mode).")
             print("  If upstream data or code changed, re-run with --refit.")
-        summary = pd.read_csv(OUT_SUMMARY_CSV)
+        summary = pd.read_csv(OUT_SUMMARY_CSV, float_precision="round_trip")
         counts = _saved_counts()
         if verbose:
             print(f"  Loaded {os.path.relpath(OUT_SUMMARY_CSV, ROOT)}")
@@ -670,14 +670,14 @@ def run_step11(verbose: bool = True, refit: bool = False):
                   f"NI {nums.get(f'{name}_nointerp', float('nan')):+.4f} "
                   f"[{n_ci[0]:+.4f}, {n_ci[1]:+.4f}]")
         print("\n" + "=" * 70)
-        print("STEP 09 COMPLETE")
+        print("STEP 11 COMPLETE")
         print("=" * 70)
     return summary
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 09 — interpolation sensitivity of the coupling estimates "
+        description="Step 11 — interpolation sensitivity of the coupling estimates "
                     "(Table S7, Section S7)."
     )
     parser.add_argument("--refit", action="store_true",

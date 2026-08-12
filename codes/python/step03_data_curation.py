@@ -405,7 +405,7 @@ def run_step03(verbose: bool = True, refit: bool = False):
         print("=" * 70)
         print(f"  Input: {IN_SCORED_CSV}")
 
-    df_full = pd.read_csv(IN_SCORED_CSV)
+    df_full = pd.read_csv(IN_SCORED_CSV, float_precision="round_trip")
     if verbose:
         n_subj = df_full["ID"].nunique()
         print(f"  Loaded: {len(df_full):,} rows, {n_subj} subjects")

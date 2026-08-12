@@ -1,5 +1,5 @@
 """
-Step 07 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
+Step 14 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
 ======================================================================
 
 Input:  derivatives/step13_fmri_contrasts/masked/   (NAcc ROIs)
@@ -211,7 +211,7 @@ def load_stim_side_map(verbose=True):
       (contralateral = LEFT hemisphere), 2 = Left knee stimulated
       (contralateral = RIGHT hemisphere).
     """
-    long_df = pd.read_csv(LONG_CSV)
+    long_df = pd.read_csv(LONG_CSV, float_precision="round_trip")
     long_df["ID"] = long_df["ID"].astype(str)
     analytic_ids = set(long_df["ID"].unique())
 
@@ -455,7 +455,7 @@ def generate_figure_s4(verbose=True):
 def run_step14(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 07 — Extract Sleep-to-Pain fMRI ROI values + Figure S4")
+        print("STEP 14 — Extract Sleep-to-Pain fMRI ROI values + Figure S4")
         print("=" * 70)
 
     if not refit and os.path.exists(OUT_ROI_CSV):
@@ -474,7 +474,7 @@ def run_step14(verbose=True, refit=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 07 — extract SP fMRI ROI values + Figure S4."
+        description="Step 14 — extract SP fMRI ROI values + Figure S4."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",
