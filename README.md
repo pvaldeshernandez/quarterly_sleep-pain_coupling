@@ -41,9 +41,14 @@ python run_pipeline.py --strict    # stop at the first failure instead of contin
 Without `--refit`, each step loads its saved derivative and redraws — so changing a figure's
 styling costs seconds, not a refit. With `--refit`, it recomputes.
 
-A full `--refit` of steps 00-25 takes roughly three hours on a 4-core node, excluding
-**step 13**, which re-estimates 188 first-level GLMs and is far longer. Step 13 reads the
-SPM design matrices directly, so it only needs re-running if the imaging data change.
+A full `--refit` of all 26 steps takes **three hours**, measured on a run from an empty
+`derivatives/` and `results/`. Nearly all of it is sampling: step 08 takes 28 minutes for
+its four models, step 18 forty-four for its sixteen, step 16 twenty-two for its eight.
+**Step 13** re-estimates all 188 first-level GLMs in 8 minutes — it solves the OLS directly
+from the SPM design matrices rather than re-running SPM, so it is not the bottleneck an
+imaging step usually is.
+
+Replotting everything from saved derivatives takes under three minutes.
 
 ---
 
