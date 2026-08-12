@@ -498,6 +498,13 @@ Compare the two interpolation arms on everything the paper concludes.
 - `section(title)` — *(undocumented)*
 - `main()` — *(undocumented)*
 
+### `compare_registries.py`
+
+Diff two runs of the pipeline, by NAME rather than by file.
+
+- `load(path)` — *(undocumented)*
+- `main()` — *(undocumented)*
+
 ### `make_functions_md.py`
 
 Regenerate `codes/python/FUNCTIONS.md` from the code itself.
