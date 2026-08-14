@@ -4,8 +4,8 @@ Step 03 — Data curation: who is in the analytic sample.
 
 Input:  derivatives/step01_factor_analysis/step01_scored_long.csv
 Output: derivatives/step03_curation/step03_curated_long.csv
-        results/step03_curation/step03_figure1.png
-        results/step03_curation/step03_table3_demographics.csv
+        results/step03_curation/step03_availability_grid.png
+        results/step03_curation/step03_demographics.csv
 
 SPLIT OUT OF the old prepare_varx_data on 11 Aug 2026. That step did two unrelated
 jobs -- deciding who is in the study, and building the VARX frame -- and three steps
@@ -25,8 +25,8 @@ Operations, in order:
   1. Segment filter -- maximal runs of consecutive quarters with both factors scored;
      assign segment_id; discard segments shorter than 3 quarters.
   2. Baseline merge -- Age and Sex forward-filled from the quarter-0 row.
-  3. Figure 1 -- data-availability grid: observed, interpolated, discarded.
-  4. Table 3 -- demographics of the participants surviving the filter.
+  3. The data-availability grid: observed, interpolated, discarded.
+  4. Demographics of the participants surviving the filter.
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
 """
@@ -66,8 +66,8 @@ IN_SCORED_CSV = os.path.join(DERIV_DIR, "step01_factor_analysis", "step01_scored
 
 #: The analytic sample. Every step that asks "who is in the study" reads THIS file.
 OUT_CURATED_CSV = os.path.join(STEP_DERIV_DIR, "step03_curated_long.csv")
-OUT_FIGURE1 = os.path.join(STEP_RESULTS_DIR, "step03_figure1.png")
-OUT_TABLE3_CSV = os.path.join(STEP_RESULTS_DIR, "step03_table3_demographics.csv")
+OUT_GRID_PNG = os.path.join(STEP_RESULTS_DIR, "step03_availability_grid.png")
+OUT_DEMOGRAPHICS_CSV = os.path.join(STEP_RESULTS_DIR, "step03_demographics.csv")
 
 
 # =====================================================================
@@ -159,15 +159,15 @@ def segment_filter(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # =====================================================================
-# Table 3 — Demographics of the analytic sample
+# Demographics of the analytic sample
 # =====================================================================
 
-#: baseline sleep instruments, in the order Table 3 lists them. Questionnaires first,
+#: baseline sleep instruments, in the order the demographics table lists them. Questionnaires first,
 #: then the derived apnea score, then the nightly diary. Keys are the canonical names in
-#: lib/sleep_instruments. All 17 instruments Figure S3 draws are listed, the three ISI
+#: lib/sleep_instruments. All 17 instruments the sleep-stability heatmap draws are listed, the three ISI
 #: sub-items included: a demographics table that reported 14 of them would be inconsistent
 #: with its own figure, and the reader comparing the two would have to work out why.
-TABLE3_SLEEP = [
+DEMOGRAPHICS_SLEEP = [
     # questionnaires and the derived apnea score
     ("Insomnia__s1", "Insomnia Severity Index (0-28)"),
     ("PROMIS_Sleep_Tscore__s1", "PROMIS Sleep-Related Impairment (T-score)"),
@@ -186,7 +186,7 @@ TABLE3_SLEEP = [
 #: pain measured on the SAME nightly diary form as the sleep items above. Reporting the
 #: sleep half of a form and not the pain half, in a sleep-pain paper, is the omission
 #: this table already had once.
-TABLE3_PAIN_DIARY = [
+DEMOGRAPHICS_PAIN_DIARY = [
     ("sleep_pain_rating", "Diary average pain that day (0-100)"),
 ]
 
@@ -195,7 +195,7 @@ def _baseline_sleep(analytic_ids):
     """{label -> Series of person-level values} for every baseline sleep instrument.
 
     Delegates to lib/sleep_instruments.baseline_frame and lib/stopbang.scores, which are
-    what Section S4 uses, so Table 3 and Section S4 cannot report different numbers for
+    what the sleep-correlates section uses, so the demographics table and the sleep-correlates section cannot report different numbers for
     the same instrument. Returns an empty dict, with a warning, if the wide export or the
     data dictionary is unavailable -- the demographics table is still worth producing
     without its sleep block, but silently dropping it is what left the gap in the first
@@ -208,7 +208,7 @@ def _baseline_sleep(analytic_ids):
     dict_path = os.path.join(DATA_DIR, "original", "UPLOAD2_Data_Dictionary.xlsx")
     for p in (wide_path, dict_path):
         if not os.path.exists(p):
-            print(f"    WARNING: {os.path.basename(p)} not found; Table 3 will have no "
+            print(f"    WARNING: {os.path.basename(p)} not found; the demographics table will have no "
                   f"sleep rows. They are NOT optional -- fix the path.")
             return {}
 
@@ -219,7 +219,7 @@ def _baseline_sleep(analytic_ids):
 
     ids = set(map(str, analytic_ids))
     out = {}
-    for key, label in TABLE3_SLEEP + TABLE3_PAIN_DIARY:
+    for key, label in DEMOGRAPHICS_SLEEP + DEMOGRAPHICS_PAIN_DIARY:
         if key == "stopbang_total":
             s = sbg.scores(ids=ids, wide=wide)
         elif key in values:
@@ -232,10 +232,10 @@ def _baseline_sleep(analytic_ids):
     return out
 
 
-def compute_table3(
+def compute_demographics(
     df_processed: pd.DataFrame, df_full: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Compute Table 3 demographics for the analytic sample.
+    """Compute demographics for the analytic sample.
 
     The analytic sample is the set of subjects in ``df_processed``
     (post-segment-filter). Baseline variables are pulled from
@@ -244,7 +244,7 @@ def compute_table3(
     Returns a DataFrame with one row per variable, columns for
     the statistic name, value, and formatting.
     """
-    print("\n  Computing Table 3 demographics...")
+    print("\n  Computing demographics...")
 
     analytic_ids = set(df_processed["ID"].unique())
     baseline = df_full[df_full["quarter"] == 0].copy()
@@ -294,7 +294,7 @@ def compute_table3(
         _add(f"{label}, mean (SD)", "",
              f"{vals.mean():.1f} ({vals.std():.1f})")
 
-    # GCPS. Present in the extract and used in Figure S2, but the table omitted them
+    # GCPS. Present in the extract and used in the convergent-validity figure, but the table omitted them
     # while listing every other clinical pain measure -- the same inconsistency as the
     # missing sleep block below, on the pain side.
     for col, label in [
@@ -309,7 +309,7 @@ def compute_table3(
 
     # Diary pain, from the same nightly form as the diary sleep rows below.
     sleep_values = _baseline_sleep(analytic_ids)
-    for _key, label in TABLE3_PAIN_DIARY:
+    for _key, label in DEMOGRAPHICS_PAIN_DIARY:
         vals = sleep_values.get(label)
         if vals is not None and len(vals.dropna()) >= 20:
             vals = vals.dropna()
@@ -330,7 +330,7 @@ def compute_table3(
     _add("Knee pain rating (0-100), mean (SD)", "",
          f"{vals.mean():.1f} ({vals.std():.1f})")
 
-    # PHQ body-map knee endorsement. table3.docx has printed this row for months with
+    # PHQ body-map knee endorsement. demographics.docx has printed this row for months with
     # no pipeline source behind the number, which is exactly the gap the reportable map
     # exists to close. Area 11 is the knees (step05.KNEE_AREA_COL).
     knee_col = "phq_pain_areas___11__s1"
@@ -357,9 +357,9 @@ def compute_table3(
     # rather than the pain half of one.
     #
     # The values come from lib/sleep_instruments.baseline_frame and lib/stopbang.scores,
-    # the same functions Section S4 uses, so a number here cannot disagree with the same
+    # the same functions the sleep-correlates section uses, so a number here cannot disagree with the same
     # number there. Diary items are the mean of the nights a participant completed.
-    diary_pain_labels = {lbl for _, lbl in TABLE3_PAIN_DIARY}
+    diary_pain_labels = {lbl for _, lbl in DEMOGRAPHICS_PAIN_DIARY}
     for label, values in sleep_values.items():
         if label in diary_pain_labels:
             continue                       # already emitted with the pain block
@@ -369,22 +369,22 @@ def compute_table3(
             continue
         _add(f"{label}, mean (SD)", "", f"{vals.mean():.1f} ({vals.std():.1f})")
 
-    table3 = pd.DataFrame(rows)
+    demographics = pd.DataFrame(rows)
     print(f"    {len(rows)} rows generated for N = {n}")
 
-    return table3
+    return demographics
 
 
 # =====================================================================
-# Figure 1 — Data availability grid
+# Data availability grid
 # =====================================================================
 
-def generate_figure1(
+def generate_availability_grid(
     df_processed: pd.DataFrame,
     df_full: pd.DataFrame,
     out_path: str,
 ) -> None:
-    """Generate Figure 1: data availability grid.
+    """Generate the data availability grid.
 
     Shows every subject (row) x quarter (column) with dots colored
     by status:
@@ -399,7 +399,7 @@ def generate_figure1(
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
 
-    print("\n  Generating Figure 1 (data availability grid)...")
+    print("\n  Generating the data availability grid...")
 
     # Build a full grid of all subjects x all quarters (1..11)
     all_ids = sorted(df_full["ID"].unique())
@@ -552,14 +552,14 @@ def run_step03(verbose: bool = True, refit: bool = False):
         print(f"\n  Saved: {OUT_CURATED_CSV}")
         print(f"    Shape: {df_out.shape}")
 
-    table3 = compute_table3(df_out, df_full)
-    table3.to_csv(OUT_TABLE3_CSV, index=False)
+    demographics = compute_demographics(df_out, df_full)
+    demographics.to_csv(OUT_DEMOGRAPHICS_CSV, index=False)
     if verbose:
-        print(f"  Saved: {OUT_TABLE3_CSV}")
+        print(f"  Saved: {OUT_DEMOGRAPHICS_CSV}")
 
-    generate_figure1(df_out, df_full, OUT_FIGURE1)
+    generate_availability_grid(df_out, df_full, OUT_GRID_PNG)
     if verbose:
-        print(f"  Saved: {OUT_FIGURE1}")
+        print(f"  Saved: {OUT_GRID_PNG}")
 
     # The curation counts the Results state directly. They were previously readable only
     # from step 07's timepoint summary, which is a different step describing a different

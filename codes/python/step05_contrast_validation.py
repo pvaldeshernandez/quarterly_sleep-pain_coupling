@@ -12,8 +12,8 @@ Input:
   data/original/participants_wideformat.xlsx     — WOMAC, PHQ, KL grade
 
 Output (results/step05/):
-  step05_figure_endorsement.png  — Figure S1: point-biserial bar chart
-  step05_figure_convergent.png   — Figure S2: scatter plots vs clinical
+  step05_figure_endorsement.png  — point-biserial bar chart
+  step05_figure_convergent.png   — scatter plots vs clinical
   step05_text_numbers.csv           — ANOVA, Tukey, point-biserial (FDR),
                                      Pearson/Spearman correlations
 
@@ -56,8 +56,8 @@ IN_WIDE_XLSX = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx"
 SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
 
-OUT_FIG_S1 = os.path.join(SUPP_DIR, "figure_endorsement.png")
-OUT_FIG_S2 = os.path.join(SUPP_DIR, "figure_convergent.png")
+OUT_ENDORSEMENT_PNG = os.path.join(SUPP_DIR, "figure_endorsement.png")
+OUT_CONVERGENT_PNG = os.path.join(SUPP_DIR, "figure_convergent.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step05_text_numbers.csv")
 
 AREA_LABELS = [
@@ -69,7 +69,7 @@ KNEE_AREA_COL = "phq_pain_areas___11__s1"  # area 11 = knees
 
 #: Kellgren-Lawrence grade of the index knee. The wide file has used several
 #: spellings across exports, so the column is resolved by search rather than
-#: hardcoded. Figure S2 and the Spearman text number must resolve the SAME
+#: hardcoded. The convergent-validity figure and the Spearman text number must resolve the SAME
 #: column, hence one list and one resolver shared by both.
 KL_COLUMN_CANDIDATES = [
     "KL_Index__s1", "kl_index__s1", "kl_grade__s1", "kl_grade_s1",
@@ -124,11 +124,11 @@ def _load_person_mean_contrast():
 
 
 # =====================================================================
-# Figure S1 — Factor endorsement validation (point-biserial)
+# Factor endorsement validation (point-biserial)
 # =====================================================================
 
-def generate_figure_s1(verbose=True):
-    """Figure S1: body-map endorsement point-biserial correlations.
+def generate_endorsement_figure(verbose=True):
+    """Body-map endorsement point-biserial correlations.
 
     Shows that the pain localization contrast factor correlates with
     body-area endorsement patterns in the expected way: positive
@@ -141,7 +141,7 @@ def generate_figure_s1(verbose=True):
     from statsmodels.stats.multitest import multipletests
 
     if verbose:
-        print("  Figure S1: Factor endorsement validation")
+        print("  Factor endorsement validation")
 
     ki = _load_person_mean_contrast()
     extracted = pd.read_csv(IN_EXTRACTED_CSV, float_precision="round_trip")
@@ -181,7 +181,7 @@ def generate_figure_s1(verbose=True):
     rpb_df = rpb_df.sort_values("r_pb", ascending=True).reset_index(drop=True)
 
     fig, ax = plt.subplots(figsize=(10, 7))
-    # Colour by AREA, not by the sign of r. The Figure S1 caption states "Blue = knee;
+    # Colour by AREA, not by the sign of r. The endorsement figure's caption states "Blue = knee;
     # coral = non-knee areas", but this coloured blue when r < 0 and coral otherwise --
     # and since the knee is the one positively-correlated area, the figure drew the knee
     # in coral and every other area in blue, exactly inverting its own caption. Encoding
@@ -207,18 +207,18 @@ def generate_figure_s1(verbose=True):
     ax.set_title("Point-biserial correlations: body-area endorsement vs. "
                  "pain localization contrast", fontsize=13, fontweight="bold")
     fig.tight_layout()
-    fig.savefig(OUT_FIG_S1, dpi=300, bbox_inches="tight")
+    fig.savefig(OUT_ENDORSEMENT_PNG, dpi=300, bbox_inches="tight")
     plt.close(fig)
     if verbose:
-        print(f"    Saved: {OUT_FIG_S1}")
+        print(f"    Saved: {OUT_ENDORSEMENT_PNG}")
 
 
 # =====================================================================
-# Figure S2 — Convergent validity scatter plots
+# Convergent validity scatter plots
 # =====================================================================
 
-def generate_figure_s2(verbose=True):
-    """Figure S2: convergent validity of the contrast factor vs baseline
+def generate_convergent_figure(verbose=True):
+    """Convergent validity of the contrast factor vs baseline
     clinical measures (WOMAC, PHQ, KL grade).
     """
     import matplotlib
@@ -227,7 +227,7 @@ def generate_figure_s2(verbose=True):
     from scipy import stats as sp_stats
 
     if verbose:
-        print("  Figure S2: Convergent validity scatter")
+        print("  Convergent validity scatter")
 
     if not os.path.exists(IN_WIDE_XLSX):
         if verbose:
@@ -312,10 +312,10 @@ def generate_figure_s2(verbose=True):
     fig.suptitle("Convergent validity: person-mean contrast vs baseline "
                  "clinical measures", fontsize=13, fontweight="bold", y=0.98)
     fig.tight_layout(rect=[0, 0, 1, 0.96])
-    fig.savefig(OUT_FIG_S2, dpi=300, bbox_inches="tight")
+    fig.savefig(OUT_CONVERGENT_PNG, dpi=300, bbox_inches="tight")
     plt.close(fig)
     if verbose:
-        print(f"    Saved: {OUT_FIG_S2}")
+        print(f"    Saved: {OUT_CONVERGENT_PNG}")
 
 
 # =====================================================================
@@ -522,8 +522,8 @@ def run_step05(verbose=True, refit=False):
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-    generate_figure_s1(verbose)
-    generate_figure_s2(verbose)
+    generate_endorsement_figure(verbose)
+    generate_convergent_figure(verbose)
     generate_text_numbers(verbose)
 
     if verbose:

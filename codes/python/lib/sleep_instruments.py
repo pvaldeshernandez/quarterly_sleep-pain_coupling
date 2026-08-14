@@ -12,10 +12,10 @@ reported set. That exclusion lives in PAIN_DIARY below so it is explicit and
 auditable rather than silent.
 
 Consumers:
-  step06_sleep_measure_correlates.py     the whole sweep, the grid and Figure S3
+  step06_sleep_measure_correlates.py     the whole sweep, the grid and the sleep-stability heatmap
   a10b_diary_averaged.py                 person-mean correlations (the Mean column)
   a10c_per_quarter_sleep_stability.py    per-quarter correlations (Q1-Q11)
-  a10d_render_heatmap.py                 Figure S3 heatmap + table CSV
+  a10d_render_heatmap.py                 the sleep-stability heatmap heatmap + table CSV
 """
 import re
 
@@ -65,7 +65,7 @@ SINGLE_DESC = {
 # --- diary items measuring PAIN, not sleep -----------------------------------
 # Computed upstream because they sit on the same nightly diary form, but they are
 # sleep-pain correlations rather than measurement evidence, so they are not part
-# of the reported sleep-instrument set and never appear in Figure S3.
+# of the reported sleep-instrument set and never appear in the sleep-stability heatmap.
 PAIN_DIARY = {
     "sleep_pain_today":  "Diary: any pain that day",
     "sleep_pain_rating": "Diary: average pain that day",
@@ -86,7 +86,7 @@ LABELS = {**DIARY, **SINGLE}
 
 N_INSTRUMENTS = len(LABELS)          # 16
 
-# Every row of Figure S3 -- the count the manuscript and the reply quote.
+# Every row of the sleep-stability heatmap -- the count the manuscript and the reply quote.
 ROW_LABELS = {**LABELS, **DERIVED}
 
 N_ROWS = len(ROW_LABELS)             # 17
@@ -232,7 +232,7 @@ def baseline_frame(wide, dd, min_nights=MIN_NIGHTS):
         # carries -99 ("not answered") and -88 ("not applicable"), and none of these
         # items -- counts of naps and awakenings, minutes, hours slept, drinks -- can
         # legitimately be negative. Averaging them produced person-level values like
-        # -75 naps and -61 hours slept, and those values reached the Section S4
+        # -75 naps and -61 hours slept, and those values reached the published
         # correlations for minutes awake after onset, sleep-onset latency and total
         # hours slept. Treated as missing, which is what they are; a participant left
         # with fewer than `min_nights` usable nights then drops out by the rule below,
@@ -251,7 +251,7 @@ def baseline_frame(wide, dd, min_nights=MIN_NIGHTS):
         if col not in wide.columns:
             raise KeyError(
                 f"{col} ({LABELS.get(col, col)}) is a registry instrument but is "
-                f"absent from the wide frame; Figure S3 cannot be drawn short")
+                f"absent from the wide frame; the sleep-stability heatmap cannot be drawn short")
         values[col] = pd.Series(
             pd.to_numeric(wide[col], errors="coerce").values, index=ids)
         meta_rows[col] = {"kind": "single administration",

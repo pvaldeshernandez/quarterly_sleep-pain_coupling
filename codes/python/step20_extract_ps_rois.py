@@ -1,23 +1,23 @@
 """
-Step 20 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
+Step 20 — Extract Pain-to-Sleep arousal relay ROI values and ROI brain maps.
 ======================================================================
 
 Input:  derivatives/step13_fmri_contrasts/masked/   (LH ROI)
         derivatives/step13_fmri_contrasts/unmasked/ (all other fMRI ROIs)
         data/original/vbm/, data/atlases/
-        MNI152 template (via nilearn, for Figure S6)
+        MNI152 template (via nilearn, for the ROI brain-map figure)
 Output:
   derivatives/step20_ps_roi_values/
     step20_ps_fmri_roi_values.csv   — per-subject fMRI BOLD z-scored ROI values
     step20_ps_vbm_roi_values.csv    — per-subject VBM GM volume z-scored ROI values
   results/<this step>/
-    figure_arousal_rois.png      — Figure S6: arousal ROI brain maps
+    figure_arousal_rois.png      — arousal ROI brain maps
 
 Extracts probability-weighted mean fMRI BOLD and VBM GM volume
 from 5 atlas-defined arousal relay ROIs (Lynch et al. 2025):
   PBN, SI-BF/Ch4, CeA, BNST, LH
 
-Also generates Figure S6: orthogonal brain slices for all 5 ROIs.
+Also generates orthogonal brain slices for all 5 ROIs.
 
 Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
 """
@@ -62,7 +62,7 @@ ATLAS_DIR = os.path.join(ROOT, "data", "atlases")
 
 OUT_FMRI_CSV = os.path.join(STEP_DERIV_DIR, "step20_ps_fmri_roi_values.csv")
 OUT_VBM_CSV = os.path.join(STEP_DERIV_DIR, "step20_ps_vbm_roi_values.csv")
-OUT_FIG_S6 = os.path.join(SUPP_DIR, "figure_arousal_rois.png")
+OUT_AROUSAL_ROIS_PNG = os.path.join(SUPP_DIR, "figure_arousal_rois.png")
 
 AROUSAL_ROIS = {
     "PBN": {
@@ -101,8 +101,8 @@ ATLAS_FILES = {
     "LH": os.path.join("hypothalamus_neudorfer2020", "atlas_labels_0.5mm.nii.gz"),
 }
 
-# Figure S6 display config
-FIG_S6_ROIS = {
+# Brain-map figure display config
+ROI_FIG_ROIS = {
     "PBN": {
         "label": "Lateral Parabrachial Nucleus (PBN)",
         "atlas_file": os.path.join(ATLAS_DIR, "atlas_b2_brainstem.nii.gz"),
@@ -138,7 +138,7 @@ FIG_S6_ROIS = {
     },
 }
 
-FIG_S6_COLORS = ["#e41a1c", "#377eb8", "#4daf4a", "#ff7f00", "#984ea3"]
+ROI_FIG_COLORS = ["#e41a1c", "#377eb8", "#4daf4a", "#ff7f00", "#984ea3"]
 
 
 # =====================================================================
@@ -181,7 +181,7 @@ def extract_fmri_arousal(verbose=True):
             weights = resampled.get_fdata().clip(0, 1)
 
         n_brain = int(np.sum((weights * brain_mask) > 0))
-        # Recorded, not just printed. The Figure S7 caption quotes this ("3 brain
+        # Recorded, not just printed. The arousal-ROI figure caption quotes this ("3 brain
         # voxels at 3 mm fMRI resolution" for the PBN), so it is a reported value and
         # needs a name. Written to results/ as a metric,value CSV, which persists
         # across the reload path -- this loop only runs under --refit.
@@ -314,7 +314,7 @@ def extract_vbm_arousal(verbose=True):
 
 
 # =====================================================================
-# Figure S6 — Arousal ROI brain maps
+# Arousal ROI brain maps
 # =====================================================================
 
 def _make_solid_cmap(hex_color):
@@ -396,19 +396,19 @@ def _make_composite(panels, ncols=2):
     return composite
 
 
-def generate_figure_s6(verbose=True):
-    """Generate Figure S6: orthogonal brain slices for all PS arousal ROIs."""
+def generate_roi_figure(verbose=True):
+    """Generate orthogonal brain slices for all PS arousal ROIs."""
     from nilearn.datasets import load_mni152_template
 
     if verbose:
-        print("\n  Generating Figure S6 (PS arousal ROI brain maps)...")
+        print("\n  Generating the PS arousal ROI brain maps...")
 
     template = load_mni152_template(resolution=1)
     if verbose:
         print("    Loaded MNI152 template (1mm)")
 
     panels = []
-    for idx, (roi_key, cfg) in enumerate(FIG_S6_ROIS.items()):
+    for idx, (roi_key, cfg) in enumerate(ROI_FIG_ROIS.items()):
         if verbose:
             print(f"    Loading: {cfg['label']}")
         roi_img = _load_atlas_roi(cfg, template)
@@ -416,14 +416,14 @@ def generate_figure_s6(verbose=True):
         com = _get_center_of_mass(roi_img)
         if verbose:
             print(f"      {nvox} voxels, center of mass: {com}")
-        cmap = _make_solid_cmap(FIG_S6_COLORS[idx])
+        cmap = _make_solid_cmap(ROI_FIG_COLORS[idx])
         panel = _render_roi_to_image(roi_img, template, com, cfg["title"], cmap)
         panels.append(panel)
 
     composite = _make_composite(panels, ncols=2)
-    composite.save(OUT_FIG_S6, dpi=(200, 200))
+    composite.save(OUT_AROUSAL_ROIS_PNG, dpi=(200, 200))
     if verbose:
-        print(f"    Saved: {OUT_FIG_S6}")
+        print(f"    Saved: {OUT_AROUSAL_ROIS_PNG}")
 
 
 # =====================================================================
@@ -434,7 +434,7 @@ def generate_figure_s6(verbose=True):
 def run_step20(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 20 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6")
+        print("STEP 20 — Extract Pain-to-Sleep arousal relay ROI values and ROI brain maps")
         print("=" * 70)
 
     if not refit and os.path.exists(OUT_FMRI_CSV) and os.path.exists(OUT_VBM_CSV):
@@ -466,7 +466,7 @@ def run_step20(verbose=True, refit=False):
             print(f"  Saved: {OUT_VBM_CSV} ({vbm_df['ROI'].nunique()} ROIs, "
                   f"{vbm_df['ID'].nunique()} subjects)")
 
-    generate_figure_s6(verbose)
+    generate_roi_figure(verbose)
 
     publish_subsample_demographics(verbose)
 
@@ -537,7 +537,7 @@ def publish_subsample_demographics(verbose=True):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 20 — extract PS arousal relay ROI values + Figure S6."
+        description="Step 20 — extract PS arousal relay ROI values and ROI brain maps."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

@@ -42,8 +42,8 @@ def load(root_results, root_deriv, rel):
     return pd.read_csv(p) if os.path.exists(p) else None
 
 
-def table4(res, der):
-    d = load(res, der, "step08_coupling_model/step08_table4_coupling.csv")
+def coupling_table(res, der):
+    d = load(res, der, "step08_coupling_model/step08_coupling_parameters.csv")
     return d.set_index("Parameter") if d is not None else None
 
 
@@ -74,9 +74,9 @@ def main():
             print(f"  {lab:22s} {d['ID'].nunique():4d} participants, {len(d):5d} person-quarters, "
                   f"{len(b):5d} transitions")
 
-    # ---- Table 4 -------------------------------------------------------------
+    # ---- the coupling-parameter table -------------------------------------------------------------
     section("TABLE 4 — population coupling parameters")
-    o, n = table4(OLD_R, OLD_D), table4(NEW_R, NEW_D)
+    o, n = coupling_table(OLD_R, OLD_D), coupling_table(NEW_R, NEW_D)
     if o is not None and n is not None:
         print(f"  {'parameter':34s} {'OLD':>22s} {'NEW':>22s}  verdict")
         for k in o.index:
@@ -87,7 +87,7 @@ def main():
             f = lambda r: f"{r['Estimate']:+.4f}[{r['CrI_lo']:+.3f},{r['CrI_hi']:+.3f}]"
             mark = "   < FLIP" if co != cn else ""
             if co != cn:
-                flips.append(f"Table 4 {k} ({ro['Description']}): "
+                flips.append(f"the coupling-parameter table {k} ({ro['Description']}): "
                              f"{'credible' if co else 'ns'} -> {'credible' if cn else 'ns'}")
             print(f"  {str(ro['Description'])[:34]:34s} {f(ro):>22s} {f(rn):>22s}  "
                   f"{'cred' if co else 'ns':>4}->{'cred' if cn else 'ns':<4}{mark}")
@@ -107,7 +107,7 @@ def main():
     # ---- the optimal-lag formula --------------------------------------------
     section("SECTION S14 — is the optimal lag computable?")
     for lab, R, D in (("OLD", OLD_R, OLD_D), ("NEW", NEW_R, NEW_D)):
-        t = table4(R, D)
+        t = coupling_table(R, D)
         if t is None:
             continue
         pp, ps = t.loc["a1", "Estimate"], t.loc["b2", "Estimate"]
@@ -123,12 +123,12 @@ def main():
         print(f"      Eq.S3 (needs ln phi_s):             "
               f"{'computable, omega_opt=%.3f quarters = %.0f days' % (w, w*91) if ok3 else 'UNDEFINED (phi_s < 0)'}")
         if not ok3:
-            flips.append("Section S14: the optimal-lag surrogate is undefined (phi_s < 0)")
+            flips.append("optimal lag: the surrogate is undefined (phi_s < 0)")
 
     # ---- moderation tables ---------------------------------------------------
     for title, rel, est, lo, hi, key in (
         ("TABLE 5 — sleep-to-pain fMRI moderation",
-         "step16_sp_moderation/step16_table5_sp_moderation.csv",
+         "step16_sp_moderation/step16_sp_moderation_estimates.csv",
          "gamma_sp", "gamma_sp_ci_lo", "gamma_sp_ci_hi", "ROI"),
     ):
         section(title)

@@ -232,7 +232,7 @@ def write_diagnostics(idata, fit_id, cfg, out_dir):
         path = os.path.join(out_dir, f"diagnostics_{fit_id}.json")
         with open(path, "w") as fh:
             json.dump(rec, fh, indent=1)
-        # The PER-PARAMETER table too, not just the extrema. Table S3 reports
+        # The PER-PARAMETER table too, not just the extrema. the convergence table reports
         # convergence by parameter family, and that cannot be recovered afterwards:
         # the saved posterior npz holds flattened draws with no chain structure, so
         # R-hat and ESS are computable only here, while the InferenceData exists.
@@ -1064,7 +1064,7 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         # One theta per covariate per equation, N(0, 5) as for the localization
         # terms. They enter the LINEAR PREDICTORS only, never the coupling
         # slopes, so lambda_sp and lambda_ps keep the primary model's meaning
-        # and Table S4 answers "does the coupling survive adjustment?" rather
+        # and the sampler table answers "does the coupling survive adjustment?" rather
         # than estimating a different quantity.
         tv_cols = list(X_tv) if X_tv else []
         for col in tv_cols:

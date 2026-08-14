@@ -6,7 +6,7 @@ Input:  derivatives/step03_curation/step03_curated_long.csv
 Output: derivatives/step07_varx_data/step07_processed_long.csv
         derivatives/step07_varx_data/step07_timepoint_summary.csv
 
-The curation half of this step -- the segment filter, Figure 1, Table 3 and the
+The curation half of this step -- the segment filter, the availability grid, the demographics table and the
 timepoint summary -- moved to step 03 on 11 Aug 2026. What is left is model
 preparation, and it runs immediately before the fit that consumes it.
 

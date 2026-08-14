@@ -24,7 +24,7 @@ R1 names the left NAcc and the ACC; both hemispheres of both regions are
 fitted so the control is symmetric and cannot be accused of reporting only the
 side that gives the convenient answer. That makes four ROIs — a deliberate
 subset of step 13's eight — so this step's table is NOT row-comparable with
-Table 5.
+the moderation table.
 
 Method: identical to step16_fit_sp_moderation.py except that
 ``moderator_direction`` is "ps" instead of "sp". Same ROI values, same masking
@@ -41,7 +41,7 @@ diagnostics here would silently change a published count.
 
 Input:  derivatives/step07_varx_data/step07_processed_long.csv
         derivatives/step14_sp_roi_values/step14_sp_roi_values.csv
-        results/step16_sp_moderation/step16_table5_sp_moderation.csv
+        results/step16_sp_moderation/step16_sp_moderation_estimates.csv
             (read-only cross-check of the analytic sample; optional)
 Output:
   derivatives/step19_ps_specificity/
@@ -88,8 +88,8 @@ IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values",
                           "step14_sp_roi_values.csv")
 #: step 14's table, used only to verify that this control ran on the same
 #: persons as the sleep-to-pain fits it is a control for. Never written.
-IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation",
-                               "step16_table5_sp_moderation.csv")
+IN_MODERATION_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation",
+                               "step16_sp_moderation_estimates.csv")
 
 OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step19_ps_specificity_draws.npz")
 OUT_SUMMARY_CSV = os.path.join(STEP_RESULTS_DIR, "step19_ps_specificity.csv")
@@ -147,9 +147,9 @@ def _step16_n_persons():
     absent, or it does not itself use one sample for the four), not that the
     samples agree.
     """
-    if not os.path.exists(IN_TABLE5_CSV):
+    if not os.path.exists(IN_MODERATION_CSV):
         return None
-    table = pd.read_csv(IN_TABLE5_CSV, float_precision="round_trip")
+    table = pd.read_csv(IN_MODERATION_CSV, float_precision="round_trip")
     if "ROI" not in table.columns or "N" not in table.columns:
         return None
     rows = table[table["ROI"].isin(TARGET_ROIS)]

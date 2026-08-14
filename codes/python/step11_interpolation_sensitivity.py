@@ -3,7 +3,7 @@
 Step 11 — Sensitivity of the coupling estimates to interpolated observations.
 ======================================================================
 
-Feeds Table S7 and supplement Section S7.
+Feeds the interpolation-sensitivity table.
 
 Step 01 fills isolated gaps in the scored items before the VARX frame is built, so a
 transition can carry an interpolated value at its outcome end (t), at its predictor end
@@ -12,7 +12,7 @@ NO interpolated value at EITHER endpoint, and places that fit beside the primary
 
 The primary ("all transitions") column is READ from step 08, never refitted here. Two
 executions of the same code with the same seed do not land on the same third decimal, and
-a local refit of the primary model is how a supplement table drifts away from Table 4
+a local refit of the primary model is how a supplement table drifts away from the coupling-parameter table
 without anyone noticing. One fit runs in this step: the interpolation-free arm.
 
 A transition is excluded when EITHER endpoint is interpolated. `interpolated` is a
@@ -25,7 +25,7 @@ Input:
       ID, quarter, interpolated, the within/lag columns, Age, Sex
   derivatives/step08_coupling_model/step08_posterior_summary.csv   (preferred)
       the primary fit's tidy summary, if step 08 publishes one
-  results/step08_coupling_model/step08_table4_coupling.csv         (fallback estimates)
+  results/step08_coupling_model/step08_coupling_parameters.csv         (fallback estimates)
   derivatives/step08_coupling_model/diagnostics_step08_primary_by_param.csv
       per-parameter R-hat / bulk ESS of the primary fit, written by lib.write_diagnostics
   results/step08_coupling_model/numbers.json                        (optional)
@@ -39,7 +39,7 @@ Output:
       diagnostics_step11_nointerp.json  written by lib.coupling_model.run_fit
       diagnostics_step11_nointerp_by_param.csv
   results/step11_interpolation_sensitivity/
-      step11_tableS7_interpolation.csv  Table S7 DATA (row label + numeric cells only)
+      step11_coupling_by_interpolation.csv  TABLE DATA (row label + numeric cells only)
       step11_figure_interpolation_sensitivity.png
       numbers.json
 
@@ -88,7 +88,7 @@ STEP08_RESULTS_DIR = os.path.join(RESULTS_DIR, "step08_coupling_model")
 #: preferred source for the primary arm — one tidy frame carrying estimates AND
 #: diagnostics. Read it if step 08 publishes it; otherwise the two files below.
 IN_STEP08_SUMMARY = os.path.join(STEP08_DERIV_DIR, "step08_posterior_summary.csv")
-IN_STEP08_TABLE4 = os.path.join(STEP08_RESULTS_DIR, "step08_table4_coupling.csv")
+IN_STEP08_TABLE4 = os.path.join(STEP08_RESULTS_DIR, "step08_coupling_parameters.csv")
 IN_STEP08_BYPARAM = os.path.join(STEP08_DERIV_DIR,
                                  "diagnostics_step08_primary_by_param.csv")
 IN_STEP08_NUMBERS = os.path.join(STEP08_RESULTS_DIR, "numbers.json")
@@ -98,8 +98,8 @@ IN_STEP08_PERSON = os.path.join(STEP08_DERIV_DIR, "step08_person_coupling.csv")
 OUT_NI_IDATA = os.path.join(STEP_DERIV_DIR, "step11_nointerp_idata.nc")
 OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step11_posterior_summary.csv")
 OUT_FLAGS_CSV = os.path.join(STEP_DERIV_DIR, "step11_transition_flags.csv")
-OUT_TABLE_S7_CSV = os.path.join(STEP_RESULTS_DIR,
-                                "step11_tableS7_interpolation.csv")
+OUT_INTERPOLATION_CSV = os.path.join(STEP_RESULTS_DIR,
+                                "step11_coupling_by_interpolation.csv")
 OUT_FIGURE = os.path.join(STEP_RESULTS_DIR,
                           "step11_figure_interpolation_sensitivity.png")
 OUT_NUMBERS = os.path.join(STEP_RESULTS_DIR, "numbers.json")
@@ -126,7 +126,7 @@ SUMMARY_COLUMNS = ["arm", "param", "mean", "sd", "ci_lo_2.5", "ci_hi_97.5",
 ARM_ALL = "all"
 ARM_NI = "nointerp"
 
-#: (manuscript name, script name, Table S7 row label) in the table's row order.
+#: (manuscript name, script name, table row label) in the table's row order.
 #: Script-internal names (a1/a2/b1/...) are never renamed in code; the manuscript name
 #: is what numbers.json keys on, so a value typed into the supplement traces back.
 MANUSCRIPT_PARAMS = [
@@ -286,7 +286,7 @@ def load_primary_arm(n_obs, n_persons, verbose=True):
     Preference order:
       1. step08_posterior_summary.csv — the tidy summary, estimates and diagnostics
          in one frame (this is what step 08 should publish; see lib_changes_needed).
-      2. step08_table4_coupling.csv (estimates) merged with
+      2. step08_coupling_parameters.csv (estimates) merged with
          diagnostics_step08_primary_by_param.csv (per-parameter R-hat and bulk ESS).
          The per-parameter diagnostics are recoverable only from that file: step 08's
          saved draws are flattened with no chain dimension, so R-hat cannot be
@@ -376,7 +376,7 @@ def _cell(summary, arm, param):
 
 
 def estimate_numbers(summary, verbose=True):
-    """Every Table S7 cell, plus the two derived ratios the supplement states."""
+    """Every table cell, plus the two derived ratios the supplement states."""
     nums = {}
     missing = []
     for name, param, _label in MANUSCRIPT_PARAMS:
@@ -392,7 +392,7 @@ def estimate_numbers(summary, verbose=True):
                 nums[f"{name}_{suffix}_pneg"] = float(row["P_neg"])
     if missing:
         raise RuntimeError(
-            "Table S7 cannot be assembled; missing parameter(s): "
+            "The table cannot be assembled; missing parameter(s): "
             f"{sorted(missing)}"
         )
 
@@ -401,7 +401,7 @@ def estimate_numbers(summary, verbose=True):
     nums["phi_p_ratio_nointerp_over_all"] = (
         float(ni_phi / all_phi) if all_phi else float("nan"))
 
-    # Section S7: the pain-to-sleep estimate barely moves. Stated as a fraction of the
+    # The pain-to-sleep estimate barely moves. Stated as a fraction of the
     # primary fit's posterior SD, so the claim is checkable and not eyeballed.
     shift = nums["lambda_ps_nointerp"] - nums["lambda_ps_all"]
     nums["lambda_ps_shift_nointerp_minus_all"] = float(shift)
@@ -440,7 +440,7 @@ def diagnostic_numbers(verbose=True):
 
 
 def count_numbers(flags, n_obs, n_persons, n_interp_rows):
-    """The 'X of Y transitions' block of Section S7, all of it derived, none hardcoded."""
+    """The 'X of Y transitions' block of the interpolation section, all of it derived, none hardcoded."""
     n_bad = int(flags["contaminated"].sum())
     clean_flags = flags[~flags["contaminated"]]
     n_clean_persons = int(clean_flags["ID"].nunique())
@@ -485,8 +485,8 @@ def _saved_counts():
 # Table data and figure (both regenerated on every run, from the summary)
 # =====================================================================
 
-def write_table_s7(summary, path):
-    """Table S7 DATA: one row per parameter, the two arms side by side.
+def write_interpolation_table(summary, path):
+    """TABLE DATA: one row per parameter, the two arms side by side.
 
     Numbers and row labels only. The column headers ('1,818 transitions,
     229 participants'), the note and the caption are prose and are authored by hand
@@ -573,7 +573,7 @@ def plot_arms(table, out_path):
 # =====================================================================
 
 def run_step11(verbose: bool = True, refit: bool = False):
-    """Compare the primary fit with its interpolation-free refit (Table S7)."""
+    """Compare the primary fit with its interpolation-free refit ."""
     from registry import write_numbers
 
     os.makedirs(STEP_DERIV_DIR, exist_ok=True)
@@ -653,11 +653,11 @@ def run_step11(verbose: bool = True, refit: bool = False):
     nums.update(diagnostic_numbers(verbose=verbose))
     write_numbers(STEP_RESULTS_DIR, nums, prefix="step11")
 
-    table = write_table_s7(summary, OUT_TABLE_S7_CSV)
+    table = write_interpolation_table(summary, OUT_INTERPOLATION_CSV)
     plot_arms(table, OUT_FIGURE)
 
     if verbose:
-        print(f"\n  Saved Table S7 data: {OUT_TABLE_S7_CSV}")
+        print(f"\n  Saved interpolation-sensitivity data: {OUT_INTERPOLATION_CSV}")
         print(f"  Saved figure: {OUT_FIGURE}")
         print(f"  Saved numbers: {OUT_NUMBERS}")
         print("\n  Key comparison (posterior mean [95% CrI]):")
@@ -678,7 +678,7 @@ def run_step11(verbose: bool = True, refit: bool = False):
 def main():
     parser = argparse.ArgumentParser(
         description="Step 11 — interpolation sensitivity of the coupling estimates "
-                    "(Table S7, Section S7)."
+                    "(the interpolation-sensitivity table)."
     )
     parser.add_argument("--refit", action="store_true",
                         help="Re-run the interpolation-free MCMC fit instead of "

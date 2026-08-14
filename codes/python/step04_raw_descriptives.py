@@ -21,8 +21,7 @@ Output:
 
 The CSVs are named for their CONTENT, not for the supplement table they currently feed.
 As of this writing the binding is: item_descriptives -> Panel A, by_quarter -> Panel B,
-variance_decomposition -> Panel C of the raw-descriptives table (today Table S2; it was
-Table S3 before the supplement was renumbered). Table and panel numbering is authored
+variance_decomposition -> Panel C of the raw-descriptives table (the raw-descriptives table). Table and panel numbering is authored
 prose and moves; filenames must not follow it.
 
 NO PROSE, NO FIGURE.

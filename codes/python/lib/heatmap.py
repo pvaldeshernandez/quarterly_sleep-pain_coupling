@@ -2,11 +2,11 @@
 
 Written around the CONCEPT — "a grid of correlations with their p and n, sorted by
 strength, with the non-significant cells marked" — not around one figure. It takes three
-aligned frames and a list of column labels, so the same function draws Figure S3's
+aligned frames and a list of column labels, so the same function draws the sleep-stability heatmap's
 17 x 12 grid or any other grid of the same shape.
 
 Factored out of `archive/revision_20260811/a10d_render_heatmap.py`, which was the only thing that could
-draw Figure S3 and was never migrated when the sandbox became the pipeline: step 06
+draw the sleep-stability heatmap and was never migrated when the sandbox became the pipeline: step 06
 computed the grid but nothing rendered it, so the figure in the document had no source.
 
 Functions
@@ -27,7 +27,7 @@ ALPHA = 0.05
 #: colour scale, centred on zero so the sign of r is readable from hue alone
 VMIN, VMAX = -0.6, 0.6
 
-# Layout. These are tuned to the published figure; changing them changes Figure S3.
+# Layout. These are tuned to the published figure; changing them changes the sleep-stability heatmap.
 FIG_W, FIG_H = 17.5, 12.0
 AX_LEFT, AX_RIGHT = 0.190, 0.905      # grid spans from the row labels to the colorbar
 AX_BOTTOM, AX_TOP = 0.055, 0.985

@@ -1,15 +1,15 @@
 """
-Step 14 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
+Step 14 — Extract Sleep-to-Pain fMRI ROI values and ROI brain maps.
 ======================================================================
 
 Input:  derivatives/step13_fmri_contrasts/masked/   (NAcc ROIs)
         derivatives/step13_fmri_contrasts/unmasked/ (all other ROIs)
-        MNI152 template (via nilearn, for Figure S4)
+        MNI152 template (via nilearn, for the ROI brain-map figure)
 Output:
   derivatives/step14_sp_roi_values/
     step14_sp_roi_values.csv    — per-subject z-scored ROI values
   results/<this step>/
-    figure_stim_rois.png    — Figure S4: ROI brain maps
+    figure_stim_rois.png    — ROI brain maps
 
 Extracts mean fMRI BOLD contrast (stimulation > baseline) within
 8 spherical ROIs for the Sleep-to-Pain moderation analysis:
@@ -20,7 +20,7 @@ Extracts mean fMRI BOLD contrast (stimulation > baseline) within
 NAcc ROIs use GM-masked contrasts; all others use unmasked
 re-estimated contrasts. Values are z-scored across subjects.
 
-Also generates Figure S4: orthogonal brain slices for all 8 ROIs.
+Also generates orthogonal brain slices for all 8 ROIs.
 
 Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
 """
@@ -55,7 +55,7 @@ LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
 OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step14_sp_roi_values.csv")
-OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_stim_rois.png")
+OUT_STIM_ROIS_PNG = os.path.join(SUPP_DIR, "figure_stim_rois.png")
 
 # Contrast image directories from Step 06
 FMRI_MASKED_DIR   = os.path.join(DERIV_DIR, "step13_fmri_contrasts", "masked")
@@ -130,8 +130,8 @@ SP_ROIS = {
     },
 }
 
-# ROI definitions for Figure S4 (display order, with contralateral labels)
-FIG_S4_ROIS = {
+# ROI definitions for the brain-map figure (display order, with contralateral labels)
+ROI_FIG_ROIS = {
     "Contra_S1": {
         "label": "Contralateral Somatosensory Cortex (S1)",
         "mni": (36, -45, 59),
@@ -176,7 +176,7 @@ FIG_S4_ROIS = {
     },
 }
 
-FIG_S4_COLORS = [
+ROI_FIG_COLORS = [
     "#e41a1c", "#377eb8", "#4daf4a", "#ff7f00",
     "#984ea3", "#984ea3", "#a65628", "#a65628",
 ]
@@ -340,7 +340,7 @@ def extract_rois(verbose=True):
 
 
 # =====================================================================
-# Figure S4 — ROI brain maps
+# ROI brain maps
 # =====================================================================
 
 def _make_solid_cmap(hex_color):
@@ -408,20 +408,20 @@ def _make_composite(panels, ncols=2):
     return composite
 
 
-def generate_figure_s4(verbose=True):
-    """Generate Figure S4: orthogonal brain slices for all SP ROIs."""
+def generate_roi_figure(verbose=True):
+    """Generate orthogonal brain slices for all SP ROIs."""
     from nilearn.datasets import load_mni152_template
     from nilearn.image import new_img_like
 
     if verbose:
-        print("\n  Generating Figure S4 (SP ROI brain maps)...")
+        print("\n  Generating the SP ROI brain maps...")
 
     template = load_mni152_template(resolution=1)
     if verbose:
         print("    Loaded MNI152 template (1mm)")
 
     panels = []
-    for idx, (roi_key, cfg) in enumerate(FIG_S4_ROIS.items()):
+    for idx, (roi_key, cfg) in enumerate(ROI_FIG_ROIS.items()):
         if verbose:
             print(f"    Building: {cfg['label']}")
         roi_img = _make_sphere_img(template, cfg["mni"], cfg["radius_mm"])
@@ -437,14 +437,14 @@ def generate_figure_s4(verbose=True):
             title = (f"{cfg['label']}  "
                      f"(MNI: {cfg['mni']}, r = {cfg['radius_mm']} mm)")
 
-        cmap = _make_solid_cmap(FIG_S4_COLORS[idx])
+        cmap = _make_solid_cmap(ROI_FIG_COLORS[idx])
         panel = _render_roi_to_image(roi_img, template, cfg["mni"], title, cmap)
         panels.append(panel)
 
     composite = _make_composite(panels, ncols=2)
-    composite.save(OUT_FIG_S4, dpi=(200, 200))
+    composite.save(OUT_STIM_ROIS_PNG, dpi=(200, 200))
     if verbose:
-        print(f"    Saved: {OUT_FIG_S4}")
+        print(f"    Saved: {OUT_STIM_ROIS_PNG}")
 
 
 # =====================================================================
@@ -455,7 +455,7 @@ def generate_figure_s4(verbose=True):
 def run_step14(verbose=True, refit=False):
     if verbose:
         print("=" * 70)
-        print("STEP 14 — Extract Sleep-to-Pain fMRI ROI values + Figure S4")
+        print("STEP 14 — Extract Sleep-to-Pain fMRI ROI values and ROI brain maps")
         print("=" * 70)
 
     if not refit and os.path.exists(OUT_ROI_CSV):
@@ -466,7 +466,7 @@ def run_step14(verbose=True, refit=False):
     else:
         extract_rois(verbose)
 
-    generate_figure_s4(verbose)
+    generate_roi_figure(verbose)
 
     if verbose:
         print("=" * 70)
@@ -474,7 +474,7 @@ def run_step14(verbose=True, refit=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 14 — extract SP fMRI ROI values + Figure S4."
+        description="Step 14 — extract SP fMRI ROI values and ROI brain maps."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

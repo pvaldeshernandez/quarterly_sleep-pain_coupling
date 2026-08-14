@@ -8,7 +8,7 @@ Output:
     step08_posterior_draws.npz     — raw posterior arrays for downstream steps
     step08_person_coupling.csv     — per-person lambda_sp / lambda_ps
   results/
-    step08_table4_coupling.csv     — Table 4: population parameters
+    step08_coupling_parameters.csv     — population parameters
     step08_loo_comparison.csv      — LOO-CV pairwise comparisons
     step08_text_numbers.csv        — every number stated in the text
 
@@ -64,12 +64,12 @@ OUT_PERSON_CSV = os.path.join(STEP_DERIV_DIR, "step08_person_coupling.csv")
 OUT_IDATA_NC = os.path.join(STEP_DERIV_DIR, "step08_primary_idata.nc")
 
 # Results
-OUT_TABLE4_CSV = os.path.join(STEP_RESULTS_DIR, "step08_table4_coupling.csv")
+OUT_COUPLING_CSV = os.path.join(STEP_RESULTS_DIR, "step08_coupling_parameters.csv")
 # Intermediate CSVs (inputs to text rendering) live under derivatives/.
 OUT_LOO_CSV = os.path.join(STEP_RESULTS_DIR, "step08_loo_comparison.csv")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step08_text_numbers.csv")
-OUT_FIG2 = os.path.join(STEP_RESULTS_DIR, "step08_figure2_ps_coupling.png")
-OUT_FIG3 = os.path.join(STEP_RESULTS_DIR, "step08_figure3_sp_coupling.png")
+OUT_PS_COUPLING_PNG = os.path.join(STEP_RESULTS_DIR, "step08_ps_coupling.png")
+OUT_SP_COUPLING_PNG = os.path.join(STEP_RESULTS_DIR, "step08_sp_coupling.png")
 
 
 # =====================================================================
@@ -245,7 +245,7 @@ def run_step08(verbose: bool = True, refit: bool = False):
 
     # Check whether saved derivatives exist
     saved_exist = (os.path.exists(OUT_DRAWS_NPZ) and os.path.exists(OUT_PERSON_CSV)
-                   and os.path.exists(OUT_TABLE4_CSV) and os.path.exists(OUT_LOO_CSV)
+                   and os.path.exists(OUT_COUPLING_CSV) and os.path.exists(OUT_LOO_CSV)
                    and os.path.exists(OUT_TEXT_CSV))
     if not refit and not saved_exist:
         if verbose:
@@ -261,10 +261,10 @@ def run_step08(verbose: bool = True, refit: bool = False):
             print("  If you have changed upstream data or code, re-run with --refit.")
 
         # round_trip on all four: these values are republished verbatim into
-        # numbers.json and drawn into Figures 2 and 3, so without it the reload path
+        # numbers.json and drawn into the two coupling figures, so without it the reload path
         # reports different numbers from the run that produced them.
         person_df = pd.read_csv(OUT_PERSON_CSV, float_precision="round_trip")
-        table4 = pd.read_csv(OUT_TABLE4_CSV, float_precision="round_trip")
+        coupling_table = pd.read_csv(OUT_COUPLING_CSV, float_precision="round_trip")
         # keep_default_na: one of the four compared models is called "null", which
         # pandas' default na_values turns into NaN. The registry key is built from that
         # string, so the reload path was publishing loo_no_SP_vs_nan_delta where the fit
@@ -274,9 +274,9 @@ def run_step08(verbose: bool = True, refit: bool = False):
                              float_precision="round_trip")
         text_df = pd.read_csv(OUT_TEXT_CSV, float_precision="round_trip")
 
-        # Reconstruct results dict from Table 4 for figure generation
+        # Reconstruct results dict from the coupling table for figure generation
         results = {}
-        for _, row in table4.iterrows():
+        for _, row in coupling_table.iterrows():
             key = row["Parameter"]
             results[f"{key}_mean"] = row["Estimate"]
             results[f"{key}_sd"] = row["SD"]
@@ -289,7 +289,7 @@ def run_step08(verbose: bool = True, refit: bool = False):
             results["rhat_max"] = float(rhat_row["value"].iloc[0])
 
         if verbose:
-            print(f"  Loaded Table 4: {OUT_TABLE4_CSV}")
+            print(f"  Loaded coupling parameters: {OUT_COUPLING_CSV}")
             print(f"  Loaded person coupling: {OUT_PERSON_CSV}")
             print(f"  Loaded LOO: {OUT_LOO_CSV}")
     else:
@@ -320,13 +320,13 @@ def run_step08(verbose: bool = True, refit: bool = False):
         )
 
         # ==============================================================
-        # 2. Extract population parameters -> Table 4
+        # 2. Extract population parameters -> the coupling table
         # ==============================================================
         results = extract_results(idata)
         results["n_persons"] = n_persons
         results["n_obs"] = n_obs
 
-        table4_rows = []
+        coupling_rows = []
         for key, desc in [
             ("a0", "Pain intercept (mu_p)"),
             ("a1", "Pain autoregression (phi_p)"),
@@ -344,7 +344,7 @@ def run_step08(verbose: bool = True, refit: bool = False):
             ("sigma_sleep", "Innovation SD (sleep)"),
             ("rho_innov", "Innovation correlation (rho)"),
         ]:
-            table4_rows.append({
+            coupling_rows.append({
                 "Parameter": key,
                 "Description": desc,
                 "Estimate": results.get(f"{key}_mean"),
@@ -354,10 +354,10 @@ def run_step08(verbose: bool = True, refit: bool = False):
                 "P_neg": results.get(f"{key}_prob_neg"),
             })
 
-        table4 = pd.DataFrame(table4_rows)
-        table4.to_csv(OUT_TABLE4_CSV, index=False)
+        coupling_table = pd.DataFrame(coupling_rows)
+        coupling_table.to_csv(OUT_COUPLING_CSV, index=False)
         if verbose:
-            print(f"\n  Saved Table 4: {OUT_TABLE4_CSV}")
+            print(f"\n  Saved coupling parameters: {OUT_COUPLING_CSV}")
 
         # ==============================================================
         # 3. Per-person coupling slopes
@@ -585,7 +585,7 @@ def run_step08(verbose: bool = True, refit: bool = False):
         print(f"  Saved text numbers: {OUT_TEXT_CSV}")
 
     # ==================================================================
-    # 7. Figures 2 & 3 — person-level coupling (always regenerated)
+    # 7. Person-level coupling figures — person-level coupling (always regenerated)
     # ==================================================================
     _generate_coupling_figure(
         person_df,
@@ -595,11 +595,11 @@ def run_step08(verbose: bool = True, refit: bool = False):
         col_mean="beta_ps_mean", col_ci_lo="beta_ps_ci_lo",
         col_ci_hi="beta_ps_ci_hi", col_prob="beta_ps_prob_neg",
         direction_label="Pain -> Sleep",
-        out_path=OUT_FIG2,
+        out_path=OUT_PS_COUPLING_PNG,
         prob_neg=results["b1_prob_neg"],
     )
     if verbose:
-        print(f"  Saved Figure 2: {OUT_FIG2}")
+        print(f"  Saved pain-to-sleep coupling figure: {OUT_PS_COUPLING_PNG}")
 
     _generate_coupling_figure(
         person_df,
@@ -609,11 +609,11 @@ def run_step08(verbose: bool = True, refit: bool = False):
         col_mean="beta_sp_mean", col_ci_lo="beta_sp_ci_lo",
         col_ci_hi="beta_sp_ci_hi", col_prob="beta_sp_prob_neg",
         direction_label="Sleep -> Pain",
-        out_path=OUT_FIG3,
+        out_path=OUT_SP_COUPLING_PNG,
         prob_neg=results["a2_prob_neg"],
     )
     if verbose:
-        print(f"  Saved Figure 3: {OUT_FIG3}")
+        print(f"  Saved sleep-to-pain coupling figure: {OUT_SP_COUPLING_PNG}")
 
     # ==================================================================
     # 8. The numbers registry
@@ -673,7 +673,7 @@ def run_step08(verbose: bool = True, refit: bool = False):
         nums[f"person_{d}_n_credible_neg"] = int(
             (person_df[f"beta_{d}_prob_neg"] > 0.95).sum())
 
-    # Standardized coupling, quoted in Section S13 against the Orth et al. (2024)
+    # Standardized coupling, quoted against the Orth et al. (2024)
     # benchmarks. `analytic_frame`, not `model_df`: the latter exists only inside the
     # fit branch, so using it here would raise NameError on a reload -- the same
     # warm/cold asymmetry that broke three steps during the restructure.
@@ -682,7 +682,7 @@ def run_step08(verbose: bool = True, refit: bool = False):
     nums["lambda_ps_standardized"] = float(nums["lambda_ps_mean"]) * sd_pain / sd_sleep
     nums["lambda_sp_standardized"] = float(nums["lambda_sp_mean"]) * sd_sleep / sd_pain
 
-    # The per-person posterior spread, published as the raw ingredient of Section S13's
+    # The per-person posterior spread, published as the raw ingredient of the shrinkage
     # shrinkage discussion rather than as the summary itself.
     #
     # S13 states that "approximately 12-21% of each person-specific estimate derives

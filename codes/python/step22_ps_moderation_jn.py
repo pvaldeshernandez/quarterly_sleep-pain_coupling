@@ -4,15 +4,15 @@ Step 22 — Johnson-Neyman analysis for PS arousal moderation ROIs.
 
 Input:  derivatives/step21/step21_ps_fmri_posterior_draws.npz
         derivatives/step21/step21_ps_vbm_posterior_draws.npz
-        results/step21/step21_table_s1_fmri_arousal.csv
-        results/step21/step21_table_s1_vbm_arousal.csv
+        results/step21/step21_fmri_arousal_moderation.csv
+        results/step21/step21_vbm_arousal_moderation.csv
 Output:
   derivatives/step22/
     step22_jn_ps_fmri_results.csv
     step22_jn_ps_vbm_results.csv
   results/step22/
-    step22_figure_fmri_arousal_jn.png   — Figure S7
-    step22_figure_vbm_arousal_jn.png    — Figure S8
+    step22_figure_fmri_arousal_jn.png   — fMRI arousal JN
+    step22_figure_vbm_arousal_jn.png    — VBM arousal JN
     step22_text_numbers.csv
 
 Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
@@ -43,8 +43,8 @@ sys.path.insert(0, LIB_DIR)
 
 IN_FMRI_DRAWS = os.path.join(DERIV_DIR, "step21_ps_moderation", "step21_ps_fmri_posterior_draws.npz")
 IN_VBM_DRAWS = os.path.join(DERIV_DIR, "step21_ps_moderation", "step21_ps_vbm_posterior_draws.npz")
-IN_FMRI_TABLE = os.path.join(RESULTS_DIR, "step21_ps_moderation", "table_s1_fmri_arousal.csv")
-IN_VBM_TABLE = os.path.join(RESULTS_DIR, "step21_ps_moderation", "table_s1_vbm_arousal.csv")
+IN_FMRI_TABLE = os.path.join(RESULTS_DIR, "step21_ps_moderation", "step21_fmri_arousal_moderation.csv")
+IN_VBM_TABLE = os.path.join(RESULTS_DIR, "step21_ps_moderation", "step21_vbm_arousal_moderation.csv")
 
 OUT_FMRI_JN = os.path.join(STEP_DERIV_DIR, "step22_jn_ps_fmri_results.csv")
 OUT_VBM_JN = os.path.join(STEP_DERIV_DIR, "step22_jn_ps_vbm_results.csv")
@@ -53,8 +53,8 @@ OUT_VBM_JN = os.path.join(STEP_DERIV_DIR, "step22_jn_ps_vbm_results.csv")
 #: results/supplementary_materials/ under their document-facing names.
 SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
-OUT_FIG_S7 = os.path.join(SUPP_DIR, "figure_fmri_arousal_jn.png")
-OUT_FIG_S8 = os.path.join(SUPP_DIR, "figure_vbm_arousal_jn.png")
+OUT_FMRI_JN_PNG = os.path.join(SUPP_DIR, "figure_fmri_arousal_jn.png")
+OUT_VBM_JN_PNG = os.path.join(SUPP_DIR, "figure_vbm_arousal_jn.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step22_text_numbers.csv")
 
 
@@ -473,7 +473,7 @@ def run_step22(verbose=True, refit=False):
     _make_merged_figure(
         fmri_jn_results, fmri_slopes, fmri_d, fmri_table,
         modality_label="fMRI BOLD",
-        fig_path=OUT_FIG_S7,
+        fig_path=OUT_FMRI_JN_PNG,
         fig_title="Pain-to-Sleep arousal moderation (fMRI BOLD)",
         verbose=verbose,
     )
@@ -490,7 +490,7 @@ def run_step22(verbose=True, refit=False):
     _make_merged_figure(
         vbm_jn_results, vbm_slopes, vbm_d, vbm_table,
         modality_label="GM volume",
-        fig_path=OUT_FIG_S8,
+        fig_path=OUT_VBM_JN_PNG,
         fig_title="Pain-to-Sleep arousal moderation (VBM GM volume)",
         verbose=verbose,
     )

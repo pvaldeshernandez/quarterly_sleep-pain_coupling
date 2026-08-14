@@ -100,60 +100,60 @@ OUT_DICT_XLSX = os.path.join(DATA_DIR, "step00_extracted_dictionary.xlsx")
 # from the paper. None of those variables are extracted here.
 #
 # Reference map — where each variable is used in the paper:
-#   age__s1                      : Table 2, VARX covariate
-#   gender__s1                   : Table 2, VARX covariate
-#   Race__s1                     : Table 2 (1=NHB, 2=NHW; = Race_Group)
-#   pe_bmi__s1                   : Table 2
-#   womac_pain__s1               : Table 2, Figure S2 convergent validity
-#   womac_stiffness__s1          : Table 2, Figure S2
-#   womac_phys_function__s1      : Table 2, Figure S2
-#   total_womac__s1              : Table 2, Figure S2
-#   KL_Index__s1                 : Table 2
-#   phq_knee_pain_days__s1       : Table 2, Figure S2
-#   phq_percent_pain__s1         : Table 2, Figure S2
-#   qst_knee_pain_rating__s1     : Table 2, Figure S2
+#   age__s1                      : the baseline-characteristics table, VARX covariate
+#   gender__s1                   : the baseline-characteristics table, VARX covariate
+#   Race__s1                     : the baseline-characteristics table (1=NHB, 2=NHW; = Race_Group)
+#   pe_bmi__s1                   : the baseline-characteristics table
+#   womac_pain__s1               : the baseline-characteristics table, the convergent-validity figure convergent validity
+#   womac_stiffness__s1          : the baseline-characteristics table, the convergent-validity figure
+#   womac_phys_function__s1      : the baseline-characteristics table, the convergent-validity figure
+#   total_womac__s1              : the baseline-characteristics table, the convergent-validity figure
+#   KL_Index__s1                 : the baseline-characteristics table
+#   phq_knee_pain_days__s1       : the baseline-characteristics table, the convergent-validity figure
+#   phq_percent_pain__s1         : the baseline-characteristics table, the convergent-validity figure
+#   qst_knee_pain_rating__s1     : the baseline-characteristics table, the convergent-validity figure
 #   gcps_pain_intensity__s1      : GCPS characteristic pain intensity (0-100)
 #   gcps_interference__s1        : GCPS pain interference (0-100)
 #   img_test_site__s1            : fMRI ROI contralateralization for
 #                                  contralateral S1 and Middle Insula
 #   phq_pain_areas___{1..13}__s1 : Factor analysis validation
-#                                  (Figure S1: ANOVA + point-biserial
+#                                  (the endorsement figure: ANOVA + point-biserial
 #                                  correlations of contrast scores
 #                                  against 13 body-map endorsements)
 #
 # 28 variables in total (plus ID).
 
 BASELINE_VARS = [
-    # Demographics (Table 2 + VARX covariates)
+    # Demographics (the baseline-characteristics table + VARX covariates)
     "age__s1",
     "gender__s1",
     "pe_bmi__s1",
 
-    # Race group (Table 2) — single screening-form variable, 1=NHB, 2=NHW.
+    # Race group (the baseline-characteristics table) — single screening-form variable, 1=NHB, 2=NHW.
     # In the wide xlsx this is the export of Race_Group from the screening
     # REDCap form (data dictionary entry #1806).
     "Race__s1",
 
-    # WOMAC (Table 2 + Figure S2)
+    # WOMAC (the baseline-characteristics table + the convergent-validity figure)
     "womac_pain__s1",
     "womac_stiffness__s1",
     "womac_phys_function__s1",
     "total_womac__s1",
 
-    # Kellgren-Lawrence grade (Table 2)
+    # Kellgren-Lawrence grade (the baseline-characteristics table)
     "KL_Index__s1",
 
-    # PHQ clinical (Table 2 + Figure S2)
+    # PHQ clinical (the baseline-characteristics table + the convergent-validity figure)
     "phq_knee_pain_days__s1",
     "phq_percent_pain__s1",
 
-    # QST knee pain rating (Table 2 + Figure S2)
+    # QST knee pain rating (the baseline-characteristics table + the convergent-validity figure)
     "qst_knee_pain_rating__s1",
 
-    # Baseline sleep instruments (Table 3). The paper's sleep measure is the
+    # Baseline sleep instruments (the demographics table). The paper's sleep measure is the
     # QUARTERLY item q13; these characterize how the sample slept at baseline, which a
     # sleep-pain paper's demographics table has to state. Names are the canonical ones
-    # in lib/sleep_instruments.py, so this table and the Section S4 correlations refer
+    # in lib/sleep_instruments.py, so this table and the sleep-measure correlations refer
     # to the same variables. STOP-BANG is not here because it is DERIVED from eight
     # components rather than exported as a column; lib/stopbang.py scores it.
     "Insomnia__s1",
@@ -167,7 +167,7 @@ BASELINE_VARS = [
     # fMRI stimulation side (for contralateralized S1 / Mid Insula)
     "img_test_site__s1",
 
-    # Body-map endorsements (Figure S1 factor-analysis validation)
+    # Body-map endorsements (the endorsement figure factor-analysis validation)
     "phq_pain_areas___1__s1",
     "phq_pain_areas___2__s1",
     "phq_pain_areas___3__s1",

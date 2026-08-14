@@ -12,7 +12,7 @@ correlation matrix, scores every person-quarter via Bartlett
 factor scoring, z-scores the q13 sleep item, and then linearly
 interpolates single interior gaps in the three factor scores. It
 is the direct successor to Step 00 (data extraction) and the
-predecessor to step 03 (segment filtering, Figure 1 and Table 3);
+predecessor to step 03 (segment filtering, the availability grid and the demographics table);
 the within-between decomposition and the lags are built in step 07.
 
 The code in this file is a direct port of the factor-analysis and
@@ -870,7 +870,7 @@ def run_step01(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame,
     # ---- Results CSV: numbers that fill the manuscript text -----------
     # Every number from Results §3.1 "Factor analysis and pain
     # localization contrast" that is stated in the text, plus the
-    # loadings table (Table 1) and PA thresholds.
+    # loadings table (the notation table) and PA thresholds.
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
     OUT_RESULTS_CSV = os.path.join(STEP_RESULTS_DIR, "step01_factor_results.csv")

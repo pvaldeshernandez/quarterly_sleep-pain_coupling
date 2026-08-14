@@ -6,7 +6,7 @@ item). Correlating them separately at each occasion shows whether the associatio
 stable property of the measure or an artifact of one particular assessment.
 
 Written around that concept rather than around a particular file layout, so the same
-function serves the sixteen baseline sleep instruments of Figure S3 and the STOP-BANG
+function serves the sixteen baseline sleep instruments of the sleep-stability heatmap and the STOP-BANG
 score added to it, at any number of occasions, with no per-variable variants.
 
 Consumers:
@@ -87,7 +87,7 @@ def per_occasion(repeated, baseline, occasions=None):
 def against_person_mean(repeated, baseline, method="pearson"):
     """Correlate `baseline` with each person's MEAN of the repeated measure.
 
-    This is the "Mean" column of Figure S3: one number summarizing the association
+    This is the "Mean" column of the sleep-stability heatmap: one number summarizing the association
     across all occasions, computed on the person-level average rather than pooled
     across occasions, so each person contributes exactly once.
 

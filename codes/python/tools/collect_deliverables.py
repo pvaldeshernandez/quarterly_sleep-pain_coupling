@@ -10,13 +10,23 @@
 
 WHY THIS EXISTS. Steps write into their own folder -- one step, one folder -- and name
 their outputs for what they SHOW, because a step cannot know what number the document
-will give it. The document decides that, and it changes: inserting Section S4 last week
-shifted six figure numbers, and splitting Section S9 yesterday shifted four more.
+will give it. The document decides that, and it changes: inserting a section shifted six
+figure numbers, splitting one shifted four more, and moving Model diagnostics to S12
+renumbered eight tables at once.
 
 So the numbering lives in exactly one place: MANUSCRIPT and SUPPLEMENT below. Renumber
 the documents and only this file moves. Everything downstream then works by NAME --
 `figureS6.png` is Figure S6, with nothing to look up -- which is why
 `docs/tools/update_figures.py` needs no map of its own.
+
+THIS FILE IS THE ONLY ONE. On 14 Aug 2026 every document number was taken out of the rest
+of the pipeline -- filenames, constants, function names, docstrings and console messages.
+The claim above used to be aspirational: `step09_table_s5_ppc.csv` produced Table S10,
+`step18_tableS8_*` produced Table S6, `OUT_FIG_S4` in step14 pointed at Figure S5, and
+step23 called Table S11 "Table S2". Each was right when written. A name that states a
+number it does not control is a name that goes wrong the next time a section moves, so
+none of them state one now. If you find a document number outside the two dicts below,
+it is a bug.
 
 THE THIRD OUTPUT is `reported_values.csv`: every value the pipeline names, merged from
 each step's `numbers.json` and `step*_text_numbers.csv`. Figures and tables are not the
@@ -49,15 +59,15 @@ OUT_SUPPLEMENT = os.path.join(RESULTS, "supplementary_materials")
 
 #: document name -> the step folder and file that produces it.
 MANUSCRIPT = {
-    "figure1.png": ("step03_curation", "step03_figure1.png"),
-    "figure2.png": ("step08_coupling_model", "step08_figure2_ps_coupling.png"),
-    "figure3.png": ("step08_coupling_model", "step08_figure3_sp_coupling.png"),
-    "figure4.png": ("step12_contrast_moderation", "step12_figure4_jn_localization_ps.png"),
-    "figure5.png": ("step17_sp_jn", "step17_figure5_jn_nacc.png"),
-    "figure6.png": ("step17_sp_jn", "step17_figure6_jn_acc.png"),
-    "table3_demographics.csv": ("step03_curation", "step03_table3_demographics.csv"),
-    "table4_coupling.csv": ("step08_coupling_model", "step08_table4_coupling.csv"),
-    "table5_sp_moderation.csv": ("step16_sp_moderation", "step16_table5_sp_moderation.csv"),
+    "figure1.png": ("step03_curation", "step03_availability_grid.png"),
+    "figure2.png": ("step08_coupling_model", "step08_ps_coupling.png"),
+    "figure3.png": ("step08_coupling_model", "step08_sp_coupling.png"),
+    "figure4.png": ("step12_contrast_moderation", "step12_jn_localization_ps.png"),
+    "figure5.png": ("step17_sp_jn", "step17_jn_nacc.png"),
+    "figure6.png": ("step17_sp_jn", "step17_jn_acc.png"),
+    "table3_demographics.csv": ("step03_curation", "step03_demographics.csv"),
+    "table4_coupling.csv": ("step08_coupling_model", "step08_coupling_parameters.csv"),
+    "table5_sp_moderation.csv": ("step16_sp_moderation", "step16_sp_moderation_estimates.csv"),
 }
 
 SUPPLEMENT = {
@@ -78,20 +88,20 @@ SUPPLEMENT = {
     # The two time-varying panels feed BOTH Table S3 (fatigue and mood) and Table S4
     # (treatment activity), so both numbers are in the name; one file, two tables.
     "tableS3_S4_panelA_coupling.csv": ("step10_timevarying_covariates",
-                                       "step10_tableS6_panelA_coupling.csv"),
+                                       "step10_coupling_by_adjustment.csv"),
     "tableS3_S4_panelB_covariates.csv": ("step10_timevarying_covariates",
-                                         "step10_tableS6_panelB_covariates.csv"),
+                                         "step10_covariate_coefficients.csv"),
     "tableS5_interpolation.csv": ("step11_interpolation_sensitivity",
-                                  "step11_tableS7_interpolation.csv"),
+                                  "step11_coupling_by_interpolation.csv"),
     "tableS6_nuisance.csv": ("step18_nuisance_adjusted",
-                             "step18_tableS8_nuisance_sensitivity.csv"),
-    "tableS7_fmri_arousal.csv": ("step21_ps_moderation", "table_s1_fmri_arousal.csv"),
-    "tableS7_vbm_arousal.csv": ("step21_ps_moderation", "table_s1_vbm_arousal.csv"),
+                             "step18_nuisance_sensitivity.csv"),
+    "tableS7_fmri_arousal.csv": ("step21_ps_moderation", "step21_fmri_arousal_moderation.csv"),
+    "tableS7_vbm_arousal.csv": ("step21_ps_moderation", "step21_vbm_arousal_moderation.csv"),
     "tableS8_convergence.csv": ("step24_diagnostics", "step24_by_family.csv"),
     "tableS9_sampler.csv": ("step24_diagnostics", "step24_sampler.csv"),
     "tableS10_ppc.csv": ("step09_posterior_predictive_check",
-                         "step09_table_s5_ppc.csv"),
-    "tableS11_severity.csv": ("step23_severity_moderation", "table_s2_severity.csv"),
+                         "step09_ppc_summary.csv"),
+    "tableS11_severity.csv": ("step23_severity_moderation", "step23_severity_moderation_estimates.csv"),
 }
 
 

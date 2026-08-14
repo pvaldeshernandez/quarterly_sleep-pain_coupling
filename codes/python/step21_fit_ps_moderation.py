@@ -10,8 +10,8 @@ Output:
     step21_ps_fmri_posterior_draws.npz
     step21_ps_vbm_posterior_draws.npz
   results/
-    step21_table_s1_fmri_arousal.csv    — Table S1 fMRI panel
-    step21_table_s1_vbm_arousal.csv     — Table S1 VBM panel
+    step21_fmri_arousal_moderation.csv    — arousal relay, fMRI panel
+    step21_vbm_arousal_moderation.csv     — arousal relay, VBM panel
     step21_vbm_sign_concordance.csv     — VBM 5/5 sign test
     step21_text_numbers.csv
 
@@ -57,8 +57,8 @@ OUT_VBM_DRAWS = os.path.join(STEP_DERIV_DIR, "step21_ps_vbm_posterior_draws.npz"
 #: results/supplementary_materials/ under their document-facing names.
 SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
-OUT_FMRI_TABLE = os.path.join(SUPP_DIR, "table_s1_fmri_arousal.csv")
-OUT_VBM_TABLE = os.path.join(SUPP_DIR, "table_s1_vbm_arousal.csv")
+OUT_FMRI_TABLE = os.path.join(SUPP_DIR, "step21_fmri_arousal_moderation.csv")
+OUT_VBM_TABLE = os.path.join(SUPP_DIR, "step21_vbm_arousal_moderation.csv")
 OUT_VBM_SIGN = os.path.join(STEP_RESULTS_DIR, "step21_vbm_sign_concordance.csv")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step21_text_numbers.csv")
 

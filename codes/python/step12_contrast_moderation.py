@@ -7,12 +7,12 @@ Output:
   derivatives/
     step12_jn_localization_results.csv — full JN grid for both directions
   results/
-    step12_figure4_jn_localization_ps.png  — Figure 4: PS direction JN
-    figure_jn_localization_sp.png — Figure S4: SP direction JN (null)
+    step12_jn_localization_ps.png  — pain-to-sleep JN
+    figure_jn_localization_sp.png — sleep-to-pain JN (null)
     step12_text_numbers.csv                — JN boundary, simple slopes, etc.
 
 Note: contrast moderation parameters (delta_p, omega_sp, delta_s, omega_ps)
-are in Table 4 (results/step08_coupling_model/step08_table4_coupling.csv), not a separate table.
+are in the coupling-parameter table (results/step08_coupling_model/step08_coupling_parameters.csv), not a separate table.
 
 This step reads the posterior draws from the VARX(1) fit (step 08)
 and runs the Bayesian Johnson-Neyman analysis on the contrast
@@ -60,13 +60,13 @@ IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step08_coupling_model", "step08_posterio
 OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step12_jn_localization_results.csv")
 
 # Results
-OUT_FIG4 = os.path.join(STEP_RESULTS_DIR, "step12_figure4_jn_localization_ps.png")
+OUT_PS_JN_PNG = os.path.join(STEP_RESULTS_DIR, "step12_jn_localization_ps.png")
 #: A step writes into its OWN results folder. tools/collect_deliverables.py
 #: copies what the documents need into results/manuscript/ and
 #: results/supplementary_materials/ under their document-facing names.
 SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
-OUT_FIG_S4 = os.path.join(SUPP_DIR, "figure_jn_localization_sp.png")
+OUT_SP_JN_PNG = os.path.join(SUPP_DIR, "figure_jn_localization_sp.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step12_text_numbers.csv")
 
 
@@ -316,7 +316,7 @@ def run_step12(verbose: bool = True, refit: bool = False):
         bds = jn_result["jn_boundaries"]
         return float(bds[0]) if len(bds) > 0 else None
 
-    # ---- Pain-to-Sleep (PS) direction: Figure 4 ----
+    # ---- Pain-to-Sleep (PS) direction ----
     jn_ps = compute_jn_curve(b1_draws, b4_draws, contrast_vals,
                              clip_pct=(0, 100))
     slopes_ps = compute_simple_slopes(b1_draws, b4_draws, x_positions)
@@ -356,13 +356,13 @@ def run_step12(verbose: bool = True, refit: bool = False):
                   body_knee_labels=True,
                   legend_loc="lower left", info_loc="lower right",
                   person_dots={"x": obs_contrast, "y": obs_ps})
-    os.makedirs(os.path.dirname(OUT_FIG4), exist_ok=True)
-    fig.savefig(OUT_FIG4, dpi=300, bbox_inches="tight")
+    os.makedirs(os.path.dirname(OUT_PS_JN_PNG), exist_ok=True)
+    fig.savefig(OUT_PS_JN_PNG, dpi=300, bbox_inches="tight")
     plt.close(fig)
     if verbose:
-        print(f"  Saved Figure 4: {OUT_FIG4}")
+        print(f"  Saved pain-to-sleep JN figure: {OUT_PS_JN_PNG}")
 
-    # ---- Sleep-to-Pain (SP) direction: Figure S4 ----
+    # ---- Sleep-to-Pain (SP) direction ----
     jn_sp = compute_jn_curve(a2_draws, a4_draws, contrast_vals,
                              clip_pct=(0, 100))
     slopes_sp = compute_simple_slopes(a2_draws, a4_draws, x_positions)
@@ -394,11 +394,11 @@ def run_step12(verbose: bool = True, refit: bool = False):
                   legend_loc="lower right", info_loc="upper left",
                   person_dots={"x": obs_contrast, "y": obs_sp})
     ax.set_xlim(jn_sp["x_grid"][0], jn_sp["x_grid"][-1])
-    os.makedirs(os.path.dirname(OUT_FIG_S4), exist_ok=True)
-    fig.savefig(OUT_FIG_S4, dpi=300, bbox_inches="tight")
+    os.makedirs(os.path.dirname(OUT_SP_JN_PNG), exist_ok=True)
+    fig.savefig(OUT_SP_JN_PNG, dpi=300, bbox_inches="tight")
     plt.close(fig)
     if verbose:
-        print(f"  Saved Figure S4: {OUT_FIG_S4}")
+        print(f"  Saved sleep-to-pain JN figure: {OUT_SP_JN_PNG}")
 
     # ==================================================================
     # Save JN grid results (derivative)
@@ -432,7 +432,7 @@ def run_step12(verbose: bool = True, refit: bool = False):
         _t("jn_ps_boundary_K", f"{ps_boundary:.4f}")
         _t("jn_ps_boundary_sd", f"{ps_boundary/c_sd:.2f}")
         # From the JN result, not recomputed. This line used to take the fraction on
-        # the credible side of the boundary while Figure 4 took the fraction between
+        # the credible side of the boundary while the pain-to-sleep figure took the fraction between
         # the credible grid edges -- 83.88% against 83.66%, i.e. the sentence said
         # 83.9% and the figure beside it drew 83.7%.
         _t("jn_ps_pct_credible", f"{jn_ps['pct_in_credible_region']:.1f}")

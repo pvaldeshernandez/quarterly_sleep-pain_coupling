@@ -4,7 +4,7 @@ Step 24 — Collect the diagnostics of every fit in the paper.
 
 Runs LAST, and that is the whole reason it is a separate step. Per-fit diagnostics are
 written by `lib.coupling_model.run_fit` at each fit, so there is nothing to compute in
-the middle of the pipeline. But Tables S3 and S4 and the "across all fits" sentence
+the middle of the pipeline. But the convergence and sampler tables and the "across all fits" sentence
 summarize EVERY model the paper reports, including step 21's, so the aggregation can
 only happen after the last one has run.
 
@@ -13,8 +13,8 @@ This step recomputes nothing. It reads what the fits already recorded.
 Input:  derivatives/step*/diagnostics_*.json            (one per fit)
         derivatives/step*/diagnostics_*_by_param.csv    (per-parameter, per fit)
 Output: derivatives/step24_diagnostics/step24_all_fits.csv
-        results/step24_diagnostics/step24_by_family.csv     -> Table S3
-        results/step24_diagnostics/step24_sampler.csv       -> Table S4
+        results/step24_diagnostics/step24_by_family.csv     -> convergence by parameter family
+        results/step24_diagnostics/step24_sampler.csv       -> sampler behavior
         results/step24_diagnostics/numbers.json
 
 Two fits are ALIASES of the primary model rather than separate models: the full model of
@@ -50,13 +50,13 @@ OUT_ALL = os.path.join(STEP_DERIV_DIR, "step24_all_fits.csv")
 OUT_FAMILY = os.path.join(STEP_RESULTS_DIR, "step24_by_family.csv")
 OUT_SAMPLER = os.path.join(STEP_RESULTS_DIR, "step24_sampler.csv")
 
-#: the primary model, whose per-parameter table becomes Table S3
+#: the primary model, whose per-parameter table is published
 PRIMARY = "step08_primary"
 
 #: fits that are the primary model under another name. Counted once.
 ALIASES = {"step08_loo_full", "step11_all_transitions"}
 
-#: parameter -> family, for Table S3. Order is the table's row order.
+#: parameter -> family. Order is the table's row order.
 FAMILIES = [
     ("Pain equation: intercept, autoregression, coupling, direct and interaction terms",
      lambda n: n in {"a0", "a1", "a2", "a3", "a4"}),
@@ -88,7 +88,7 @@ def collect(verbose=True):
 
 
 def by_family(verbose=True):
-    """Table S3: convergence by parameter family, for the primary model."""
+    """Convergence by parameter family, for the primary model."""
     hits = glob.glob(os.path.join(DERIV_DIR, "step*",
                                   f"diagnostics_{PRIMARY}_by_param.csv"))
     if not hits:
@@ -160,7 +160,7 @@ def run_step24(verbose=True, refit=False):
     # Per-GROUP minima, because six table notes quote them and none of them had a name.
     # Each note says "Across the sixteen adjusted models, R-hat did not exceed X, bulk and
     # tail effective sample sizes were at least Y and Z" -- numbers computed by hand from
-    # this frame and typed in. Table 5's note was still quoting the previous run's pair
+    # this frame and typed in. the moderation table's note was still quoting the previous run's pair
     # months later, and nothing could have caught it: with no name there is nothing for a
     # checker to compare against. Published here, one set per note.
     for prefix, tag in (("step10", "timevarying_six"),

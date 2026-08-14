@@ -1,7 +1,7 @@
 """Canonical STOP-BANG obstructive sleep apnea risk score.
 
-ONE definition of how the score is formed, so the number quoted in Section S4, the
-number in the Response, and the row drawn in Figure S3 can never disagree.
+ONE definition of how the score is formed, so the number quoted in the supplement, the
+number in the Response, and the row drawn in the sleep-stability heatmap can never disagree.
 
 Background: no polysomnography, apnea diagnosis or CPAP record exists in this dataset,
 but the four STOP items were administered verbatim as items 5-8 of the baseline sleep
@@ -24,14 +24,14 @@ not comparable across people, since a missing component is indistinguishable fro
 negative one.
 
 This module was factored out of `a11_stopbang.py` after the script that produced
-`a11_stopbang_summary_N229.csv` -- the file Section S4 and the Response quote -- was
+`a11_stopbang_summary_N229.csv` -- the file the supplement and the Response quote -- was
 found to no longer exist, leaving those numbers unreproducible. `summary()` below
 regenerates them exactly; `test_reproduces_published()` asserts it.
 
 Consumers:
   a11_stopbang.py                        distribution and association with sleep quality
-  a10b_diary_averaged.py                 person-mean correlation (Figure S3 Mean column)
-  a10c_per_quarter_sleep_stability.py    per-quarter correlations (Figure S3, Q1-Q11)
+  a10b_diary_averaged.py                 person-mean correlation (heatmap Mean column)
+  a10c_per_quarter_sleep_stability.py    per-quarter correlations (heatmap, Q1-Q11)
 """
 import os
 
@@ -170,7 +170,7 @@ def summary(q13_person_mean=None, ids=None, wide=None):
 
 
 def test_reproduces_published(q13_person_mean=None, ids=None, wide=None):
-    """Assert this module reproduces the numbers Section S4 and the Response quote.
+    """Assert this module reproduces the numbers the supplement and the Response quote.
 
     The producing script was lost, so these values were only ever recoverable from a
     CSV. Pinning them here makes the loss non-repeatable: any future change to the

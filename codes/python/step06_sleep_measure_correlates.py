@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Step 06 — Correlates of the quarterly sleep-quality item (Figure S3, Section S4).
+Step 06 — Correlates of the quarterly sleep-quality item (the sleep-stability heatmap).
 ======================================================================
 
 Every correlate of the quarterly sleep item, computed once, in one sweep:
 
   * the person-mean correlation of the item with each baseline sleep instrument
-    (the "Mean" column of Figure S3),
+    (the "Mean" column of the sleep-stability heatmap),
   * the same correlation recomputed separately at each of the 11 quarters
     (the Q1-Q11 columns),
   * the STOP-BANG apnea-risk score -- its distribution, its item endorsement, and
     its association with the item -- as ONE MORE ROW of the same grid, not a
     special case,
-  * the assembled, already-sorted 17 x 12 grid Figure S3 is drawn from.
+  * the assembled, already-sorted 17 x 12 grid the sleep-stability heatmap is drawn from.
 
 This collapses five sandbox scripts (a10b, a10c, a10d's data assembly, a10e, a11).
 They swept the same instruments over the same sample, which is why `diary_stems`,
@@ -45,7 +45,7 @@ Output:
     step06_person_mean_correlations.csv  — one row per column-based instrument
     step06_per_quarter_correlations.csv  — tidy (instrument, quarter, r, p, n, n_q13)
     step06_stopbang_summary.csv          — one row: distribution, endorsement, association
-    step06_figureS3_grid.csv             — tidy 17 x 12 grid, sorted, with `rank`
+    step06_stability_grid.csv             — tidy 17 x 12 grid, sorted, with `rank`
   results/step06_sleep_measure_correlates/
     figure_sleep_stability_heatmap.png   — the per-quarter stability heatmap
     numbers.json                         — every quantity the documents quote
@@ -101,7 +101,7 @@ IN_LONG_CANDIDATES = [
 OUT_MEAN_CSV = os.path.join(STEP_DERIV_DIR, "step06_person_mean_correlations.csv")
 OUT_QUARTER_CSV = os.path.join(STEP_DERIV_DIR, "step06_per_quarter_correlations.csv")
 OUT_STOPBANG_CSV = os.path.join(STEP_DERIV_DIR, "step06_stopbang_summary.csv")
-OUT_GRID_CSV = os.path.join(STEP_DERIV_DIR, "step06_figureS3_grid.csv")
+OUT_GRID_CSV = os.path.join(STEP_DERIV_DIR, "step06_stability_grid.csv")
 
 #: Every supplementary figure lands in one directory, named as the supplement numbers
 #: it, so the figure-update tool can pair a file with the caption that guards it.
@@ -109,7 +109,7 @@ OUT_GRID_CSV = os.path.join(STEP_DERIV_DIR, "step06_figureS3_grid.csv")
 #: copies what the documents need into results/manuscript/ and
 #: results/supplementary_materials/ under their document-facing names.
 SUPP_DIR = STEP_RESULTS_DIR
-OUT_FIGURE_S3 = os.path.join(SUPP_DIR, "figure_sleep_stability_heatmap.png")
+OUT_HEATMAP_PNG = os.path.join(SUPP_DIR, "figure_sleep_stability_heatmap.png")
 
 #: the coupling model's quarters. The quarterly item is restricted to these in ONE
 #: place; a10b did not filter and a10c/a10e did, which was only harmless because
@@ -120,7 +120,7 @@ QUARTERS = list(range(1, 12))
 #: column order of the grid: the eleven quarters, then the person-mean summary
 COL_LABELS = [f"Q{q}" for q in QUARTERS] + ["Mean"]
 
-#: a cell at or below this p is "significant" -- hatched otherwise in Figure S3
+#: a cell at or below this p is "significant" -- hatched otherwise in the sleep-stability heatmap
 ALPHA = 0.05
 
 
@@ -238,7 +238,7 @@ def _sweep(series, meta, rep, verbose=True):
                 raise ValueError(
                     f"{name} ({si.label(name)}) has only {n} complete pairs, below "
                     f"sleep_instruments.MIN_N = {si.MIN_N}, but it is a reported "
-                    f"instrument. Figure S3 cannot be drawn short; fix the data or "
+                    f"instrument. the sleep-stability heatmap cannot be drawn short; fix the data or "
                     f"the registry, do not drop the row.")
             if verbose:
                 print(f"    dropped {name}: {n} complete pairs < {si.MIN_N}")
@@ -279,7 +279,7 @@ def _assemble_grid(mean_table, per_quarter, verbose=True):
 
     `rank` is written out because the figure step must not re-sort: a tidy CSV read
     back with `pivot` comes out alphabetical, and both the caption ("ordered by
-    strength") and Section S4's ninth-place claim depend on the order being the one
+    strength") and the ninth-place claim depend on the order being the one
     computed here.
     """
     mean = mean_table.set_index("instrument")
@@ -331,7 +331,7 @@ def pivot_grid(grid):
     """Tidy grid -> (r, p, n) frames in RANK order, columns COL_LABELS.
 
     The one place the saved order is honored. `pivot` alone sorts the index
-    alphabetically, which would silently reorder Figure S3's rows; the figure step
+    alphabetically, which would silently reorder the sleep-stability heatmap's rows; the figure step
     calls this rather than pivoting for itself.
     """
     order = (grid.sort_values("rank")["instrument"]
@@ -360,7 +360,7 @@ def check_grid(r, p, n):
     absmean = r["Mean"].abs().values
     assert np.all(np.diff(absmean) <= 1e-12), (
         "rows are not ordered by descending |Mean r|; the saved `rank` no longer "
-        "matches the values, so Figure S3 would be drawn out of order")
+        "matches the values, so the sleep-stability heatmap would be drawn out of order")
     assert (n[COL_LABELS] >= 0).values.all()
 
 
@@ -384,7 +384,7 @@ def compute_numbers(grid, per_quarter, stopbang, verbose=True):
         "n_analytic": int(stopbang["n_analytic"]),
         "n_quarters": len(quarters),
         "n_instruments": si.N_INSTRUMENTS,
-        "n_figureS3_rows": si.N_ROWS,
+        "n_stability_grid_rows": si.N_ROWS,
         # The denominator behind every quarterly n: analytic participants with a
         # rating at that quarter. Stored so a change in the quarter filter, or in
         # step 00's export, shows up as a moved number instead of a silent one.
@@ -425,7 +425,7 @@ def compute_numbers(grid, per_quarter, stopbang, verbose=True):
         nums[f"stopbang_{key}"] = value
 
     # One published number, one code path. The STOP-BANG correlation quoted in
-    # Section S4 and reply R2.16 is the same cell the figure draws; if these ever
+    # the sleep-correlates section and reply R2.16 is the same cell the figure draws; if these ever
     # differ, a second Pearson has crept back in.
     summary_r, grid_r = nums["stopbang_r_q13"], nums[f"mean_r.{si.STOPBANG_ROW}"]
     assert np.isclose(summary_r, grid_r, rtol=0, atol=1e-12), (
@@ -466,7 +466,7 @@ def run_step06(verbose=True, refit=False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 06 — Correlates of the quarterly sleep measure (Figure S3, S4)")
+        print("STEP 06 — Correlates of the quarterly sleep measure (the sleep-stability heatmap)")
         print("=" * 70)
 
     saved = [OUT_MEAN_CSV, OUT_QUARTER_CSV, OUT_STOPBANG_CSV, OUT_GRID_CSV]
@@ -482,7 +482,7 @@ def run_step06(verbose=True, refit=False):
         # ------ FULL RECOMPUTE from data/ ------
         wide, dd, rep, ids = _load_inputs(verbose)
 
-        # The gate. `summary()` regenerates the values Section S4 and reply R2.16
+        # The gate. `summary()` regenerates the values the sleep-correlates section and reply R2.16
         # quote from a CSV whose producing script was lost; this asserts it still
         # does, on the frames already loaded here rather than on paths of its own.
         q13_person_mean = rep.groupby("ID")["value"].mean()
@@ -537,9 +537,9 @@ def run_step06(verbose=True, refit=False):
         stopbang = {c: _sb[c].iloc[0].item() for c in _sb.columns}
         grid = pd.read_csv(OUT_GRID_CSV, float_precision="round_trip")
 
-    # ---- Figure S3 ---------------------------------------------------------
+    # ---- the sleep-stability heatmap ---------------------------------------------------------
     # Drawn from the grid DATA, on both paths. Until this existed, step 06 computed
-    # the grid and nothing rendered it: the only thing that could draw Figure S3 was
+    # the grid and nothing rendered it: the only thing that could draw the sleep-stability heatmap was
     # a sandbox script that was never migrated, so the figure in the supplement had
     # no pipeline source and could not be regenerated.
     r_grid, p_grid, n_grid = pivot_grid(grid)
@@ -550,7 +550,7 @@ def run_step06(verbose=True, refit=False):
         r_grid, p_grid, n_grid,
         columns=COL_LABELS,
         row_labels=[si.label(v) for v in r_grid.index],
-        out_path=OUT_FIGURE_S3,
+        out_path=OUT_HEATMAP_PNG,
     )
     if verbose:
         print(f"  wrote {os.path.relpath(fig_path, ROOT)}")
@@ -576,7 +576,7 @@ def run_step06(verbose=True, refit=False):
 def main():
     ap = argparse.ArgumentParser(
         description="Step 06 — correlates of the quarterly sleep measure "
-                    "(Figure S3 grid, Section S4 STOP-BANG).")
+                    "(heatmap grid, STOP-BANG).")
     ap.add_argument("--refit", action="store_true",
                     help="Recompute from data/ instead of loading saved derivatives")
     ap.add_argument("--quiet", action="store_true")

@@ -1,16 +1,16 @@
 """
 Step 25 — The optimal measurement interval implied by the fitted coupling matrix.
 
-Section S15 of the supplement derives, from Dormann & Griffin (2015), the lag at which
+The supplement derives, from Dormann & Griffin (2015), the lag at which
 a cross-lagged effect is maximally observable, and reports what fraction of that peak a
 quarterly interval recovers. Every number in that derivation was arithmetic done by hand
-on Table 4 and typed into the document: it had no pipeline source, so the checker could
+on the coupling-parameter table and typed into the document: it had no pipeline source, so the checker could
 not verify it and a refit could not update it.
 
-This step is that arithmetic, done once, from `step08_table4_coupling.csv`.
+This step is that arithmetic, done once, from `step08_coupling_parameters.csv`.
 
 It fits nothing. It reads the primary fit's four transition-matrix coefficients and
-publishes every quantity Section S15 and manuscript paragraph 174 quote.
+publishes every quantity the optimal-lag section and the Limitations paragraph quote.
 
 WHAT IS DERIVED
 ---------------
@@ -68,8 +68,8 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 RESULTS_DIR = os.path.join(ROOT, "results")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step25_optimal_lag")
 
-IN_TABLE4 = os.path.join(RESULTS_DIR, "step08_coupling_model",
-                         "step08_table4_coupling.csv")
+IN_COUPLING_CSV = os.path.join(RESULTS_DIR, "step08_coupling_model",
+                         "step08_coupling_parameters.csv")
 OUT_CSV = os.path.join(STEP_RESULTS_DIR, "step25_optimal_lag.csv")
 
 #: days per quarter, for reporting the optimal lag in the unit the Discussion uses
@@ -79,8 +79,8 @@ DAYS_PER_QUARTER = 91
 COEFFS = {"a1": "phi_p", "b2": "phi_s", "a2": "lambda_sp", "b1": "lambda_ps"}
 
 
-def read_transition_matrix(path=IN_TABLE4):
-    """The four coefficients of A, from the primary fit's published Table 4.
+def read_transition_matrix(path=IN_COUPLING_CSV):
+    """The four coefficients of A, from the primary fit's published the coupling-parameter table.
 
     Read from the table the manuscript prints rather than from the posterior, so this
     step derives from exactly the numbers a reader can see. Raises if a coefficient is
@@ -88,12 +88,12 @@ def read_transition_matrix(path=IN_TABLE4):
     """
     if not os.path.exists(path):
         raise FileNotFoundError(
-            f"{path} does not exist. Section S15 derives from the primary fit; "
+            f"{path} does not exist. the optimal-lag section derives from the primary fit; "
             f"run step 08 first.")
     t = pd.read_csv(path, float_precision="round_trip").set_index("Parameter")
     missing = [k for k in COEFFS if k not in t.index]
     if missing:
-        raise KeyError(f"Table 4 has no row(s) {missing}; cannot build A")
+        raise KeyError(f"the coupling-parameter table has no row(s) {missing}; cannot build A")
     return {sym: float(t.loc[key, "Estimate"]) for key, sym in COEFFS.items()}
 
 
@@ -130,7 +130,7 @@ def unidirectional_optimum(phi_p, phi_s):
 
 
 def derive(coeffs, verbose=True):
-    """Every quantity Section S15 reports. Returns (tidy DataFrame, numbers dict)."""
+    """Every quantity the optimal-lag section reports. Returns (tidy DataFrame, numbers dict)."""
     phi_p, phi_s = coeffs["phi_p"], coeffs["phi_s"]
     lambda_sp, lambda_ps = coeffs["lambda_sp"], coeffs["lambda_ps"]
 
@@ -171,7 +171,7 @@ def derive(coeffs, verbose=True):
         "amplification_at_one_quarter": float(f_quarterly),
         "amplification_at_optimum": float(f_peak),
         "pct_of_peak_captured_quarterly": float(pct_of_peak),
-        # Section S15 states that the dominant eigenvalue "exceeds phi_p by 23%". That
+        # The supplement states that the dominant eigenvalue "exceeds phi_p by 23%". That
         # percentage was computed by hand and had no name, so nothing could tell whether
         # it had followed the refit. Both the ratio and the excess are published because
         # the document phrases it as an excess.
@@ -200,17 +200,17 @@ def derive(coeffs, verbose=True):
             print(f"  quarterly measurement captures {pct_of_peak:.0f}% of the peak")
         else:
             print("  Eq. S3 omega_opt    UNDEFINED — an autoregression is not "
-                  "positive, so ln(phi) does not exist. Section S15 has no "
+                  "positive, so ln(phi) does not exist. the optimal-lag section has no "
                   "optimal-lag estimate under this fit.")
     return table, nums
 
 
 def run_step25(verbose=True, refit=False):
-    """Derive Section S15's optimal-lag quantities from the primary fit."""
+    """Derive the optimal-lag quantities from the primary fit."""
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
     if verbose:
         print("=" * 70)
-        print("STEP 25 — Optimal measurement interval (Section S15)")
+        print("STEP 25 — Optimal measurement interval ")
         print("=" * 70)
 
     coeffs = read_transition_matrix()

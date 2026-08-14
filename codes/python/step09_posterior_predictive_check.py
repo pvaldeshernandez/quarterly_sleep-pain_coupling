@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 09 — Posterior predictive check of the primary coupling model (Table S5, Section S5).
+Step 09 — Posterior predictive check of the primary coupling model.
 
 Simulates replicated datasets from the posterior step 07 already saved and scores the
 discrepancy statistics: for pain and for sleep separately the mean, SD, 5th and 95th
@@ -27,12 +27,12 @@ rather than assumed.
 Input:  derivatives/step08_coupling_model/step08_primary_idata.nc
         derivatives/step07_varx_data/step07_processed_long.csv
 Output: derivatives/step09_posterior_predictive_check/step09_ppc_replicates.npz
-        results/step09_posterior_predictive_check/step09_table_s5_ppc.csv   -> Table S5
+        results/step09_posterior_predictive_check/step09_ppc_summary.csv   -> the posterior-predictive-check table
         results/step09_posterior_predictive_check/numbers.json
 
 The CSV carries machine names in its `statistic` column (mean/sd/q05/q95/iqr/kurt/
 corr(pain,sleep)/corr(innov_pain,innov_sleep)). Display labels, the table note and the
-Section S5 sentences are prose and are written by hand, not generated here.
+The surrounding sentences are prose and are written by hand, not generated here.
 
 No figure. The replicate arrays, the observed series and the per-replicate statistic
 matrices are all persisted, so a standalone `plot_*` script can draw a predictive overlay
@@ -67,7 +67,7 @@ IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
                                 "step07_processed_long.csv")
 
 OUT_REPLICATES_NPZ = os.path.join(STEP_DERIV_DIR, "step09_ppc_replicates.npz")
-OUT_TABLE_CSV = os.path.join(STEP_RESULTS_DIR, "step09_table_s5_ppc.csv")
+OUT_TABLE_CSV = os.path.join(STEP_RESULTS_DIR, "step09_ppc_summary.csv")
 
 #: Replicated datasets. Pinned from the sandbox grid (`sandbox/s02_grid.py:116`,
 #: N_REP_PPC) rather than retyped, and quoted in the Methods as "200 datasets
@@ -85,7 +85,7 @@ SEED = 42
 N_TRANSITIONS_EXPECTED = 1818
 N_PERSONS_EXPECTED = 229
 
-#: The rows whose ppp the Section S5 sentence summarizes as a range. Location and spread
+#: The rows whose ppp the surrounding sentence summarizes as a range. Location and spread
 #: of both series plus the joint outcome correlation — deliberately excluding the tail
 #: statistics (q05, q95) and the two shape statistics (IQR, excess kurtosis), which are
 #: the ones that DO misfit and are quoted individually. Without this set fixed in code,
@@ -120,7 +120,7 @@ def _key_stem(variable, statistic):
 
 
 def numbers_from_table(table, meta):
-    """Every quantity Table S5 and Section S5 quote, under a stable key.
+    """Every quantity the posterior-predictive-check table quotes, under a stable key.
 
     Built from the CSV in BOTH paths — after simulating and after loading — so the
     registry cannot drift from the table it is supposed to describe.
@@ -243,7 +243,7 @@ def load_inputs(verbose=True):
 
 
 def simulate_and_score(md, idata, innovations, n_rep, seed, verbose=True):
-    """Table S5 plus everything a later figure would need, from one posterior.
+    """The check summary plus everything a later figure would need, from one posterior.
 
     The whole computation is `lib/ppc.py`: `ppc_table` for the 14 discrepancy rows and
     the replicate arrays it scored them on. Neither is reimplemented here, and the
@@ -346,7 +346,7 @@ def run_step09(verbose=True, refit=False, n_rep=N_REP, seed=SEED):
 
     if verbose:
         print("=" * 70)
-        print("STEP 09 — Posterior predictive check of the primary model (Table S5)")
+        print("STEP 09 — Posterior predictive check of the primary model")
         print("=" * 70)
 
     table, meta = (None, None) if refit else _load_saved()

@@ -47,12 +47,12 @@ Outputs
                                          diagnostics_*.json that lib.run_fit
                                          writes beside each fit
   results/step10_timevarying_covariates/
-      step10_tableS6_panelA_coupling.csv    Table S6 Panel A (data only)
-      step10_tableS6_panelB_covariates.csv  Table S6 Panel B (data only)
+      step10_coupling_by_adjustment.csv    Panel A (data only)
+      step10_covariate_coefficients.csv  Panel B (data only)
       numbers.json                          the registry (Decision 4)
 
-No prose is generated: no *_text.md, no table notes, no captions. Table S6's
-note and Section S6 are authored by hand from numbers.json.
+No prose is generated: no *_text.md, no table notes, no captions. the two panels'
+note and the surrounding prose are authored by hand from numbers.json.
 
 Default path is LOAD-AND-EMIT: the two panels and numbers.json are rebuilt from
 the saved summary + design frame without sampling. ``--refit`` re-runs all six
@@ -105,9 +105,9 @@ OUT_SUMMARY_CSV = os.path.join(STEP_DERIV_DIR, "step10_posterior_summary.csv")
 OUT_DESIGN_CSV = os.path.join(STEP_DERIV_DIR, "step10_timevarying_design.csv")
 OUT_DIAG_CSV = os.path.join(STEP_DERIV_DIR, "step10_fit_diagnostics.csv")
 OUT_PANEL_A_CSV = os.path.join(STEP_RESULTS_DIR,
-                               "step10_tableS6_panelA_coupling.csv")
+                               "step10_coupling_by_adjustment.csv")
 OUT_PANEL_B_CSV = os.path.join(STEP_RESULTS_DIR,
-                               "step10_tableS6_panelB_covariates.csv")
+                               "step10_covariate_coefficients.csv")
 
 # ---------------------------------------------------------------------------
 # The two covariate sets. One list, one loop — a09_mood_fatigue.py and
@@ -137,7 +137,7 @@ BLOCKS = [
         "standardize": False,
         "binary": True,
         "models": [("M0", None), ("T1", "lag"), ("T2", "cur")],
-        # q14/q15 are endorsements; Section S6 quotes how often they occur.
+        # q14/q15 are endorsements; the surrounding prose quotes how often they occur.
         "endorsement": True,
     },
 ]
@@ -331,7 +331,7 @@ def collect_diagnostics(verbose=True):
 
 
 # ===================================================================
-# Table S6 — the two panels, as DATA
+# the time-varying covariate tables — the two panels, as DATA
 # ===================================================================
 
 def panel_a(summary):
@@ -397,7 +397,7 @@ def endorsement_counts(raw_long_df, block):
 
 
 def assemble_numbers(summary, design, raw_long_df, diagnostics):
-    """Every quantity Table S6 and Section S6 quote, under a stable key.
+    """Every quantity the time-varying covariate tables quote, under a stable key.
 
     Derived entirely from the persisted summary, the persisted design frame and
     the raw item columns, so it is reproducible without refitting.
@@ -472,13 +472,13 @@ def assemble_numbers(summary, design, raw_long_df, diagnostics):
 # ===================================================================
 
 def run_step10(verbose=True, refit=False):
-    """Rebuild Table S6 and numbers.json; ``refit`` re-runs the six fits."""
+    """Rebuild the time-varying covariate tables and numbers.json; ``refit`` re-runs the six fits."""
     os.makedirs(STEP_DERIV_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
     if verbose:
         print("=" * 70)
-        print("STEP 10 — Time-varying covariates (Table S6, Section S6)")
+        print("STEP 10 — Time-varying covariates (the time-varying covariate tables)")
         print("=" * 70)
 
     raw_long_path = resolve_raw_long()
@@ -540,9 +540,9 @@ def run_step10(verbose=True, refit=False):
     numbers_path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step10")
 
     if verbose:
-        print(f"\n  Saved Table S6 Panel A ({len(pa)} rows): "
+        print(f"\n  Saved Panel A ({len(pa)} rows): "
               f"{os.path.relpath(OUT_PANEL_A_CSV, ROOT)}")
-        print(f"  Saved Table S6 Panel B ({len(pb)} rows): "
+        print(f"  Saved Panel B ({len(pb)} rows): "
               f"{os.path.relpath(OUT_PANEL_B_CSV, ROOT)}")
         print(f"  Saved numbers ({len(nums)} keys): "
               f"{os.path.relpath(numbers_path, ROOT)}")
@@ -574,7 +574,7 @@ def run_step10(verbose=True, refit=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 10 — time-varying covariate sensitivity (Table S6)."
+        description="Step 10 — time-varying covariate sensitivity ."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

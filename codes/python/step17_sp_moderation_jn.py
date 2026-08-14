@@ -3,14 +3,14 @@ Step 17 — Johnson-Neyman analysis for SP moderation ROIs.
 ======================================================================
 
 Input:  derivatives/step16/step16_sp_posterior_draws.npz
-        results/step16/step16_table5_sp_moderation.csv
+        results/step16/step16_sp_moderation_estimates.csv
 Output:
   derivatives/
     step17_jn_sp_results.csv              — full JN grids per ROI
   results/
-    step17_figure5_jn_nacc.png            — Figure 5: Left NAcc JN
-    step17_figure6_jn_acc.png             — Figure 6: ACC JN (Right + Left, 2 panels)
-    step17_figure_krause_jn.png        — Figure S5: 4 non-sig Krause JN
+    step17_jn_nacc.png            — left NAcc JN
+    step17_jn_acc.png             — ACC JN (Right + Left, 2 panels)
+    step17_figure_krause_jn.png        — the four non-credible Krause JN panels
     step17_text_numbers.csv               — JN boundaries, % sample, slopes
 
 Author: Pedro Valdes-Hernandez (with Claude Opus 4.6)
@@ -40,23 +40,23 @@ LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
 IN_DRAWS_NPZ = os.path.join(DERIV_DIR, "step16_sp_moderation", "step16_sp_posterior_draws.npz")
-IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation", "step16_table5_sp_moderation.csv")
+IN_MODERATION_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation", "step16_sp_moderation_estimates.csv")
 
 OUT_JN_CSV = os.path.join(STEP_DERIV_DIR, "step17_jn_sp_results.csv")
-OUT_FIG5 = os.path.join(STEP_RESULTS_DIR, "step17_figure5_jn_nacc.png")
-OUT_FIG6 = os.path.join(STEP_RESULTS_DIR, "step17_figure6_jn_acc.png")
+OUT_NACC_JN_PNG = os.path.join(STEP_RESULTS_DIR, "step17_jn_nacc.png")
+OUT_ACC_JN_PNG = os.path.join(STEP_RESULTS_DIR, "step17_jn_acc.png")
 #: A step writes into its OWN results folder. tools/collect_deliverables.py
 #: copies what the documents need into results/manuscript/ and
 #: results/supplementary_materials/ under their document-facing names.
 SUPP_DIR = STEP_RESULTS_DIR
 os.makedirs(SUPP_DIR, exist_ok=True)
-OUT_FIG_S5 = os.path.join(SUPP_DIR, "figure_krause_jn.png")
+OUT_KRAUSE_JN_PNG = os.path.join(SUPP_DIR, "figure_krause_jn.png")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step17_text_numbers.csv")
 
-# ROI for Figure 5 (single panel)
-FIG5_ROI = "Left_NAcc"
-# ROIs for Figure 6 (two panels stacked: Right ACC on top, Left ACC below)
-FIG6_ROIS = ["Right_dACC_MCC", "Left_dACC_MCC"]
+# ROI for the NAcc JN figure (single panel)
+NACC_JN_ROI = "Left_NAcc"
+# ROIs for the ACC JN figure (two panels stacked: Right ACC on top, Left ACC below)
+ACC_JN_ROIS = ["Right_dACC_MCC", "Left_dACC_MCC"]
 # Non-credible Krause ROIs for the S5 2x2 merge
 S5_ROIS = ["Contra_S1", "Contra_Middle_Insula", "Left_Thalamus", "Left_Anterior_Insula"]
 
@@ -260,13 +260,13 @@ def run_step17(verbose=True, refit=False):
     os.makedirs(RESULTS_DIR, exist_ok=True)
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
-    if not refit and os.path.exists(IN_DRAWS_NPZ) and os.path.exists(IN_TABLE5_CSV):
+    if not refit and os.path.exists(IN_DRAWS_NPZ) and os.path.exists(IN_MODERATION_CSV):
         if verbose:
             print("  WARNING: Running in replot mode -- loading saved derivatives.")
             print("  If you have changed upstream data or code, re-run with --refit.")
 
     d = np.load(IN_DRAWS_NPZ)
-    table5 = pd.read_csv(IN_TABLE5_CSV, float_precision="round_trip")
+    moderation_table = pd.read_csv(IN_MODERATION_CSV, float_precision="round_trip")
 
     import matplotlib
     matplotlib.use("Agg")
@@ -280,7 +280,7 @@ def run_step17(verbose=True, refit=False):
     def _t(metric, value, note=""):
         text_rows.append({"metric": metric, "value": str(value), "note": note})
 
-    for _, row in table5.iterrows():
+    for _, row in moderation_table.iterrows():
         roi_name = row["ROI"]
 
         a2_key = f"{roi_name}_a2_draws"
@@ -407,13 +407,13 @@ def run_step17(verbose=True, refit=False):
             person_y = a2_mean + gamma_mean * X_vals
         return {"x_raw": person_x_raw, "y": person_y}
 
-    # --- Figure 5: Left NAcc (single panel) ---
-    if FIG5_ROI in jn_results:
-        jn = jn_results[FIG5_ROI]
-        slopes = slopes_all[FIG5_ROI]
-        row = table5[table5["ROI"] == FIG5_ROI].iloc[0]
-        raw_mean = float(d[f"{FIG5_ROI}_raw_mean"][0])
-        raw_sd = float(d[f"{FIG5_ROI}_raw_sd"][0])
+    # --- Left NAcc (single panel) ---
+    if NACC_JN_ROI in jn_results:
+        jn = jn_results[NACC_JN_ROI]
+        slopes = slopes_all[NACC_JN_ROI]
+        row = moderation_table[moderation_table["ROI"] == NACC_JN_ROI].iloc[0]
+        raw_mean = float(d[f"{NACC_JN_ROI}_raw_mean"][0])
+        raw_sd = float(d[f"{NACC_JN_ROI}_raw_sd"][0])
 
         level_labels = [
             f"Q1\u22121.5\u00b7IQR\n({slopes['low']['x_val']:.3f})",
@@ -423,7 +423,7 @@ def run_step17(verbose=True, refit=False):
         level_x_vals = [slopes["low"]["x_val"], slopes["median"]["x_val"],
                         slopes["high"]["x_val"]]
 
-        dots = _person_dots(FIG5_ROI)
+        dots = _person_dots(NACC_JN_ROI)
 
         fig, ax = plt.subplots(figsize=(12.8, 8.05))
         draw_jn_panel(ax, jn, "Sleep \u2192 Pain", slopes,
@@ -432,13 +432,13 @@ def run_step17(verbose=True, refit=False):
                       legend_loc="lower right", info_loc="upper left",
                       person_dots=dots)
         ax.set_xlim(jn["x_grid"][0], jn["x_grid"][-1])
-        fig.savefig(OUT_FIG5, dpi=300, bbox_inches="tight")
+        fig.savefig(OUT_NACC_JN_PNG, dpi=300, bbox_inches="tight")
         plt.close(fig)
         if verbose:
-            print(f"  Saved Figure 5: {OUT_FIG5}")
+            print(f"  Saved left-NAcc JN figure: {OUT_NACC_JN_PNG}")
 
-    # --- Figure 6: Right + Left dACC/MCC (2 panels stacked vertically) ---
-    available_f6 = [r for r in FIG6_ROIS if r in jn_results]
+    # --- Right + Left dACC/MCC (2 panels stacked vertically) ---
+    available_f6 = [r for r in ACC_JN_ROIS if r in jn_results]
     if available_f6:
         fig, axes = plt.subplots(len(available_f6), 1,
                                  figsize=(12.8, 8.05 * len(available_f6)))
@@ -447,7 +447,7 @@ def run_step17(verbose=True, refit=False):
         for ax, roi_name in zip(axes, available_f6):
             jn = jn_results[roi_name]
             slopes = slopes_all[roi_name]
-            row_r = table5[table5["ROI"] == roi_name].iloc[0]
+            row_r = moderation_table[moderation_table["ROI"] == roi_name].iloc[0]
             level_labels = [
                 f"Q1\u22121.5\u00b7IQR\n({slopes['low']['x_val']:.3f})",
                 f"Median\n({slopes['median']['x_val']:.3f})",
@@ -463,12 +463,12 @@ def run_step17(verbose=True, refit=False):
                           person_dots=dots)
             ax.set_xlim(jn["x_grid"][0], jn["x_grid"][-1])
         fig.tight_layout()
-        fig.savefig(OUT_FIG6, dpi=300, bbox_inches="tight")
+        fig.savefig(OUT_ACC_JN_PNG, dpi=300, bbox_inches="tight")
         plt.close(fig)
         if verbose:
-            print(f"  Saved Figure 6: {OUT_FIG6}")
+            print(f"  Saved ACC JN figure: {OUT_ACC_JN_PNG}")
 
-    # --- Figure S5: 2x2 merge of non-credible Krause ROIs ---
+    # --- 2x2 merge of non-credible Krause ROIs ---
     available_s5 = [r for r in S5_ROIS if r in jn_results]
     if len(available_s5) >= 2:
         n_panels = len(available_s5)
@@ -479,7 +479,7 @@ def run_step17(verbose=True, refit=False):
         for i, roi_name in enumerate(available_s5):
             jn = jn_results[roi_name]
             slopes = slopes_all[roi_name]
-            row_r = table5[table5["ROI"] == roi_name].iloc[0]
+            row_r = moderation_table[moderation_table["ROI"] == roi_name].iloc[0]
             level_labels = [
                 f"Q1\u22121.5\u00b7IQR\n({slopes['low']['x_val']:.3f})",
                 f"Median\n({slopes['median']['x_val']:.3f})",
@@ -497,10 +497,10 @@ def run_step17(verbose=True, refit=False):
         for j in range(n_panels, len(axes)):
             axes[j].set_visible(False)
         fig.tight_layout()
-        fig.savefig(OUT_FIG_S5, dpi=300, bbox_inches="tight")
+        fig.savefig(OUT_KRAUSE_JN_PNG, dpi=300, bbox_inches="tight")
         plt.close(fig)
         if verbose:
-            print(f"  Saved Figure S5: {OUT_FIG_S5}")
+            print(f"  Saved Krause JN figure: {OUT_KRAUSE_JN_PNG}")
 
     pd.DataFrame(text_rows).to_csv(OUT_TEXT_CSV, index=False)
     if verbose:

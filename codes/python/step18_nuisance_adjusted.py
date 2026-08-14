@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 """
-Step 18 — Nuisance-adjusted sleep-to-pain fMRI moderation (Section S11, Table S8).
+Step 18 — Nuisance-adjusted sleep-to-pain fMRI moderation (the nuisance-sensitivity table).
 ==================================================================================
 
-Each of the four Table S8 ROIs is refit with its moderator residualized on scanner site,
+Each of the four the nuisance-sensitivity table ROIs is refit with its moderator residualized on scanner site,
 on evoked pain, on mean framewise displacement, and on all three jointly.
 4 ROIs x 4 schemes = 16 fits.
 
-SPLIT OUT OF step 15 on 11 Aug 2026. This half reads Table 5 for its unadjusted column,
+SPLIT OUT OF step 15 on 11 Aug 2026. This half reads the moderation table for its unadjusted column,
 so it must run AFTER the moderation fits; the QC half must run BEFORE them, where the
 paper reports it under "Final MRI samples". One step could not be in both places, and
-leaving it whole meant step 15 silently read the PREVIOUS run's Table 5.
+leaving it whole meant step 15 silently read the PREVIOUS run's the moderation table.
 
 SAMPLES are imported from step 15's `prepare_inputs`, never redefined here. The
 residualization and z-scoring use the FULL ROI table (188 rows; 182 for the two
 contralateralized ROIs), because step 14 z-scored the unadjusted moderator over exactly
 those rows. gamma is "per one SD of the moderator", so standardizing the adjusted gamma
-over a different base would leave Table S8's columns incomparable to Table 5's -- with no
+over a different base would leave the nuisance table's columns incomparable to the moderation table's -- with no
 error and no visible symptom.
 
-Input:  results/step16_sp_moderation/step16_table5_sp_moderation.csv
-Output: results/step18_nuisance_adjusted/step18_tableS8_nuisance_sensitivity.csv
+Input:  results/step16_sp_moderation/step16_sp_moderation_estimates.csv
+Output: results/step18_nuisance_adjusted/step18_nuisance_sensitivity.csv
         derivatives/step18_nuisance_adjusted/step18_nuisance_gamma_draws.npz
 """
 from __future__ import annotations
@@ -54,8 +54,8 @@ IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
                                 "step07_processed_long.csv")
 IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values",
                           "step14_sp_roi_values.csv")
-IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation",
-                             "step16_table5_sp_moderation.csv")
+IN_MODERATION_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation",
+                             "step16_sp_moderation_estimates.csv")
 
 # --- outputs --------------------------------------------------------------
 OUT_MOTION_CSV = os.path.join(STEP_DERIV_DIR, "step15_motion_qc.csv")
@@ -64,8 +64,8 @@ OUT_DIAG_CSV = os.path.join(STEP_DERIV_DIR, "step18_diagnostics.csv")
 OUT_FD_CORR_CSV = os.path.join(STEP_RESULTS_DIR, "step15_motion_correlations.csv")
 OUT_PAIN_CORR_CSV = os.path.join(STEP_RESULTS_DIR, "step15_evokedpain_correlations.csv")
 OUT_SITE_CSV = os.path.join(STEP_RESULTS_DIR, "step15_site_differences.csv")
-OUT_TABLE_S8_CSV = os.path.join(STEP_RESULTS_DIR,
-                                "step18_tableS8_nuisance_sensitivity.csv")
+OUT_NUISANCE_CSV = os.path.join(STEP_RESULTS_DIR,
+                                "step18_nuisance_sensitivity.csv")
 
 # --- library --------------------------------------------------------------
 from coupling_model import (  # noqa: E402
@@ -88,9 +88,9 @@ ALL_SP_ROIS = [
     "Left_NAcc", "Right_NAcc", "Left_dACC_MCC", "Right_dACC_MCC",
 ]
 
-#: the four ROIs that appear in Table S8. Only these are refit — the other four site
+#: the four ROIs that appear in the nuisance-sensitivity table. Only these are refit — the other four site
 #: fits a06b ran are dead compute, they enter no table and no sentence.
-TABLE_S8_ROIS = ["Left_NAcc", "Right_NAcc", "Left_dACC_MCC", "Right_dACC_MCC"]
+NUISANCE_ROIS = ["Left_NAcc", "Right_NAcc", "Left_dACC_MCC", "Right_dACC_MCC"]
 
 #: adjustment schemes; the covariate maps themselves are assembled at run time
 SCHEMES = ["site", "pain", "motion", "all3"]
@@ -230,7 +230,7 @@ def run_step18(verbose=True, refit=False):
     covmaps = {"site": [site_map], "pain": [pain_map], "motion": [fd_map],
                "all3": [site_map, pain_map, fd_map]}
 
-    have_fits = os.path.exists(OUT_DRAWS_NPZ) and os.path.exists(OUT_TABLE_S8_CSV)
+    have_fits = os.path.exists(OUT_DRAWS_NPZ) and os.path.exists(OUT_NUISANCE_CSV)
     if not refit and not have_fits:
         if verbose:
             print("  Saved fits not found — forcing refit of the 16 models.")
@@ -243,13 +243,13 @@ def run_step18(verbose=True, refit=False):
         if verbose:
             print("  WARNING: Running in load mode -- using saved posterior draws.")
             print("  If you have changed upstream data or code, re-run with --refit.")
-        table_s8 = pd.read_csv(OUT_TABLE_S8_CSV, float_precision="round_trip")
+        nuisance_table = pd.read_csv(OUT_NUISANCE_CSV, float_precision="round_trip")
         draws = dict(np.load(OUT_DRAWS_NPZ, allow_pickle=False))
     else:
         # ------ FULL MCMC: 4 ROIs x 4 schemes ------
-        pub = pd.read_csv(IN_TABLE5_CSV, float_precision="round_trip").set_index("ROI")
+        pub = pd.read_csv(IN_MODERATION_CSV, float_precision="round_trip").set_index("ROI")
         draws, table_rows = {}, []
-        for roi in TABLE_S8_ROIS:
+        for roi in NUISANCE_ROIS:
             mod = roi_maps[roi]
             ids = list(mod)
             z = np.array([mod[i] for i in ids], dtype=float)
@@ -307,16 +307,16 @@ def run_step18(verbose=True, refit=False):
 
             table_rows.append(row)
 
-        table_s8 = pd.DataFrame(table_rows)
-        table_s8.to_csv(OUT_TABLE_S8_CSV, index=False)
+        nuisance_table = pd.DataFrame(table_rows)
+        nuisance_table.to_csv(OUT_NUISANCE_CSV, index=False)
         np.savez(OUT_DRAWS_NPZ, **draws)
         if verbose:
-            print(f"\n  Saved Table S8 data: {OUT_TABLE_S8_CSV}")
+            print(f"\n  Saved nuisance-sensitivity data: {OUT_NUISANCE_CSV}")
             print(f"  Saved draws: {OUT_DRAWS_NPZ}")
 
     # The NPZ is the provenance of the table: one gamma_sp draw array per fit.
     expected_draws = [f"{roi}_{scheme}_gamma_sp_draws"
-                      for roi in TABLE_S8_ROIS for scheme in SCHEMES]
+                      for roi in NUISANCE_ROIS for scheme in SCHEMES]
     missing_draws = [k for k in expected_draws if k not in draws]
     if missing_draws:
         raise ValueError(f"{OUT_DRAWS_NPZ} is missing draws for: {missing_draws}")
@@ -324,7 +324,7 @@ def run_step18(verbose=True, refit=False):
 
     # numbers from the table, identically on both paths
     n_persons_seen = []
-    for _, row in table_s8.iterrows():
+    for _, row in nuisance_table.iterrows():
         roi = row["ROI"]
         for scheme in SCHEMES:
             nums[f"gamma_sp_{roi}_{scheme}"] = float(row[f"gamma_sp_{scheme}"])
@@ -372,7 +372,7 @@ def run_step18(verbose=True, refit=False):
                   f"tail ESS >= {nums['ess_tail_min_all_16']:.0f}, "
                   f"{nums['n_divergences_16']} divergence(s)")
     elif verbose:
-        print("  WARNING: no diagnostics records for step 15 — the Table S8 note's "
+        print("  WARNING: no diagnostics records for step 15 — the the nuisance-sensitivity table note's "
               "R-hat/ESS/divergence numbers cannot be published. Re-run with --refit.")
 
     path = write_numbers(STEP_RESULTS_DIR, nums, prefix="step18")

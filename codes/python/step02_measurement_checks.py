@@ -395,8 +395,8 @@ def assemble_numbers(loadings_df, congruence_df, dominance_df):
         nums[f"congruence_{key}_f2"] = float(published.loc[name, "congruence_F2"])
     # The "X or above" sentence covers the congruence table's three rows only; POOLED is the
     # estimator control and is reported separately as congruence_pooled_f1/f2.
-    table_s2 = published.loc[list(REPORTED_SAMPLINGS), ["congruence_F1", "congruence_F2"]]
-    nums["congruence_min_across_samplings"] = float(np.min(table_s2.values))
+    congruence = published.loc[list(REPORTED_SAMPLINGS), ["congruence_F1", "congruence_F2"]]
+    nums["congruence_min_across_samplings"] = float(np.min(congruence.values))
     nums["congruence_threshold"] = float(CONGRUENCE_THRESHOLD)
 
     dom = dominance_df.set_index("level")

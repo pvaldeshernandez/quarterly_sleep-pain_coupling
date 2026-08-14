@@ -1,5 +1,5 @@
 """
-Step 23 — Person-mean severity moderation of coupling (Table S2).
+Step 23 — Person-mean severity moderation of coupling.
 ======================================================================
 
 Tests whether person-mean pain severity or sleep quality moderate
@@ -11,7 +11,7 @@ the coupling parameters. Three models:
 Input:  derivatives/step07_varx_data/step07_processed_long.csv
 Output:
   results/step23_severity_moderation/
-    table_s2_severity.csv          — Table S2
+    step23_severity_moderation_estimates.csv          — the severity-moderation table
     step23_text_numbers.csv        — estimates for manuscript text
 
 Author: Pedro Valdes-Hernandez (with Claude Sonnet 4.6)
@@ -48,7 +48,7 @@ sys.path.insert(0, LIB_DIR)
 IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
                                 "step07_processed_long.csv")
 
-OUT_TABLE_CSV = os.path.join(SUPP_DIR, "table_s2_severity.csv")
+OUT_TABLE_CSV = os.path.join(SUPP_DIR, "step23_severity_moderation_estimates.csv")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step23_text_numbers.csv")
 
 
@@ -85,7 +85,7 @@ def run_step23(verbose=True, refit=False):
 
     if verbose:
         print("=" * 70)
-        print("STEP 23 — Person-mean severity moderation (Table S2)")
+        print("STEP 23 — Person-mean severity moderation")
         print("=" * 70)
 
     # Check whether saved derivatives exist
@@ -100,7 +100,7 @@ def run_step23(verbose=True, refit=False):
         if verbose:
             print("  WARNING: Running in replot mode -- loading saved derivatives.")
             print("  If you have changed upstream data or code, re-run with --refit.")
-            print(f"\n  Loaded Table S2: {OUT_TABLE_CSV}")
+            print(f"\n  Loaded severity moderation: {OUT_TABLE_CSV}")
             print(f"  Loaded text numbers: {OUT_TEXT_CSV}")
         if verbose:
             print("=" * 70)
@@ -150,7 +150,7 @@ def run_step23(verbose=True, refit=False):
         # For the joint model, we'll fit with pain controlling for sleep
         # by residualizing, or we fit a custom model.
         #
-        # Simpler approach: since Table S2 shows the joint model has
+        # Simpler approach: since the severity table shows the joint model has
         # essentially the same results, and coupling_model supports only
         # one moderator, we fit each moderator separately for "Alone"
         # models. For "Joint", we need a 2-moderator model.
@@ -239,11 +239,11 @@ def run_step23(verbose=True, refit=False):
 
         del idata
 
-    # Save Table S2
-    table_s2 = pd.DataFrame(table_rows)
-    table_s2.to_csv(OUT_TABLE_CSV, index=False)
+    # Save the severity table
+    severity_table = pd.DataFrame(table_rows)
+    severity_table.to_csv(OUT_TABLE_CSV, index=False)
     if verbose:
-        print(f"\n  Saved Table S2: {OUT_TABLE_CSV}")
+        print(f"\n  Saved severity moderation: {OUT_TABLE_CSV}")
 
     pd.DataFrame(text_rows).to_csv(OUT_TEXT_CSV, index=False)
     if verbose:
@@ -419,7 +419,7 @@ def _fit_joint_model(model_df, unique_ids, id_map,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 23 — Person-mean severity moderation (Table S2)."
+        description="Step 23 — Person-mean severity moderation."
     )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--refit", action="store_true",

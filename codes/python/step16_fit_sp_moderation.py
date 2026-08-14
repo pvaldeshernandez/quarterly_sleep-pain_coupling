@@ -8,7 +8,7 @@ Output:
   derivatives/
     step16_sp_posterior_draws.npz     — per-ROI posterior draws
   results/
-    step16_table5_sp_moderation.csv   — Table 5: fMRI SP moderators
+    step16_sp_moderation_estimates.csv   — fMRI sleep-to-pain moderators
     step16_sign_concordance.csv       — sign test results
     step16_text_numbers.csv           — gamma estimates, p-values, etc.
 
@@ -48,7 +48,7 @@ IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data", "step07_processed
 IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values", "step14_sp_roi_values.csv")
 
 OUT_DRAWS_NPZ = os.path.join(STEP_DERIV_DIR, "step16_sp_posterior_draws.npz")
-OUT_TABLE5_CSV = os.path.join(STEP_RESULTS_DIR, "step16_table5_sp_moderation.csv")
+OUT_MODERATION_CSV = os.path.join(STEP_RESULTS_DIR, "step16_sp_moderation_estimates.csv")
 OUT_SIGN_CSV = os.path.join(STEP_RESULTS_DIR, "step16_sign_concordance.csv")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step16_text_numbers.csv")
 
@@ -91,7 +91,7 @@ def run_step16(verbose=True, refit=False):
     roi_df = pd.read_csv(IN_ROI_CSV, float_precision="round_trip")
 
     # Check whether saved derivatives exist
-    saved_exist = os.path.exists(OUT_DRAWS_NPZ) and os.path.exists(OUT_TABLE5_CSV)
+    saved_exist = os.path.exists(OUT_DRAWS_NPZ) and os.path.exists(OUT_MODERATION_CSV)
     if not refit and not saved_exist:
         if verbose:
             print("  Saved derivatives not found — forcing refit.")
@@ -102,7 +102,7 @@ def run_step16(verbose=True, refit=False):
         if verbose:
             print("  WARNING: Running in replot mode -- loading saved derivatives.")
             print("  If you have changed upstream data or code, re-run with --refit.")
-        table5 = pd.read_csv(OUT_TABLE5_CSV, float_precision="round_trip")
+        moderation_table = pd.read_csv(OUT_MODERATION_CSV, float_precision="round_trip")
         draws_dict = dict(np.load(OUT_DRAWS_NPZ))
     else:
         # ------ FULL MCMC FIT ------
@@ -191,11 +191,11 @@ def run_step16(verbose=True, refit=False):
 
             del idata
 
-        # Save Table 5
-        table5 = pd.DataFrame(table_rows)
-        table5.to_csv(OUT_TABLE5_CSV, index=False)
+        # Save the moderation table
+        moderation_table = pd.DataFrame(table_rows)
+        moderation_table.to_csv(OUT_MODERATION_CSV, index=False)
         if verbose:
-            print(f"\n  Saved Table 5: {OUT_TABLE5_CSV}")
+            print(f"\n  Saved moderation table: {OUT_MODERATION_CSV}")
 
         # Save posterior draws
         np.savez(OUT_DRAWS_NPZ, **draws_dict)
@@ -209,7 +209,7 @@ def run_step16(verbose=True, refit=False):
     n_tested = 0
     sign_rows = []
     for roi_name in KRAUSE_ROIS:
-        row = table5[table5["ROI"] == roi_name]
+        row = moderation_table[moderation_table["ROI"] == roi_name]
         if len(row) == 0:
             continue
         gamma = row["gamma_sp"].iloc[0]
@@ -238,7 +238,7 @@ def run_step16(verbose=True, refit=False):
     def _t(metric, value, note=""):
         text_rows.append({"metric": metric, "value": str(value), "note": note})
 
-    for _, row in table5.iterrows():
+    for _, row in moderation_table.iterrows():
         roi = row["ROI"]
         _t(f"gamma_sp_{roi}", f"{row['gamma_sp']:+.4f}")
         _t(f"gamma_sp_{roi}_ci", f"[{row['gamma_sp_ci_lo']:+.4f}, {row['gamma_sp_ci_hi']:+.4f}]")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 15 — Imaging quality control of the fMRI subsample (Section S9).
+Step 15 — Imaging quality control of the fMRI subsample .
 =====================================================================
 
 Head motion (framewise displacement read from each participant's SPM design matrix),
@@ -8,7 +8,7 @@ scanner site, and the maximum pain rating evoked during the fMRI run -- plus how
 those tracks the eight sleep-to-pain ROI values.
 
 The sixteen nuisance-adjusted refits that used to live here moved to STEP 18 on 11 Aug
-2026. They read Table 5 for their unadjusted column, so keeping them here dragged this QC
+2026. They read the moderation table for their unadjusted column, so keeping them here dragged this QC
 after the moderation fits, while the paper reports it under "Final MRI samples", before
 them. `prepare_inputs()` is the setup both steps share; step 18 imports it rather than
 repeating it, so the two sample definitions cannot drift apart.
@@ -18,8 +18,8 @@ of the ROI table with the analytic sample, N = 174 — not on the 188 rows of th
 table. That is the sample the surrounding text describes and the sample all 16 fits use.
 The RESIDUALIZATION and z-scoring stay on the full ROI-table sample (188 rows; 182 for
 the two contralateralized ROIs), because step 13 z-scored the unadjusted moderator over
-exactly those rows and the adjusted columns of Table S8 must remain comparable to the
-unadjusted column of Table 5. The two samples are deliberately different and both are
+exactly those rows and the adjusted columns of the nuisance-sensitivity table must remain comparable to the
+unadjusted column of the moderation table. The two samples are deliberately different and both are
 recorded (`n_fmri_sample`, `n_resid_sample_<ROI>`).
 
 The per-ROI scanner-site test is written for BOTH scopes as data (`sample` column of
@@ -31,7 +31,7 @@ Input:
   data/original/participants_wideformat.xlsx               (READ ONLY)
   derivatives/step07_varx_data/step07_processed_long.csv   (step 04)
   derivatives/step14_sp_roi_values/step14_sp_roi_values.csv (step 13)
-  results/step16_sp_moderation/step16_table5_sp_moderation.csv (step 14)
+  results/step16_sp_moderation/step16_sp_moderation_estimates.csv (step 14)
   derivatives/step15_imaging_qc/diagnostics_step15_*.json  (self, written by run_fit)
 
 Output:
@@ -82,8 +82,8 @@ IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
                                 "step07_processed_long.csv")
 IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values",
                           "step14_sp_roi_values.csv")
-IN_TABLE5_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation",
-                             "step16_table5_sp_moderation.csv")
+IN_MODERATION_CSV = os.path.join(RESULTS_DIR, "step16_sp_moderation",
+                             "step16_sp_moderation_estimates.csv")
 
 # --- outputs --------------------------------------------------------------
 OUT_MOTION_CSV = os.path.join(STEP_DERIV_DIR, "step15_motion_qc.csv")
@@ -92,8 +92,6 @@ OUT_DIAG_CSV = os.path.join(STEP_DERIV_DIR, "step15_diagnostics.csv")
 OUT_FD_CORR_CSV = os.path.join(STEP_RESULTS_DIR, "step15_motion_correlations.csv")
 OUT_PAIN_CORR_CSV = os.path.join(STEP_RESULTS_DIR, "step15_evokedpain_correlations.csv")
 OUT_SITE_CSV = os.path.join(STEP_RESULTS_DIR, "step15_site_differences.csv")
-OUT_TABLE_S8_CSV = os.path.join(STEP_RESULTS_DIR,
-                                "step15_tableS8_nuisance_sensitivity.csv")
 
 # --- library --------------------------------------------------------------
 from coupling_model import (  # noqa: E402
@@ -116,9 +114,9 @@ ALL_SP_ROIS = [
     "Left_NAcc", "Right_NAcc", "Left_dACC_MCC", "Right_dACC_MCC",
 ]
 
-#: the four ROIs that appear in Table S8. Only these are refit — the other four site
+#: the four ROIs that appear in the nuisance-sensitivity table. Only these are refit — the other four site
 #: fits a06b ran are dead compute, they enter no table and no sentence.
-TABLE_S8_ROIS = ["Left_NAcc", "Right_NAcc", "Left_dACC_MCC", "Right_dACC_MCC"]
+NUISANCE_ROIS = ["Left_NAcc", "Right_NAcc", "Left_dACC_MCC", "Right_dACC_MCC"]
 
 #: adjustment schemes; the covariate maps themselves are assembled at run time
 SCHEMES = ["site", "pain", "motion", "all3"]
@@ -235,7 +233,7 @@ def prepare_inputs(verbose=True, refit=False):
     Returns a dict. `fmri_ids` (N=174) is the fitted subsample every DESCRIPTIVE
     is computed on; `roi_maps` is keyed over the full ROI table (188 rows, 182 for
     the two contralateralized ROIs), which is the base step 14 z-scored the
-    unadjusted moderator over. Table S8 stays comparable to Table 5 only if the
+    unadjusted moderator over. the nuisance-sensitivity table stays comparable to the moderation table only if the
     residualization uses that same base, so both live here in one definition.
     """
     os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
@@ -257,9 +255,9 @@ def prepare_inputs(verbose=True, refit=False):
     if unexpected and verbose:
         print(f"  WARNING: ROI table has ROIs this step does not report: {unexpected}")
     rois = [r for r in ALL_SP_ROIS if r in present]
-    missing_targets = [r for r in TABLE_S8_ROIS if r not in present]
+    missing_targets = [r for r in NUISANCE_ROIS if r not in present]
     if missing_targets:
-        raise ValueError(f"Table S8 ROIs absent from {IN_ROI_CSV}: {missing_targets}")
+        raise ValueError(f"the nuisance-sensitivity table ROIs absent from {IN_ROI_CSV}: {missing_targets}")
 
     df_full, model_df, unique_ids, id_map = load_varx_frame(IN_PROCESSED_CSV,
                                                             verbose=False)
@@ -425,7 +423,7 @@ def run_step15(verbose=True, refit=False):
     # numbers.json: the sentence in the Results describes the 174, and publishing
     # the 188 numbers too would let a token match the sample the text does not use.
     # Which scope the sentence should claim ("no ROI" over eight ROIs, or over the
-    # four of Table S8) is Pedro's call, not the code's — both counts are emitted.
+    # four of the nuisance-sensitivity table) is Pedro's call, not the code's — both counts are emitted.
     # ------------------------------------------------------------------
     site_rows, site_p = [], {}
     for sample_label, ids in (("fmri_subsample", fmri_ids),
@@ -448,14 +446,14 @@ def run_step15(verbose=True, refit=False):
         nums["site_diff_p_min"] = float(finite_p[worst])
         nums["site_diff_p_min_roi"] = worst
     nums["site_diff_n_credible_8roi"] = int(sum(v < 0.05 for v in finite_p.values()))
-    nums["site_diff_n_credible_tableS8"] = int(
-        sum(site_p.get(r, np.nan) < 0.05 for r in TABLE_S8_ROIS
+    nums["site_diff_n_credible_nuisance"] = int(
+        sum(site_p.get(r, np.nan) < 0.05 for r in NUISANCE_ROIS
             if np.isfinite(site_p.get(r, np.nan)))
     )
     if verbose:
         print(f"  Site split: UF {nums['n_site_uf']} / UAB {nums['n_site_uab']}; "
               f"ROIs differing at p<.05 — {nums['site_diff_n_credible_8roi']}/8 "
-              f"(all eight), {nums['site_diff_n_credible_tableS8']}/4 (Table S8)")
+              f"(all eight), {nums['site_diff_n_credible_nuisance']}/4 (the nuisance-sensitivity table)")
 
     # n_resid_sample_* describes the base the RESIDUALIZATION uses, which is step 18's
     # concern, not this step's. It is computed here because prepare_inputs builds the ROI
