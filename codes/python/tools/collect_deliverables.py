@@ -5,7 +5,7 @@
         |
         v  this script
     results/manuscript/         figure1.png .. figure6.png
-    results/supplementary_materials/   figureS1.png .. figureS9.png, tableS9_*.csv ..
+    results/supplementary_materials/   figureS1.png .. figureS9.png, tableS1_*.csv ..
     results/reported_values.csv        every named value, with the step that produced it
 
 WHY THIS EXISTS. Steps write into their own folder -- one step, one folder -- and name
@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import sys
 
@@ -74,20 +75,23 @@ SUPPLEMENT = {
     "tableS2_panelB_by_quarter.csv": ("step04_raw_descriptives", "step04_by_quarter.csv"),
     "tableS2_panelC_variance.csv": ("step04_raw_descriptives",
                                     "step04_variance_decomposition.csv"),
-    "tableS3_convergence.csv": ("step24_diagnostics", "step24_by_family.csv"),
-    "tableS4_sampler.csv": ("step24_diagnostics", "step24_sampler.csv"),
-    "tableS5_ppc.csv": ("step09_posterior_predictive_check", "step09_table_s5_ppc.csv"),
-    "tableS6_panelA_coupling.csv": ("step10_timevarying_covariates",
-                                    "step10_tableS6_panelA_coupling.csv"),
-    "tableS6_panelB_covariates.csv": ("step10_timevarying_covariates",
-                                      "step10_tableS6_panelB_covariates.csv"),
-    "tableS7_interpolation.csv": ("step11_interpolation_sensitivity",
+    # The two time-varying panels feed BOTH Table S3 (fatigue and mood) and Table S4
+    # (treatment activity), so both numbers are in the name; one file, two tables.
+    "tableS3_S4_panelA_coupling.csv": ("step10_timevarying_covariates",
+                                       "step10_tableS6_panelA_coupling.csv"),
+    "tableS3_S4_panelB_covariates.csv": ("step10_timevarying_covariates",
+                                         "step10_tableS6_panelB_covariates.csv"),
+    "tableS5_interpolation.csv": ("step11_interpolation_sensitivity",
                                   "step11_tableS7_interpolation.csv"),
-    "tableS8_nuisance.csv": ("step18_nuisance_adjusted",
+    "tableS6_nuisance.csv": ("step18_nuisance_adjusted",
                              "step18_tableS8_nuisance_sensitivity.csv"),
-    "tableS9_fmri_arousal.csv": ("step21_ps_moderation", "table_s1_fmri_arousal.csv"),
-    "tableS9_vbm_arousal.csv": ("step21_ps_moderation", "table_s1_vbm_arousal.csv"),
-    "tableS10_severity.csv": ("step23_severity_moderation", "table_s2_severity.csv"),
+    "tableS7_fmri_arousal.csv": ("step21_ps_moderation", "table_s1_fmri_arousal.csv"),
+    "tableS7_vbm_arousal.csv": ("step21_ps_moderation", "table_s1_vbm_arousal.csv"),
+    "tableS8_convergence.csv": ("step24_diagnostics", "step24_by_family.csv"),
+    "tableS9_sampler.csv": ("step24_diagnostics", "step24_sampler.csv"),
+    "tableS10_ppc.csv": ("step09_posterior_predictive_check",
+                         "step09_table_s5_ppc.csv"),
+    "tableS11_severity.csv": ("step23_severity_moderation", "table_s2_severity.csv"),
 }
 
 
@@ -97,14 +101,37 @@ def collect(mapping, outdir, dry):
     for doc_name, (step_dir, src_name) in sorted(mapping.items()):
         src = os.path.join(RESULTS, step_dir, src_name)
         if not os.path.exists(src):
-            print(f"  MISSING  {doc_name:26s} <- {step_dir}/{src_name}")
+            print(f"  MISSING  {doc_name:32s} <- {step_dir}/{src_name}")
             missing += 1
             continue
-        print(f"  ok       {doc_name:26s} <- {step_dir}/{src_name}")
+        print(f"  ok       {doc_name:32s} <- {step_dir}/{src_name}")
         if not dry:
             shutil.copy2(src, os.path.join(outdir, doc_name))
         ok += 1
+    sweep(mapping, outdir, dry)
     return ok, missing
+
+
+def sweep(mapping, outdir, dry):
+    """Move deliverables no longer in the mapping into `archive/`.
+
+    Renumbering makes this necessary, not tidy. `tableS3_convergence.csv` was the
+    convergence table until Model diagnostics moved to S12; Table S3 is now the
+    fatigue-and-mood sensitivity. Left in place, that file does not merely go stale --
+    it asserts, by its name, a table number that belongs to different data. Anything
+    reading the folder by name gets a confident wrong answer.
+    """
+    orphans = [f for f in sorted(os.listdir(outdir))
+               if re.match(r"(figure|table)S?\d", f) and f not in mapping]
+    if not orphans:
+        return
+    dest = os.path.join(outdir, "archive")
+    print(f"  -- {len(orphans)} file(s) no longer in the mapping -> archive/")
+    for f in orphans:
+        print(f"     archived {f}")
+        if not dry:
+            os.makedirs(dest, exist_ok=True)
+            shutil.move(os.path.join(outdir, f), os.path.join(dest, f))
 
 
 def collect_values(dry):
