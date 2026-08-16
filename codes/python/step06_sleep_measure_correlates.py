@@ -32,8 +32,8 @@ section's ranking claim depend on) is data, not a re-sort.
 Restricted UNCONDITIONALLY to the N=229 coupling analytic sample, so no n in any
 table exceeds the N reported elsewhere in the paper.
 
-Input:  data/original/participants_wideformat.xlsx          (read-only)
-        data/original/UPLOAD2_Data_Dictionary.xlsx          (read-only; the sleep_diary
+Input:  data/step00_extracted_long.csv                      (quarter-0 baseline block)
+        data/step00_extracted_dictionary.xlsx               (the sleep_diary
                                                              form's nightly variable names)
         derivatives/step00_extract_data/step00_extracted_long.csv   (step 00; ID, quarter,
                                                              q13_sleep -- falls back to
@@ -86,8 +86,12 @@ RESULTS_DIR = os.path.join(ROOT, "results")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step06_sleep_measure_correlates")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step06_sleep_measure_correlates")
 
-IN_WIDE = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
-IN_DICT = os.path.join(DATA_DIR, "original", "UPLOAD2_Data_Dictionary.xlsx")
+# Step 00 is the only door onto the raw export: it extracts the 84 baseline sleep
+# source columns and lands the reduced values on its quarter-0 row. This step reads
+# that, not `data/original/`, so the sample and the missing-code handling cannot
+# differ between what step 00 published and what this step correlates.
+IN_BASELINE = os.path.join(DATA_DIR, "step00_extracted_long.csv")
+IN_DICT = os.path.join(DATA_DIR, "step00_extracted_dictionary.xlsx")
 IN_ANALYTIC = os.path.join(DERIV_DIR, "step03_curation", "step03_curated_long.csv")
 
 # Step 00's long export. The pipeline is moving it out of the read-only data/ tree into
@@ -146,8 +150,8 @@ def _load_inputs(verbose=True):
     restricted by construction rather than by each consumer remembering to.
     """
     in_long = _first_existing(IN_LONG_CANDIDATES, "step 00 long export")
-    for path, what in ((IN_WIDE, "participants export"),
-                       (IN_DICT, "data dictionary"),
+    for path, what in ((IN_BASELINE, "step 00 baseline export"),
+                       (IN_DICT, "step 00 data dictionary"),
                        (IN_ANALYTIC, "step 03 analytic sample")):
         if not os.path.exists(path):
             raise FileNotFoundError(f"{what}: {path}")
@@ -169,8 +173,8 @@ def _load_inputs(verbose=True):
     rep = long[long["quarter"].isin(QUARTERS)].rename(
         columns={"quarter": "occasion", "q13_sleep": "value"})
 
-    wide = pd.read_excel(IN_WIDE)
-    wide["ID"] = wide["ID"].astype(str)
+    wide = pd.read_csv(IN_BASELINE, dtype={"ID": str}, float_precision="round_trip")
+    wide = wide[wide["quarter"] == 0].drop(columns=["quarter"])
     wide = wide[wide["ID"].isin(ids)]
     dd = pd.read_excel(IN_DICT)
 

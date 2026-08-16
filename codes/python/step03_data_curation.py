@@ -191,44 +191,33 @@ DEMOGRAPHICS_PAIN_DIARY = [
 ]
 
 
-def _baseline_sleep(analytic_ids):
+def _baseline_sleep(baseline, analytic_ids):
     """{label -> Series of person-level values} for every baseline sleep instrument.
 
-    Delegates to lib/sleep_instruments.baseline_frame and lib/stopbang.scores, which are
-    what the sleep-correlates section uses, so the demographics table and the sleep-correlates section cannot report different numbers for
-    the same instrument. Returns an empty dict, with a warning, if the wide export or the
-    data dictionary is unavailable -- the demographics table is still worth producing
-    without its sleep block, but silently dropping it is what left the gap in the first
-    place.
+    Read from step 00's quarter-0 block, not re-derived here. Step 00 extracts the 84
+    source columns and reduces them -- ten seven-night diary means, the eight-component
+    STOP-BANG score, the six questionnaire columns -- using lib/sleep_instruments and
+    lib/stopbang. The demographics table and the sleep-correlates section therefore read
+    the same numbers from the same place, which is what `total_womac__s1` has always
+    done and what these had to open the raw export to get.
     """
-    import sleep_instruments as si
-    import stopbang as sbg
-
-    wide_path = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
-    dict_path = os.path.join(DATA_DIR, "original", "UPLOAD2_Data_Dictionary.xlsx")
-    for p in (wide_path, dict_path):
-        if not os.path.exists(p):
-            print(f"    WARNING: {os.path.basename(p)} not found; the demographics table will have no "
-                  f"sleep rows. They are NOT optional -- fix the path.")
-            return {}
-
-    wide = pd.read_excel(wide_path)
-    dd = pd.read_excel(dict_path)
-    wide["ID"] = wide["ID"].astype(str)
-    values, _meta = si.baseline_frame(wide, dd, min_nights=si.MIN_NIGHTS)
-
+    # From step 00's export rather than from `baseline` (step 01's scored frame):
+    # step 01 rebuilds its baseline block only under --refit, so a variable added to
+    # step 00 would be silently absent here until the factor model is re-estimated.
+    # These values are step 00's product; read them from step 00.
+    step00 = os.path.join(DATA_DIR, "step00_extracted_long.csv")
+    b = pd.read_csv(step00, dtype={"ID": str}, float_precision="round_trip")
+    b = b[b["quarter"] == 0].drop(columns=["quarter"])
     ids = set(map(str, analytic_ids))
+    b = b[b["ID"].isin(ids)].set_index("ID")
+
     out = {}
     for key, label in DEMOGRAPHICS_SLEEP + DEMOGRAPHICS_PAIN_DIARY:
-        if key == "stopbang_total":
-            s = sbg.scores(ids=ids, wide=wide)
-        elif key in values:
-            s = values[key]
-            s = s[s.index.astype(str).isin(ids)]
-        else:
-            print(f"    WARNING: baseline sleep measure {key!r} unavailable")
+        if key not in b.columns:
+            print(f"    WARNING: baseline sleep measure {key!r} is not in step 00's "
+                  f"export; add it there rather than reading the raw file here")
             continue
-        out[label] = s
+        out[label] = pd.to_numeric(b[key], errors="coerce")
     return out
 
 
@@ -308,7 +297,7 @@ def compute_demographics(
                      f"{vals.mean():.1f} ({vals.std():.1f})")
 
     # Diary pain, from the same nightly form as the diary sleep rows below.
-    sleep_values = _baseline_sleep(analytic_ids)
+    sleep_values = _baseline_sleep(baseline, analytic_ids)
     for _key, label in DEMOGRAPHICS_PAIN_DIARY:
         vals = sleep_values.get(label)
         if vals is not None and len(vals.dropna()) >= 20:

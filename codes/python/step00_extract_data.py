@@ -57,9 +57,12 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import sys
 from typing import List, Tuple
 
 import pandas as pd
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 
 
 # =====================================================================
@@ -150,12 +153,12 @@ BASELINE_VARS = [
     # QST knee pain rating (the baseline-characteristics table + the convergent-validity figure)
     "qst_knee_pain_rating__s1",
 
-    # Baseline sleep instruments (the demographics table). The paper's sleep measure is the
-    # QUARTERLY item q13; these characterize how the sample slept at baseline, which a
-    # sleep-pain paper's demographics table has to state. Names are the canonical ones
-    # in lib/sleep_instruments.py, so this table and the sleep-measure correlations refer
-    # to the same variables. STOP-BANG is not here because it is DERIVED from eight
-    # components rather than exported as a column; lib/stopbang.py scores it.
+    # Baseline sleep questionnaires. The paper's sleep measure is the QUARTERLY item
+    # q13; these characterize how the sample slept at baseline, which a sleep-pain
+    # paper's demographics table has to state. Names are the canonical ones in
+    # lib/sleep_instruments.py, so that table and the sleep-measure correlations refer
+    # to the same variables. The rest of the baseline sleep set -- the nightly diary
+    # and STOP-BANG's components -- is listed further down.
     "Insomnia__s1",
     "PROMIS_Sleep_Tscore__s1",
     "PSQI_Duration__s1",
@@ -166,6 +169,76 @@ BASELINE_VARS = [
 
     # fMRI stimulation side (for contralateralized S1 / Mid Insula)
     "img_test_site__s1",
+
+    # --- Baseline SLEEP source columns -------------------------------------
+    # The 17 baseline sleep variables the paper reports are built from these 84
+    # columns (6 of them -- the ISI total, PROMIS, PSQI and STOP-BANG's BMI, age
+    # and sex -- are already listed above). Ten nightly diary items x 7 nights
+    # become ten person-means, eight components become the STOP-BANG total, and
+    # six questionnaire columns are read as they stand. `derive_baseline_sleep`
+    # below does that reduction, so the quarter-0 row carries the 17 reported
+    # values the way it already carries `total_womac__s1`.
+    #
+    # Night 1 of some items has NO trailing 1 (`sleep_refreshed__s1`, then
+    # `sleep_refreshed2__s1`..), which is why these are enumerated rather than
+    # generated from a pattern -- and why the derivation resolves them from the
+    # data dictionary rather than by name.
+    # Diary: sleep quality
+    "sleep_quality1__s1", "sleep_quality2__s1", "sleep_quality3__s1",
+    "sleep_quality4__s1", "sleep_quality5__s1", "sleep_quality6__s1",
+    "sleep_quality7__s1",
+    # Diary: restedness on waking
+    "sleep_refreshed__s1", "sleep_refreshed2__s1", "sleep_refreshed3__s1",
+    "sleep_refreshed4__s1", "sleep_refreshed5__s1", "sleep_refreshed6__s1",
+    "sleep_refreshed7__s1",
+    # Diary: minutes awake after onset
+    "sleep_awakenings_length1__s1", "sleep_awakenings_length2__s1",
+    "sleep_awakenings_length3__s1", "sleep_awakenings_length4__s1",
+    "sleep_awakenings_length5__s1", "sleep_awakenings_length6__s1",
+    "sleep_awakenings_length7__s1",
+    # Diary: sleep-onset latency
+    "sleep_fall_asleep_length1__s1", "sleep_fall_asleep_length2__s1",
+    "sleep_fall_asleep_length3__s1", "sleep_fall_asleep_length4__s1",
+    "sleep_fall_asleep_length5__s1", "sleep_fall_asleep_length6__s1",
+    "sleep_fall_asleep_length7__s1",
+    # Diary: number of awakenings
+    "sleep_wake_up_times1__s1", "sleep_wake_up_times2__s1", "sleep_wake_up_times3__s1",
+    "sleep_wake_up_times4__s1", "sleep_wake_up_times5__s1", "sleep_wake_up_times6__s1",
+    "sleep_wake_up_times7__s1",
+    # Diary: total hours slept
+    "sleep_sleep_length1__s1", "sleep_sleep_length2__s1", "sleep_sleep_length3__s1",
+    "sleep_sleep_length4__s1", "sleep_sleep_length5__s1", "sleep_sleep_length6__s1",
+    "sleep_sleep_length7__s1",
+    # Diary: number of naps
+    "sleep_nap_times1__s1", "sleep_nap_times2__s1", "sleep_nap_times3__s1",
+    "sleep_nap_times4__s1", "sleep_nap_times5__s1", "sleep_nap_times6__s1",
+    "sleep_nap_times7__s1",
+    # Diary: nap duration
+    "sleep_length_nap1__s1", "sleep_length_nap2__s1", "sleep_length_nap3__s1",
+    "sleep_length_nap4__s1", "sleep_length_nap5__s1", "sleep_length_nap6__s1",
+    "sleep_length_nap7__s1",
+    # Diary: sleep medication use
+    "sleep_sleepmeds__s1", "sleep_sleepmeds2__s1", "sleep_sleepmeds3__s1",
+    "sleep_sleepmeds4__s1", "sleep_sleepmeds5__s1", "sleep_sleepmeds6__s1",
+    "sleep_sleepmeds7__s1",
+    # Diary: alcoholic drinks
+    "sleep_alcohol_drinks__s1", "sleep_alcohol_drinks2__s1",
+    "sleep_alcohol_drinks3__s1", "sleep_alcohol_drinks4__s1",
+    "sleep_alcohol_drinks5__s1", "sleep_alcohol_drinks6__s1",
+    "sleep_alcohol_drinks7__s1",
+
+    # Diary: average pain that day. A PAIN item on the same nightly form, reported in
+    # the demographics table beside the sleep rows -- reporting the sleep half of a form
+    # and not the pain half, in a sleep-pain paper, is an omission this table had once.
+    "sleep_pain_rating1__s1", "sleep_pain_rating2__s1", "sleep_pain_rating3__s1",
+    "sleep_pain_rating4__s1", "sleep_pain_rating5__s1", "sleep_pain_rating6__s1",
+    "sleep_pain_rating7__s1",
+
+    # ISI sub-items (the total is listed above)
+    "sleep_insomnia_q1__s1", "sleep_insomnia_q2__s1", "sleep_insomnia_q3__s1",
+
+    # STOP-BANG apnea items and neck circumference (BMI, age and sex are above)
+    "sleep_snore__s1", "sleep_tired_daytime__s1", "sleep_stop_breathing__s1", "sleep_high_bp__s1", "pe_neck_circum__s1",
 
     # Body-map endorsements (the endorsement figure factor-analysis validation)
     "phq_pain_areas___1__s1",
@@ -371,6 +444,51 @@ def build_baseline_rows(wide: pd.DataFrame) -> pd.DataFrame:
     return baseline
 
 
+#: the eleven baseline sleep values that are REDUCED from several columns rather than
+#: read from one. The other six of the seventeen are questionnaire columns already.
+DERIVED_SLEEP_VARS = [
+    "sleep_quality", "sleep_refreshed", "sleep_awakenings_length",
+    "sleep_fall_asleep_length", "sleep_wake_up_times", "sleep_sleep_length",
+    "sleep_nap_times", "sleep_length_nap", "sleep_sleepmeds",
+    "sleep_alcohol_drinks", "stopbang_total",
+    "sleep_pain_rating",          # a pain item, reported beside them in the same table
+]
+
+
+def derive_baseline_sleep(wide: pd.DataFrame, dict_df: pd.DataFrame) -> pd.DataFrame:
+    """The eleven reduced baseline sleep values, one row per subject, indexed by ID.
+
+    WHY THIS IS HERE AND NOT DOWNSTREAM. A baseline pain variable reaches the paper as
+    a column: REDCap exports `total_womac__s1` already scored, `build_baseline_rows`
+    copies it verbatim onto the quarter-0 row, and every consumer reads it from there.
+    The baseline sleep variables had no such column -- ten of them are a mean over seven
+    nightly administrations and one is an eight-component score -- so each consumer
+    opened the raw export and reduced them again. Doing the reduction here gives the
+    seventeen sleep variables the same standing as `total_womac__s1`: present in
+    `step00_extracted_long.csv`, read by everyone, computed once.
+
+    The reduction itself is NOT reimplemented. `lib/sleep_instruments.baseline_frame`
+    and `lib/stopbang.components` remain the definitions -- of what counts as a diary
+    item, of the >= 3 of 7 nights rule, of the REDCap missing codes to mask, and of the
+    STOP-BANG cut-points. This function calls them and lands the answer in the export.
+    """
+    import sleep_instruments as si
+    import stopbang as sbg
+
+    values, _meta = si.baseline_frame(wide, dict_df, min_nights=si.MIN_NIGHTS)
+    values = values[[c for c in si.DIARY] + ["sleep_pain_rating"]].copy()
+    # `components` is passed the frame rather than left to re-read the xlsx, so this
+    # step keeps its promise that the export is the only file it opens.
+    values[si.STOPBANG_ROW] = sbg.components(wide)["score"]
+
+    values.index = values.index.astype(str)
+    values.index.name = "ID"
+    missing = [c for c in DERIVED_SLEEP_VARS if c not in values.columns]
+    if missing:
+        raise KeyError(f"baseline sleep reduction produced no {missing}")
+    return values[DERIVED_SLEEP_VARS].reset_index()
+
+
 def assemble_long(wide: pd.DataFrame) -> pd.DataFrame:
     """Assemble the full long-format output.
 
@@ -503,6 +621,20 @@ def extract(verbose: bool = True, refit: bool = False) -> Tuple[pd.DataFrame, pd
 
     # Assemble the long table
     long = assemble_long(wide)
+
+    # The eleven reduced baseline sleep values, onto the quarter-0 row beside the
+    # baseline columns they were reduced from.
+    sleep = derive_baseline_sleep(wide, dict_df)
+    long["ID"] = long["ID"].astype(str)
+    long = long.merge(sleep, on="ID", how="left", suffixes=("", "_dup"))
+    dup = [c for c in long.columns if c.endswith("_dup")]
+    if dup:
+        raise ValueError(f"derived sleep names collide with extracted columns: {dup}")
+    long.loc[long["quarter"] != 0, DERIVED_SLEEP_VARS] = pd.NA
+    if verbose:
+        n = long.loc[long["quarter"] == 0, DERIVED_SLEEP_VARS].notna().sum()
+        print(f"  Baseline sleep reduced: {len(DERIVED_SLEEP_VARS)} values "
+              f"(n per value {int(n.min())}-{int(n.max())})")
 
     # Drop subjects with zero quarterly data. These subjects enrolled
     # in the parent study and have baseline data in the wide file but
