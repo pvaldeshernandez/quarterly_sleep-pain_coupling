@@ -54,6 +54,8 @@ os.makedirs(SUPP_DIR, exist_ok=True)
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 
+import step00_export as s0  # noqa: E402
+
 OUT_ROI_CSV = os.path.join(STEP_DERIV_DIR, "step14_sp_roi_values.csv")
 OUT_STIM_ROIS_PNG = os.path.join(SUPP_DIR, "figure_stim_rois.png")
 
@@ -63,7 +65,7 @@ FMRI_UNMASKED_DIR = os.path.join(DERIV_DIR, "step13_fmri_contrasts", "unmasked")
 
 # Stimulation-side inputs (for contralateralized ROIs: S1, Middle Insula)
 DATA_DIR = os.path.join(ROOT, "data")
-WIDE_XLSX = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
+#: the stimulated side comes from step 00, never from the raw export
 LONG_CSV  = os.path.join(DATA_DIR, "step00_extracted_long.csv")
 
 # ROI definitions for extraction
@@ -215,8 +217,7 @@ def load_stim_side_map(verbose=True):
     long_df["ID"] = long_df["ID"].astype(str)
     analytic_ids = set(long_df["ID"].unique())
 
-    wide = pd.read_excel(WIDE_XLSX)
-    wide["ID"] = wide["ID"].astype(str)
+    wide = s0.baseline(columns=["img_test_site__s1"])
     wide_idx = wide.set_index("ID")
 
     contra = {}

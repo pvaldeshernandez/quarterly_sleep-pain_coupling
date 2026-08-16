@@ -28,7 +28,7 @@ so a document number cannot match the wrong sample silently. See the module note
 
 Input:
   data/original/spm_mats/<ID>/SPM.mat                      (READ ONLY)
-  data/original/participants_wideformat.xlsx               (READ ONLY)
+  data/step00_extracted_long.csv                           (quarter-0 block)
   derivatives/step07_varx_data/step07_processed_long.csv   (step 04)
   derivatives/step14_sp_roi_values/step14_sp_roi_values.csv (step 13)
   results/step16_sp_moderation/step16_sp_moderation_estimates.csv (step 14)
@@ -77,7 +77,7 @@ STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step15_imaging_qc")
 
 # --- inputs ---------------------------------------------------------------
 IN_SPM_DIR = os.path.join(ROOT, "data", "original", "spm_mats")
-IN_WIDE_XLSX = os.path.join(ROOT, "data", "original", "participants_wideformat.xlsx")
+IN_WIDE_XLSX = os.path.join(ROOT, "data", "step00_extracted_long.csv")
 IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
                                 "step07_processed_long.csv")
 IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values",

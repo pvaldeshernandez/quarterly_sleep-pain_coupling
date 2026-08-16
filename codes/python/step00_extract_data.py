@@ -170,6 +170,12 @@ BASELINE_VARS = [
     # fMRI stimulation side (for contralateralized S1 / Mid Insula)
     "img_test_site__s1",
 
+    # Imaging nuisances: scanner site and the maximum pain rating evoked during the
+    # fMRI run. Both enter the sleep-to-pain moderation sensitivity analysis as
+    # covariates and the imaging QC descriptives.
+    "site__s1",
+    "img_fmri_pain_score__s1",
+
     # --- Baseline SLEEP source columns -------------------------------------
     # The 17 baseline sleep variables the paper reports are built from these 84
     # columns (6 of them -- the ISI total, PROMIS, PSQI and STOP-BANG's BMI, age

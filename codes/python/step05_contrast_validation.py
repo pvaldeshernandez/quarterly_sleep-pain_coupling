@@ -9,7 +9,7 @@ knee-specific versus body-wide pain, distinct from overall pain severity.
 Input:
   derivatives/step01/step01_scored_long.csv        — factor scores per row
   data/step00_extracted_long.csv                  — baseline PHQ endorsements
-  data/original/participants_wideformat.xlsx     — WOMAC, PHQ, KL grade
+  data/step00_extracted_long.csv                 — WOMAC, PHQ, KL grade (quarter 0)
 
 Output (results/step05/):
   step05_figure_endorsement.png  — point-biserial bar chart
@@ -38,6 +38,8 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 # something else (run_pipeline.py) has already put lib/ on the path.
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
+
+import step00_export as s0  # noqa: E402
 DATA_DIR = os.path.join(ROOT, "data")
 DERIV_DIR = os.path.join(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step05_contrast_validation")
@@ -48,7 +50,7 @@ os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
 IN_SCORED_CSV = os.path.join(DERIV_DIR, "step01_factor_analysis", "step01_scored_long.csv")
 IN_EXTRACTED_CSV = os.path.join(DATA_DIR, "step00_extracted_long.csv")
-IN_WIDE_XLSX = os.path.join(DATA_DIR, "original", "participants_wideformat.xlsx")
+#: baseline clinical variables come from step 00, never from the raw export
 
 #: A step writes into its OWN results folder. tools/collect_deliverables.py
 #: copies what the documents need into results/manuscript/ and
@@ -229,14 +231,13 @@ def generate_convergent_figure(verbose=True):
     if verbose:
         print("  Convergent validity scatter")
 
-    if not os.path.exists(IN_WIDE_XLSX):
+    if not os.path.exists(s0.LONG_CSV):
         if verbose:
-            print("    SKIP: participants_wideformat.xlsx not found")
+            print("    SKIP: step 00 export not found")
         return
 
     ki = _load_person_mean_contrast()
-    wide = pd.read_excel(IN_WIDE_XLSX)
-    wide["ID"] = wide["ID"].astype(str)
+    wide = s0.baseline()
     df = ki.merge(wide, on="ID", how="inner")
 
     panels = [
@@ -451,8 +452,8 @@ def generate_text_numbers(verbose=True):
                           f"FDR={q:.3f}{fdr_sig}")
 
     # ---- Clinical measure correlations ----
-    if os.path.exists(IN_WIDE_XLSX):
-        wide = pd.read_excel(IN_WIDE_XLSX)
+    if os.path.exists(s0.LONG_CSV):
+        wide = s0.baseline()
         wide["ID"] = wide["ID"].astype(str)
         df_clin = ki.merge(wide, on="ID", how="inner")
 

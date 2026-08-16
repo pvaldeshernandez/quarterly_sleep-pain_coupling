@@ -49,7 +49,7 @@ STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step18_nuisance_adjusted")
 
 # --- inputs ---------------------------------------------------------------
 IN_SPM_DIR = os.path.join(ROOT, "data", "original", "spm_mats")
-IN_WIDE_XLSX = os.path.join(ROOT, "data", "original", "participants_wideformat.xlsx")
+IN_WIDE_XLSX = os.path.join(ROOT, "data", "step00_extracted_long.csv")
 IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
                                 "step07_processed_long.csv")
 IN_ROI_CSV = os.path.join(DERIV_DIR, "step14_sp_roi_values",

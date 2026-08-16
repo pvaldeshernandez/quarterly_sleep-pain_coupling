@@ -45,7 +45,7 @@ from scipy import stats
 # hard-coded path produces -- a helper that keeps answering, with stale data.
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
-IN_WIDE = os.path.join(REPO, "data/original/participants_wideformat.xlsx")
+IN_WIDE = os.path.join(REPO, "data/step00_extracted_long.csv")
 IN_ANALYTIC = os.path.join(REPO, "derivatives/step07_varx_data",
                            "step07_processed_long.csv")
 
@@ -79,7 +79,8 @@ def components(wide=None):
     """
     cols = list(STOP.values()) + list(BANG.values())
     if wide is None:
-        wide = pd.read_excel(IN_WIDE, usecols=lambda c: c in (["ID"] + cols))
+        from step00_export import baseline
+        wide = baseline(columns=cols)
     wide = wide.copy()
     wide["ID"] = wide["ID"].astype(str)
     missing = [c for c in cols if c not in wide.columns]
