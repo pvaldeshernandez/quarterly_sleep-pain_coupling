@@ -733,6 +733,67 @@ def add_bivariate_innovations_likelihood(
 
 
 # ===================================================================
+# Stationary initial points (latent centering)
+# ===================================================================
+
+def _add_stationary_first_points(first_points, alpha_P, alpha_S, phi_p, phi_s,
+                                 lam_sp_person, lam_ps_person, g_sp, g_ps, innov):
+    """Likelihood of each segment's first point under the stationary distribution.
+
+    For the person's transition matrix A = [[phi_p, l_sp], [l_ps, phi_s]] (coupling
+    slopes at K = 0, including the person's random slope and Age/Sex moderation)
+    and innovation covariance Sigma, the stationary covariance V solves
+    V = A V A' + Sigma. With V symmetric that is three linear equations in
+    (V11, V12, V22), solved here in closed form (Cramer's rule) for every row.
+    The point is N(alpha_i, V), factored as p(pain) p(sleep | pain). A
+    non-stationary A (no positive-definite V) gets log-probability -inf.
+    """
+    j = first_points["pid_idx"].values.astype(int)
+    y_p = first_points["pain_factor"].values.astype(float)
+    y_s = first_points["sleep_factor"].values.astype(float)
+    a, d = phi_p, phi_s
+    b = lam_sp_person[j] if not isinstance(lam_sp_person, float) else lam_sp_person
+    c = lam_ps_person[j] if not isinstance(lam_ps_person, float) else lam_ps_person
+    for g, name in ((g_sp, "b"), (g_ps, "c")):
+        if g is not None:
+            term = (g[0] * first_points["Age_z"].values.astype(float)
+                    + g[1] * first_points["Sex_c"].values.astype(float))
+            if name == "b":
+                b = b + term
+            else:
+                c = c + term
+    sp, ss, r = innov["sigma_pain"], innov["sigma_sleep"], innov["rho_innov"]
+    s11, s12, s22 = sp ** 2, r * sp * ss, ss ** 2
+
+    # (I - K) v = s, K rows: [a^2, 2ab, b^2], [ac, ad + bc, bd], [c^2, 2cd, d^2]
+    m11, m12, m13 = 1 - a ** 2, -2 * a * b, -b ** 2
+    m21, m22, m23 = -a * c, 1 - (a * d + b * c), -b * d
+    m31, m32, m33 = -c ** 2, -2 * c * d, 1 - d ** 2
+    det = (m11 * (m22 * m33 - m23 * m32) - m12 * (m21 * m33 - m23 * m31)
+           + m13 * (m21 * m32 - m22 * m31))
+    v11 = (s11 * (m22 * m33 - m23 * m32) - m12 * (s12 * m33 - m23 * s22)
+           + m13 * (s12 * m32 - m22 * s22)) / det
+    v12 = (m11 * (s12 * m33 - m23 * s22) - s11 * (m21 * m33 - m23 * m31)
+           + m13 * (m21 * s22 - s12 * m31)) / det
+    v22 = (m11 * (m22 * s22 - s12 * m32) - m12 * (m21 * s22 - s12 * m31)
+           + s11 * (m21 * m32 - m22 * m31)) / det
+
+    # stationarity: spectral radius of A below 1 (2x2: |det A| < 1 and
+    # |tr A| < 1 + det A), and V positive definite
+    detA, trA = a * d - b * c, a + d
+    cond_var = v22 - v12 ** 2 / v11
+    valid = (pt.abs(detA) < 1) & (pt.abs(trA) < 1 + detA) & (v11 > 0) & (cond_var > 0)
+    v11_safe = pt.switch(valid, v11, 1.0)
+    cond_safe = pt.switch(valid, cond_var, 1.0)
+    e_p = y_p - alpha_P[j]
+    e_s = y_s - alpha_S[j] - pt.switch(valid, v12 / v11_safe, 0.0) * e_p
+    logp = (-0.5 * (pt.log(2 * np.pi * v11_safe) + e_p ** 2 / v11_safe)
+            - 0.5 * (pt.log(2 * np.pi * cond_safe) + e_s ** 2 / cond_safe))
+    pm.Potential("first_points_stationary",
+                 pt.switch(pt.all(valid), pt.sum(logp), -np.inf))
+
+
+# ===================================================================
 # Model Fitting
 # ===================================================================
 
@@ -834,7 +895,10 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        idata_kwargs=None,
                        cores=None,
                        progressbar=True,
-                       fit_id=None, out_dir=None):
+                       fit_id=None, out_dir=None,
+                       centering="observed",
+                       first_points=None,
+                       sampler_overrides=None):
     """Fit the Bayesian VARX(1) model with contrast and optional moderators.
 
     This is the core model-fitting function used by all analyses. It builds
@@ -898,6 +962,40 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         ``az.loo`` / ``az.compare``.
     progressbar : bool, default True
         Whether to display MCMC progress bars during sampling.
+    centering : {"observed", "latent"}, default "observed"
+        How each person's usual pain and sleep level is removed.
+
+        ``"observed"`` is the published model: the outcomes and lags are step 07's
+        deviations from each person's observed mean (``pain_within``,
+        ``pain_within_lag1``, ...), with population intercepts a0, b0.
+
+        ``"latent"`` estimates the usual levels inside the model, as the random
+        intercept of the RI-CLPM / dynamic SEM does (Hamaker et al. 2015):
+
+            (alpha_P,i, alpha_S,i) ~ N((mu_P, mu_S), Sigma_alpha)
+            P*_it = P_it - alpha_P,i,   S*_it = S_it - alpha_S,i
+
+        and the same dynamics act on P*, S* with no intercepts. The likelihood is
+        on the raw scores (``pain_factor``, ``sleep_factor``), so ``model_df`` must
+        also carry ``pain_factor_lag1`` and ``sleep_factor_lag1``, built within
+        (ID, segment_id) with step 07's rule. The two interaction terms are
+        rebuilt from the latent deviations; the localization contrast K stays on
+        its observed-mean deviation, because it enters only as a predictor.
+        Removes the short-panel (Nickell 1981) bias that observed-mean centering
+        puts on the autoregressions. New parameters: mu_P, mu_S, tau_aP, tau_aS,
+        rho_alpha, and the person levels alpha (persons x 2).
+    first_points : DataFrame, optional
+        ``centering="latent"`` only. The first retained point of every segment
+        (the rows with no lag), with ``pid_idx``, ``pain_factor``,
+        ``sleep_factor``, ``Age_z``, ``Sex_c``. When given, those points are
+        modeled from the person's stationary distribution, N(alpha_i, V_i) with
+        V_i = A_i V_i A_i' + Sigma (A_i the person's transition matrix at K = 0,
+        Sigma the innovation covariance), instead of being conditioned on. Without
+        it, a short panel cannot separate persistence from the spread of usual
+        levels (the initial-conditions problem).
+    sampler_overrides : dict, optional
+        Exceptions to ``SAMPLER`` (e.g. fewer draws for a simulation-recovery
+        fit), forwarded to ``run_fit`` so they are recorded in the diagnostics.
 
     Returns
     -------
@@ -929,6 +1027,15 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         raise ValueError(
             "moderator_direction='ps' (or 'both') requires include_ps=True"
         )
+    if centering not in ("observed", "latent"):
+        raise ValueError(
+            f"centering must be 'observed' or 'latent'; got {centering!r}"
+        )
+    latent = centering == "latent"
+    if first_points is not None and not latent:
+        raise ValueError("first_points requires centering='latent'")
+    if first_points is not None and X_person is not None:
+        raise NotImplementedError("first_points with X_person is not implemented")
 
     # ------------------------------------------------------------------
     # Filter to subjects with external moderator data (Aim 2 only)
@@ -953,13 +1060,17 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
     # ------------------------------------------------------------------
     # Extract data arrays for PyMC (float64 for numerical stability)
     # ------------------------------------------------------------------
-    y_pain = sub_df["pain_within"].values.astype(float)
-    y_sleep = sub_df["sleep_within"].values.astype(float)
-    pain_lag = sub_df["pain_within_lag1"].values.astype(float)
-    sleep_lag = sub_df["sleep_within_lag1"].values.astype(float)
+    # Latent centering models the RAW scores; the observed-mean deviations and
+    # their products are step 07's and would reintroduce the centering it removes.
+    y_cols = (("pain_factor", "sleep_factor", "pain_factor_lag1", "sleep_factor_lag1")
+              if latent else
+              ("pain_within", "sleep_within", "pain_within_lag1", "sleep_within_lag1"))
+    y_pain, y_sleep, pain_lag, sleep_lag = (
+        sub_df[c].values.astype(float) for c in y_cols)
     contrast_lag = sub_df["contrast_within_lag1"].values.astype(float)
-    sleep_x_contrast = sub_df["sleep_x_contrast_lag1"].values.astype(float)
-    pain_x_contrast = sub_df["pain_x_contrast_lag1"].values.astype(float)
+    if not latent:
+        sleep_x_contrast = sub_df["sleep_x_contrast_lag1"].values.astype(float)
+        pain_x_contrast = sub_df["pain_x_contrast_lag1"].values.astype(float)
     idx = sub_df["pid_idx"].values.astype(int)
 
     if include_agesex:
@@ -981,7 +1092,8 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         # Pain equation parameters (autoregression, intercept, contrast
         # direct effect, and — if the SP path is enabled — the SP
         # coupling slope and its contrast interaction).
-        a0 = pm.Normal("a0", mu=0, sigma=5)   # mu_p: intercept
+        if not latent:
+            a0 = pm.Normal("a0", mu=0, sigma=5)   # mu_p: intercept
         a1 = pm.Normal("a1", mu=0, sigma=5)   # phi_p: pain AR
         a3 = pm.Normal("a3", mu=0, sigma=5)   # delta_p: contrast -> pain
         if include_sp:
@@ -989,7 +1101,8 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             a4 = pm.Normal("a4", mu=0, sigma=5)  # omega_sp: sleep*contrast
 
         # Sleep equation parameters (analogous).
-        b0 = pm.Normal("b0", mu=0, sigma=5)   # mu_s: intercept
+        if not latent:
+            b0 = pm.Normal("b0", mu=0, sigma=5)   # mu_s: intercept
         b2 = pm.Normal("b2", mu=0, sigma=5)   # phi_s: sleep AR
         b3 = pm.Normal("b3", mu=0, sigma=5)   # delta_s: contrast -> sleep
         if include_ps:
@@ -1057,8 +1170,35 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             if attach_ps:
                 b1_i = b1_i + gamma_ps * X_obs
 
+        # --- Latent usual levels (centering="latent" only) ---
+        # Bivariate normal, non-centered like u_sp/u_ps (a centered version mixed
+        # worse in a short test: BFMI 0.09). The correlation prior is Beta(2, 2) on
+        # (rho + 1)/2, as for rho_innov; in two dimensions that is exactly
+        # LKJ(eta=2). The offsets are named alpha_z so write_diagnostics drops them
+        # with the other *_z offsets.
+        if latent:
+            mu_P = pm.Normal("mu_P", mu=0, sigma=5)
+            mu_S = pm.Normal("mu_S", mu=0, sigma=5)
+            tau_aP = pm.HalfCauchy("tau_aP", beta=1)
+            tau_aS = pm.HalfCauchy("tau_aS", beta=1)
+            rho_alpha_raw = pm.Beta("rho_alpha_raw", alpha=2, beta=2)
+            rho_alpha = pm.Deterministic("rho_alpha", 2 * rho_alpha_raw - 1)
+            alpha_z = pm.Normal("alpha_z", mu=0, sigma=1, shape=(n_persons, 2))
+            alpha_P = mu_P + tau_aP * alpha_z[:, 0]
+            alpha_S = mu_S + tau_aS * (rho_alpha * alpha_z[:, 0]
+                                       + pt.sqrt(1 - rho_alpha ** 2) * alpha_z[:, 1])
+            pm.Deterministic("alpha", pt.stack([alpha_P, alpha_S], axis=1))
+            level_pain, level_sleep = alpha_P[idx], alpha_S[idx]
+            pain_lag = pain_lag - level_pain
+            sleep_lag = sleep_lag - level_sleep
+            sleep_x_contrast = sleep_lag * contrast_lag
+            pain_x_contrast = pain_lag * contrast_lag
+            intercept_pain, intercept_sleep = level_pain, level_sleep
+        else:
+            intercept_pain, intercept_sleep = a0, b0
+
         # --- Linear predictors ---
-        mu_pain = a0 + a1 * pain_lag + a3 * contrast_lag
+        mu_pain = intercept_pain + a1 * pain_lag + a3 * contrast_lag
 
         # --- Time-varying covariates, main effects only ---------------------
         # One theta per covariate per equation, N(0, 5) as for the localization
@@ -1088,7 +1228,7 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         if include_sp:
             mu_pain = mu_pain + a2_i * sleep_lag + a4 * sleep_x_contrast
 
-        mu_sleep = b0 + b2 * sleep_lag + b3 * contrast_lag
+        mu_sleep = intercept_sleep + b2 * sleep_lag + b3 * contrast_lag
         for col in tv_cols:
             x_tv = model_df[col].values.astype("float64")
             mu_sleep = mu_sleep + pm.Normal(f"theta_s_{col}", mu=0, sigma=5) * x_tv
@@ -1096,10 +1236,18 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             mu_sleep = mu_sleep + b1_i * pain_lag + b4 * pain_x_contrast
 
         # --- Correlated innovations via Cholesky trick ---
-        add_bivariate_innovations_likelihood(
+        innov = add_bivariate_innovations_likelihood(
             mu_pain=mu_pain, mu_sleep=mu_sleep,
             y_pain=y_pain, y_sleep=y_sleep,
         )
+        if first_points is not None:
+            _add_stationary_first_points(
+                first_points, alpha_P, alpha_S, a1, b2,
+                a2 + u_sp if include_sp else 0.0,
+                b1 + u_ps if include_ps else 0.0,
+                (g_sp_age, g_sp_sex) if include_agesex and include_sp else None,
+                (g_ps_age, g_ps_sex) if include_agesex and include_ps else None,
+                innov)
 
         # --- MCMC sampling ---
         # Delegated so that this function does not decide sampler settings and does
@@ -1109,6 +1257,8 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             extra["cores"] = cores
         if idata_kwargs is not None:
             extra["idata_kwargs"] = idata_kwargs
+        if sampler_overrides:
+            extra.update(sampler_overrides)
         idata = run_fit(model, fit_id=fit_id, out_dir=out_dir,
                         progressbar=progressbar, **extra)
 

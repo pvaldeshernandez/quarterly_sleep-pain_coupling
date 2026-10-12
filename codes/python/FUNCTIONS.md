@@ -39,7 +39,7 @@ Bayesian VARX(1) Model for Bidirectional Sleep-Pain Coupling
 - `load_varx_frame(csv_path, verbose)` — Load the VARX-ready long dataframe and prepare it for any
 - `add_bivariate_innovations_likelihood(mu_pain, mu_sleep, y_pain, y_sleep, name_suffix)` — Attach the bivariate-normal innovations likelihood to the current
 - `build_timevarying(model_df, df_full, raw_long, covars, standardize, binary, interpolate)` — Within-person-centered time-varying covariates and their within-segment lag-1.
-- `fit_bayesian_varx1(model_df, unique_ids, id_map, X_person, include_agesex, include_sp, include_ps, moderator_direction, X_tv, idata_kwargs, cores, progressbar, fit_id, out_dir)` — Fit the Bayesian VARX(1) model with contrast and optional moderators.
+- `fit_bayesian_varx1(model_df, unique_ids, id_map, X_person, include_agesex, include_sp, include_ps, moderator_direction, X_tv, idata_kwargs, cores, progressbar, fit_id, out_dir, centering, sampler_overrides)` — Fit the Bayesian VARX(1) model with contrast and optional moderators. `centering="latent"` estimates each person's usual pain/sleep level inside the model (RI-CLPM style) instead of step 07's observed-mean deviations; `sampler_overrides` reach `run_fit` and are recorded.
 - `fit_roi_moderation_set(roi_df, model_df, unique_ids, id_map, direction, rois, fit_id_prefix, out_dir, include_agesex, progressbar, verbose)` — Fit one moderation model per ROI and tabulate them.
 - `compute_loo_comparison(data_dir, synthetic)` — Fit four nested coupling-direction models and compare via LOO-CV.
 - `compute_jn_curve(intercept_draws, slope_draws, X_vals, raw_mean, raw_sd, clip_pct)` — Compute a Bayesian Johnson-Neyman (JN) significance curve.
@@ -550,3 +550,22 @@ Did the re-run reproduce the results it was supposed to reproduce?
   - `numeric(s)` — *(undocumented)*
 - `main()` — *(undocumented)*
 
+## Extensions — `codes/python/extensions/` (not pipeline steps; outputs in `extensions/<name>/`)
+
+### `latent_centering.py`
+
+The primary coupling model refit with latent mean centering; simulation recovery on the real panel; report beside the published fit.
+
+- `add_raw_lags(df)` — Raw-score lags `pain_factor_lag1`, `sleep_factor_lag1` via step 07's `create_lagged_variables`.
+- `load_latent_frame(csv_path)` — `load_varx_frame` plus raw lags, on exactly step 08's rows; checks lag NaN pattern and raw − mean = within.
+- `simulate_panel(frame, rep, truth)` — Raw pain/sleep generated on the real panel (people, quarters, segments), analyzed with step 07's decomposition and lags.
+- `data_csv(data)` — Input CSV for `real` or `simK`.
+- `run_one_fit(data, centering, tune, draws)` — One fit through `fit_bayesian_varx1`; saves InferenceData and diagnostics.
+- `standardization_sds()` — Within-person pain and sleep SDs step 08 standardizes with.
+- `tidy(idata)` — `summarize_posterior` plus the two standardized couplings.
+- `table_vs_published(pub, lat)` — Published vs latent population parameters.
+- `lag_quantities(phi_p, phi_s, lambda_sp, lambda_ps)` — Step 25's eigenvalues and optimal lags (reciprocal and unidirectional) from step 25's functions.
+- `table_optimal_lag(fits, thin)` — `lag_quantities` at posterior means plus posterior 95% intervals.
+- `table_recovery()` — True vs observed-centering vs latent-centering estimates per simulated replicate.
+- `run_report()` — Write every report CSV from saved fits only.
+- `main()` — CLI: `simulate`, `fit`, `report`.

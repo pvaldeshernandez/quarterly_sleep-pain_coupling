@@ -1,0 +1,5 @@
+free RVs identical: True 21
+deterministics identical: True
+point 0: logp main=-6467.0984697639 sandbox=-6467.0984697639 diff=0.000e+00
+point 1: logp main=-7315.8829496799 sandbox=-7315.8829496799 diff=0.000e+00
+point 2: logp main=-5747.6451001401 sandbox=-5747.6451001401 diff=0.000e+00

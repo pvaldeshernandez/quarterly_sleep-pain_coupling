@@ -71,3 +71,10 @@ Thumbs.db
 # obvious the omission is deliberate rather than an oversight.
 codes/python/archive/
 codes/python/revision/
+
+# Extensions: fits and simulated panels carry participant structure (IDs, quarters,
+# Age, Sex, localization contrast), so they stay out like derivatives/.
+extensions/*/fits/
+extensions/*/simulated_data/
+extensions/*/logs/
+extensions/*/diagnostics_*_by_param.csv
