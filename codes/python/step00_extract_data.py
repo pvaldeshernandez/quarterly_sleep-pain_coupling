@@ -124,7 +124,7 @@ OUT_DICT_XLSX = os.path.join(DATA_DIR, "step00_extracted_dictionary.xlsx")
 #                                  correlations of contrast scores
 #                                  against 13 body-map endorsements)
 #
-# 28 variables in total (plus ID).
+# 29 variables in total (plus ID).
 
 BASELINE_VARS = [
     # Demographics (the baseline-characteristics table + VARX covariates)
@@ -167,8 +167,10 @@ BASELINE_VARS = [
     "gcps_pain_intensity__s1",
     "gcps_interference__s1",
 
-    # fMRI stimulation side (for contralateralized S1 / Mid Insula)
+    # fMRI stimulation side (for contralateralized S1 / Mid Insula); session 2 is
+    # step 14's fallback for participants whose session-1 value is missing
     "img_test_site__s1",
+    "img_test_site__s2",
 
     # Imaging nuisances: scanner site and the maximum pain rating evoked during the
     # fMRI run. Both enter the sleep-to-pain moderation sensitivity analysis as

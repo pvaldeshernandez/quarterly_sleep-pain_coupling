@@ -219,7 +219,7 @@ def load_stim_side_map(verbose=True):
     long_df["ID"] = long_df["ID"].astype(str)
     analytic_ids = set(long_df["ID"].unique())
 
-    wide = s0.baseline(columns=["img_test_site__s1"])
+    wide = s0.baseline(columns=["img_test_site__s1", "img_test_site__s2"])
     wide_idx = wide.set_index("ID")
 
     contra = {}
