@@ -806,6 +806,19 @@ def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
     sp, ss, r = innov["sigma_pain"], innov["sigma_sleep"], innov["rho_innov"]
     s11, s12, s22 = sp ** 2, r * sp * ss, ss ** 2
 
+    no_coupling = (isinstance(b, float) and b == 0.0 and isinstance(c, float) and c == 0.0)
+    if no_coupling:
+        # A diagonal (the null model): Cramer's rule below reduces exactly to
+        # these. Written out because the general expression, with b = c = 0
+        # constant-folded, made PyTensor's gradient compilation run for hours.
+        v11 = s11 / (1 - a ** 2)
+        v12 = s12 / (1 - a * d)
+        v22 = s22 / (1 - d ** 2)
+        detA, trA = a * d, a + d
+        cond_var = v22 - v12 ** 2 / v11
+        valid = (pt.abs(detA) < 1) & (pt.abs(trA) < 1 + detA) & (v11 > 0) & (cond_var > 0)
+        return _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid)
+
     # (I - K) v = s, K rows: [a^2, 2ab, b^2], [ac, ad + bc, bd], [c^2, 2cd, d^2]
     m11, m12, m13 = 1 - a ** 2, -2 * a * b, -b ** 2
     m21, m22, m23 = -a * c, 1 - (a * d + b * c), -b * d
@@ -824,6 +837,14 @@ def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
     detA, trA = a * d - b * c, a + d
     cond_var = v22 - v12 ** 2 / v11
     valid = (pt.abs(detA) < 1) & (pt.abs(trA) < 1 + detA) & (v11 > 0) & (cond_var > 0)
+    return _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid)
+
+
+def _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid):
+    """Bivariate-normal log-density of the start points as p(pain) p(sleep | pain).
+
+    -inf when the person's dynamics are not stationary (``valid`` False anywhere).
+    """
     v11_safe = pt.switch(valid, v11, 1.0)
     cond_safe = pt.switch(valid, cond_var, 1.0)
     e_p = y_p - alpha_P[j]
