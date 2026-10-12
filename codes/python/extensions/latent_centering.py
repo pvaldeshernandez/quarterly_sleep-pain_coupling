@@ -43,7 +43,8 @@ sys.path.insert(0, os.path.join(CODE_DIR, "lib"))
 sys.path.insert(0, CODE_DIR)
 
 from coupling_model import (  # noqa: E402
-    fit_bayesian_varx1, load_varx_frame, summarize_posterior,
+    add_raw_lags, fit_bayesian_varx1, load_varx_frame, segment_start_points,
+    summarize_posterior,
 )
 import step07_prepare_varx_data as step07  # noqa: E402
 import step25_optimal_lag as step25  # noqa: E402
@@ -99,25 +100,6 @@ SIM_SAMPLER = dict(tune=1500, draws=1000)
 # Data
 # ===========================================================================
 
-def add_raw_lags(df):
-    """Raw-score lags ``pain_factor_lag1``, ``sleep_factor_lag1`` by step 07's rule.
-
-    Step 07's ``create_lagged_variables`` is the one implementation of the lag rule
-    (within ID x segment, NaN across non-consecutive quarters). It lags the
-    ``*_within`` columns, so it is handed the raw scores under those names; the
-    returned frame keeps ``df``'s index, so the lags align back by index.
-    """
-    tmp = df[["ID", "segment_id", "quarter"]].copy()
-    tmp["pain_within"] = df["pain_factor"]
-    tmp["sleep_within"] = df["sleep_factor"]
-    tmp["contrast_within"] = df["contrast_factor"]
-    lagged = step07.create_lagged_variables(tmp)
-    out = df.copy()
-    out["pain_factor_lag1"] = lagged["pain_within_lag1"]
-    out["sleep_factor_lag1"] = lagged["sleep_within_lag1"]
-    return out
-
-
 def load_latent_frame(csv_path):
     """``load_varx_frame`` plus raw lags, on exactly the rows step 08 fits.
 
@@ -126,7 +108,7 @@ def load_latent_frame(csv_path):
     the person mean reproduces step 07's within-person lag.
     """
     df, model_df, ids, id_map = load_varx_frame(csv_path)
-    df = add_raw_lags(df)
+    df = add_raw_lags(df)  # lib.coupling_model's, the one the pipeline uses
     for raw, within, mean in (("pain_factor_lag1", "pain_within_lag1", "pain_person_mean"),
                               ("sleep_factor_lag1", "sleep_within_lag1", "sleep_person_mean")):
         if not (df[raw].isna() == df[within].isna()).all():
@@ -135,11 +117,6 @@ def load_latent_frame(csv_path):
         if gap > 1e-12:
             raise ValueError(f"{raw} - {mean} differs from {within} by {gap:.2e}")
     return df, df.loc[model_df.index], ids, id_map
-
-
-def first_points_of(df):
-    """The first retained point of every segment: the rows step 07 gives no lag."""
-    return df[df["pain_within_lag1"].isna()].copy()
 
 
 def simulate_panel(frame, rep, truth=TRUTH):
@@ -204,31 +181,22 @@ def run_one_fit(data, centering, tune=None, draws=None, initial="conditional"):
     """
     os.makedirs(FIT_DIR, exist_ok=True)
     df, model_df, ids, id_map = load_latent_frame(data_csv(data))
-    first = first_points_of(df) if initial == "stationary" else None
     overrides = {}
     if tune is not None:
         overrides["tune"] = tune
     if draws is not None:
         overrides["draws"] = draws
-    if first is not None:
-        # The stationary likelihood is -inf wherever a person's transition matrix is
-        # explosive. PyMC's default start jitters every transition-matrix term
-        # (autoregressions, couplings, Age/Sex moderators, random-slope SDs near 1) by
-        # up to +/-1 on the unconstrained scale, which puts some persons there, so
-        # every chain fails to initialize. Start A at zero with small slope SDs and
-        # no jitter (all chains share the start; NUTS separates them).
-        overrides["init"] = "adapt_diag"
-        overrides["initvals"] = {k: 0.0 for k in ("a1", "b2", "a2", "b1", "g_sp_age",
-                                                  "g_sp_sex", "g_ps_age", "g_ps_sex")}
-        overrides["initvals"].update(tau_sp=0.05, tau_ps=0.05)
-    fit_id = f"{data}_{centering}" + ("_stationary" if first is not None else "")
+    # The stationary start (adapt_diag, zero transition terms, slope SDs 0.05) is
+    # set by fit_bayesian_varx1 itself whenever initial_points="stationary".
+    stationary = centering == "latent" and initial == "stationary"
+    fit_id = f"{data}_{centering}" + ("_stationary" if stationary else "")
     print(f"  {fit_id}: {len(ids)} persons, {len(model_df)} transitions, "
-          f"{0 if first is None else len(first)} modeled first points, "
-          f"overrides={overrides or 'none'}")
+          f"{len(segment_start_points(model_df)) if stationary else 0} modeled "
+          f"first points, overrides={overrides or 'none'}")
     idata, _, _ = fit_bayesian_varx1(
         model_df, ids, id_map, include_agesex=True, cores=4,
         progressbar=False, fit_id=fit_id, out_dir=OUT_DIR,
-        centering=centering, first_points=first,
+        centering=centering, initial_points=initial,
         sampler_overrides=overrides or None)
     idata.to_netcdf(os.path.join(FIT_DIR, f"{fit_id}_idata.nc"))
     return idata

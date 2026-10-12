@@ -72,6 +72,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
 
 # Shared modules. All four are pandas-only by design: this step fits nothing, so it
 # must not drag the sampler stack (pymc/pytensor/arviz) in through an import.
@@ -81,8 +83,8 @@ import stopbang as sbg                   # noqa: E402
 from analytic_sample import analytic_ids  # noqa: E402
 
 DATA_DIR = os.path.join(ROOT, "data")
-DERIV_DIR = os.path.join(ROOT, "derivatives")
-RESULTS_DIR = os.path.join(ROOT, "results")
+DERIV_DIR = versioned(ROOT, "derivatives")
+RESULTS_DIR = versioned(ROOT, "results")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step06_sleep_measure_correlates")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step06_sleep_measure_correlates")
 

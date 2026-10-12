@@ -149,14 +149,20 @@ def simulate_replicates(idata, md, n_rep, rng, innovations="gaussian",
             "innovations='studentt' but the posterior has no 'nu'. This idata "
             "was fit with Gaussian innovations."
         )
-    n_draws = flat["a0"].shape[0]
+    n_draws = flat["a1"].shape[0]
     picks = rng.choice(n_draws, size=min(n_rep, n_draws), replace=False)
 
-    pain_lag = md["pain_within_lag1"].values
-    sleep_lag = md["sleep_within_lag1"].values
+    # The latent model (a posterior with person levels `alpha`) predicts RAW scores
+    # from raw lags minus the person's usual levels, which change with every draw.
+    latent = "alpha" in flat
+    lag_cols = (("pain_factor_lag1", "sleep_factor_lag1") if latent
+                else ("pain_within_lag1", "sleep_within_lag1"))
+    pain_lag = md[lag_cols[0]].values
+    sleep_lag = md[lag_cols[1]].values
     k_lag = md["contrast_within_lag1"].values
-    sxk = md["sleep_x_contrast_lag1"].values
-    pxk = md["pain_x_contrast_lag1"].values
+    if not latent:
+        sxk = md["sleep_x_contrast_lag1"].values
+        pxk = md["pain_x_contrast_lag1"].values
     idx = md["pid_idx"].values.astype(int)
     age = md["Age_z"].values
     sex = md["Sex_c"].values
@@ -167,10 +173,18 @@ def simulate_replicates(idata, md, n_rep, rng, innovations="gaussian",
                 + flat["g_sp_age"][d] * age + flat["g_sp_sex"][d] * sex)
         b1_i = (flat["b1"][d] + flat["u_ps"][d][idx]
                 + flat["g_ps_age"][d] * age + flat["g_ps_sex"][d] * sex)
-        mu_p = (flat["a0"][d] + flat["a1"][d] * pain_lag + a2_i * sleep_lag
-                + flat["a3"][d] * k_lag + flat["a4"][d] * sxk)
-        mu_s = (flat["b0"][d] + b1_i * pain_lag + flat["b2"][d] * sleep_lag
-                + flat["b3"][d] * k_lag + flat["b4"][d] * pxk)
+        if latent:
+            level_p, level_s = flat["alpha"][d][idx, 0], flat["alpha"][d][idx, 1]
+            p_lag, s_lag = pain_lag - level_p, sleep_lag - level_s
+            mu_p = (level_p + flat["a1"][d] * p_lag + a2_i * s_lag
+                    + flat["a3"][d] * k_lag + flat["a4"][d] * s_lag * k_lag)
+            mu_s = (level_s + b1_i * p_lag + flat["b2"][d] * s_lag
+                    + flat["b3"][d] * k_lag + flat["b4"][d] * p_lag * k_lag)
+        else:
+            mu_p = (flat["a0"][d] + flat["a1"][d] * pain_lag + a2_i * sleep_lag
+                    + flat["a3"][d] * k_lag + flat["a4"][d] * sxk)
+            mu_s = (flat["b0"][d] + b1_i * pain_lag + flat["b2"][d] * sleep_lag
+                    + flat["b3"][d] * k_lag + flat["b4"][d] * pxk)
         sp, ss = flat["sigma_pain"][d], flat["sigma_sleep"][d]
         rho = flat["rho_innov"][d]
         # Identical rng call order to a02_diagnostics.py:89-90, so the
@@ -193,6 +207,13 @@ def simulate_replicates(idata, md, n_rep, rng, innovations="gaussian",
         return (np.array(reps_p), np.array(reps_s),
                 np.array(mus_p), np.array(mus_s))
     return np.array(reps_p), np.array(reps_s)
+
+
+def observed_outcomes(idata, md):
+    """The outcomes the fit modeled: raw scores (latent model) or within-person deviations."""
+    if "alpha" in idata.posterior:
+        return md["pain_factor"].values, md["sleep_factor"].values
+    return md["pain_within"].values, md["sleep_within"].values
 
 
 def ppc_table(idata, md, n_rep=200, seed=42, innovations="gaussian",
@@ -228,8 +249,7 @@ def ppc_table(idata, md, n_rep=200, seed=42, innovations="gaussian",
     rng = np.random.default_rng(seed)
     rep_p, rep_s, mu_p, mu_s = simulate_replicates(
         idata, md, n_rep, rng, innovations=innovations, return_mu=True)
-    obs_p = md["pain_within"].values
-    obs_s = md["sleep_within"].values
+    obs_p, obs_s = observed_outcomes(idata, md)
 
     rows = []
     for name, obs, rep in (("pain", obs_p, rep_p), ("sleep", obs_s, rep_s)):

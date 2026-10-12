@@ -42,10 +42,12 @@ warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
-DERIV_DIR = os.path.join(ROOT, "derivatives")
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
+DERIV_DIR = versioned(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step08_coupling_model")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
-RESULTS_DIR = os.path.join(ROOT, "results")
+RESULTS_DIR = versioned(ROOT, "results")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step08_coupling_model")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 
@@ -75,6 +77,28 @@ OUT_SP_COUPLING_PNG = os.path.join(STEP_RESULTS_DIR, "step08_sp_coupling.png")
 # =====================================================================
 # Data loading
 # =====================================================================
+
+#: Rows the latent model adds to the coupling table, in place of the intercepts.
+USUAL_LEVEL_ROWS = [
+    ("mu_P", "Mean usual pain level (mu_P)"),
+    ("mu_S", "Mean usual sleep level (mu_S)"),
+    ("tau_aP", "SD: usual pain level"),
+    ("tau_aS", "SD: usual sleep level"),
+    ("rho_alpha", "Correlation of usual pain and sleep levels"),
+]
+
+
+def _with_usual_levels(rows, results):
+    """The coupling-table rows for the model that was fit.
+
+    Under the latent model the intercepts a0, b0 do not exist; the usual-level
+    parameters are listed after the innovation parameters instead. Under the
+    observed model the rows are returned unchanged.
+    """
+    if "mu_P_mean" not in results:
+        return rows
+    return [r for r in rows if r[0] not in ("a0", "b0")] + USUAL_LEVEL_ROWS
+
 
 def load_data(csv_path: str):
     """Thin wrapper around lib.coupling_model.load_varx_frame."""
@@ -327,7 +351,7 @@ def run_step08(verbose: bool = True, refit: bool = False):
         results["n_obs"] = n_obs
 
         coupling_rows = []
-        for key, desc in [
+        for key, desc in _with_usual_levels([
             ("a0", "Pain intercept (mu_p)"),
             ("a1", "Pain autoregression (phi_p)"),
             ("a2", "Sleep->Pain coupling (lambda_sp)"),
@@ -343,7 +367,7 @@ def run_step08(verbose: bool = True, refit: bool = False):
             ("sigma_pain", "Innovation SD (pain)"),
             ("sigma_sleep", "Innovation SD (sleep)"),
             ("rho_innov", "Innovation correlation (rho)"),
-        ]:
+        ], results):
             coupling_rows.append({
                 "Parameter": key,
                 "Description": desc,
@@ -645,7 +669,13 @@ def run_step08(verbose: bool = True, refit: bool = False):
                         ("tau_sp", "tau_sp"), ("tau_ps", "tau_ps"),
                         ("sigma_pain", "sigma_pain"),
                         ("sigma_sleep", "sigma_sleep"),
-                        ("rho_innov", "rho_innov")):
+                        ("rho_innov", "rho_innov"),
+                        # latent model only: the usual levels
+                        ("mu_P", "mu_P"), ("mu_S", "mu_S"),
+                        ("tau_aP", "tau_aP"), ("tau_aS", "tau_aS"),
+                        ("rho_alpha", "rho_alpha")):
+        if f"{param}_mean" not in results:
+            continue
         nums[f"{name}_mean"] = float(results[f"{param}_mean"])
         nums[f"{name}_ci"] = [float(results[f"{param}_ci_lo"]),
                               float(results[f"{param}_ci_hi"])]

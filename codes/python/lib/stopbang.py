@@ -39,6 +39,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from model_version import versioned
+
 # Resolved from THIS file's location: lib/ -> codes/python/ -> codes/ -> UPLOAD2.
 # The absolute path this module used to hard-code kept pointing at step05's
 # output long after the frame moved to step07, which is exactly the failure a
@@ -46,7 +48,7 @@ from scipy import stats
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
 IN_WIDE = os.path.join(REPO, "data/step00_extracted_long.csv")
-IN_ANALYTIC = os.path.join(REPO, "derivatives/step07_varx_data",
+IN_ANALYTIC = os.path.join(versioned(REPO, "derivatives"), "step07_varx_data",
                            "step07_processed_long.csv")
 
 STOP = {"S": "sleep_snore__s1", "T": "sleep_tired_daytime__s1",

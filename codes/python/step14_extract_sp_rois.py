@@ -40,10 +40,12 @@ warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-DERIV_DIR = os.path.join(ROOT, "derivatives")
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
+DERIV_DIR = versioned(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step14_sp_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
-RESULTS_DIR = os.path.join(ROOT, "results")
+RESULTS_DIR = versioned(ROOT, "results")
 #: A step writes into its OWN results folder. tools/collect_deliverables.py
 #: copies what the documents need into results/manuscript/ and
 #: results/supplementary_materials/ under their document-facing names.

@@ -55,9 +55,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
 
-DERIV_DIR = os.path.join(ROOT, "derivatives")
-RESULTS_DIR = os.path.join(ROOT, "results")
+DERIV_DIR = versioned(ROOT, "derivatives")
+RESULTS_DIR = versioned(ROOT, "results")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step09_posterior_predictive_check")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step09_posterior_predictive_check")
 
@@ -257,8 +259,7 @@ def simulate_and_score(md, idata, innovations, n_rep, seed, verbose=True):
         return_arrays=True)
     table = table[TABLE_COLUMNS]
 
-    obs_pain = md["pain_within"].values
-    obs_sleep = md["sleep_within"].values
+    obs_pain, obs_sleep = ppc.observed_outcomes(idata, md)
 
     stat_pain = _stat_matrix(rep_pain)
     stat_sleep = _stat_matrix(rep_sleep)

@@ -64,8 +64,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
 
-RESULTS_DIR = os.path.join(ROOT, "results")
+RESULTS_DIR = versioned(ROOT, "results")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step25_optimal_lag")
 
 IN_COUPLING_CSV = os.path.join(RESULTS_DIR, "step08_coupling_model",

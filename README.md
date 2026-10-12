@@ -36,7 +36,16 @@ python run_pipeline.py --list      # print the order and exit
 python run_pipeline.py --from 07 --to 10
 python run_pipeline.py --only 15,18
 python run_pipeline.py --strict    # stop at the first failure instead of continuing
+python run_pipeline.py --refit --model latent   # the latent-centering version
 ```
+
+**Model versions.** `--model` selects the coupling model for every step
+(`lib/model_version.py`; a step run on its own reads `COUPLING_MODEL`). `observed`, the
+default, is the published model and writes to `derivatives/` and `results/`. `latent`
+estimates each person's usual pain and sleep level inside the model and models each
+segment's first quarter from the person's stationary distribution (validated by
+simulation in `extensions/latent_centering/`); it writes to `derivatives_latent/` and
+`results_latent/`, so the two versions never overwrite each other. `data/` is shared.
 
 Without `--refit`, each step loads its saved derivative and redraws — so changing a figure's
 styling costs seconds, not a refit. With `--refit`, it recomputes.

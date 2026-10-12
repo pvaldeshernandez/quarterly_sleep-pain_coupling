@@ -5,6 +5,12 @@
     python run_pipeline.py --refit          # recompute everything (hours)
     python run_pipeline.py --from 07 --to 10
     python run_pipeline.py --list
+    python run_pipeline.py --refit --model latent   # the latent-centering version
+
+`--model` picks the coupling model for every step (lib/model_version.py). The
+published model, `observed`, writes to derivatives/ and results/; any other model
+writes to derivatives_<model>/ and results_<model>/, so versions never overwrite
+each other.
 
 Steps are discovered from the filenames rather than listed here, so inserting
 `step09_posterior_predictive_check.py` makes it part of the pipeline with no edit to
@@ -31,6 +37,10 @@ import traceback
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "lib"))
+
+ROOT = os.path.dirname(os.path.dirname(HERE))
+
+import model_version  # noqa: E402
 
 STEP_RE = re.compile(r"^(step(\d{2})_[a-z0-9_]+)\.py$")
 
@@ -67,7 +77,13 @@ def main() -> int:
     ap.add_argument("--list", action="store_true", help="print the order and exit")
     ap.add_argument("--strict", action="store_true", help="stop at the first failure")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--model", default=None, choices=sorted(model_version.MODELS),
+                    help="coupling model; default: $COUPLING_MODEL, else observed")
     args = ap.parse_args()
+    # Set before any step is imported: steps resolve their output folders at import.
+    # The environment also carries it to the collector subprocess.
+    if args.model is not None:
+        os.environ[model_version.ENV_VAR] = args.model
 
     steps = discover()
     if args.only:
@@ -97,7 +113,8 @@ def main() -> int:
     verbose = not args.quiet
     mode = "REFIT (recomputing)" if args.refit else "REPLOT (from saved derivatives)"
     print("=" * 72)
-    print(f"PIPELINE — {mode}")
+    print(f"PIPELINE — {mode} — model: {model_version.current()} "
+          f"(outputs: {os.path.basename(model_version.versioned(ROOT, 'results'))}/)")
     print(f"{len(steps)} steps: {steps[0][0]} … {steps[-1][0]}")
     print("=" * 72)
 

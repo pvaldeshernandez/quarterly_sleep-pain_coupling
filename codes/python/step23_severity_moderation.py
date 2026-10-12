@@ -31,10 +31,13 @@ warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-DERIV_DIR = os.path.join(ROOT, "derivatives")
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
+import model_version  # noqa: E402
+DERIV_DIR = versioned(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step23_severity_moderation")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
-RESULTS_DIR = os.path.join(ROOT, "results")
+RESULTS_DIR = versioned(ROOT, "results")
 #: A step writes into its OWN results folder. tools/collect_deliverables.py
 #: copies what the documents need into results/manuscript/ and
 #: results/supplementary_materials/ under their document-facing names.
@@ -47,6 +50,10 @@ sys.path.insert(0, LIB_DIR)
 
 IN_PROCESSED_CSV = os.path.join(DERIV_DIR, "step07_varx_data",
                                 "step07_processed_long.csv")
+
+#: Under the latent model, severity is the person's latent usual level (a model
+#: parameter) instead of the observed person mean.
+LATENT = model_version.centering() == "latent"
 
 OUT_TABLE_CSV = os.path.join(SUPP_DIR, "step23_severity_moderation_estimates.csv")
 OUT_TEXT_CSV = os.path.join(STEP_RESULTS_DIR, "step23_text_numbers.csv")
@@ -162,6 +169,20 @@ def run_step23(verbose=True, refit=False):
         # Workaround: for the joint model, residualize each moderator
         # against the other and fit with the residual.
 
+        if mod_name == "joint" and LATENT:
+            # Under the latent model severity IS the person's usual level, a
+            # parameter of the model, so both moderators go through the library.
+            idata, _, _ = fit_bayesian_varx1(
+                model_df, unique_ids, id_map,
+                include_agesex=True,
+                level_moderators={"gamma_sp_pain": ("sp", "pain"),
+                                  "gamma_sp_sleep": ("sp", "sleep")},
+                progressbar=True,
+                fit_id="step23_severity_joint", out_dir=STEP_DERIV_DIR,
+            )
+            _report_joint(idata, table_rows, text_rows, verbose)
+            continue
+
         if mod_name == "joint":
             # Fit a 2-moderator model by extending the PyMC model directly
             _fit_joint_model(model_df, unique_ids, id_map,
@@ -179,22 +200,35 @@ def run_step23(verbose=True, refit=False):
             pm_mean, pm_sd = sleep_mean, sleep_sd
             label = "Mean Sleep Quality"
 
-        # Build X_person: z-scored person means
-        X_person = {}
-        for sid in unique_ids:
-            sub = model_df[model_df["ID"] == sid]
-            if len(sub) == 0:
-                continue
-            raw = sub[col].iloc[0]
-            X_person[str(sid)] = (raw - pm_mean) / pm_sd
+        if LATENT:
+            # The person's latent usual level, in SD units, moderates both slopes;
+            # named gamma_sp / gamma_ps so it is read exactly like X_person.
+            level = "pain" if col == "pain_person_mean" else "sleep"
+            idata, sub_df, valid_ids = fit_bayesian_varx1(
+                model_df, unique_ids, id_map,
+                include_agesex=True,
+                level_moderators={"gamma_sp": ("sp", level),
+                                  "gamma_ps": ("ps", level)},
+                progressbar=True,
+                fit_id=f"step23_severity_{mod_name}", out_dir=STEP_DERIV_DIR,
+            )
+        else:
+            # Build X_person: z-scored person means
+            X_person = {}
+            for sid in unique_ids:
+                sub = model_df[model_df["ID"] == sid]
+                if len(sub) == 0:
+                    continue
+                raw = sub[col].iloc[0]
+                X_person[str(sid)] = (raw - pm_mean) / pm_sd
 
-        idata, sub_df, valid_ids = fit_bayesian_varx1(
-            model_df, unique_ids, id_map,
-            X_person=X_person,
-            include_agesex=True,
-            progressbar=True,
-            fit_id=f"step23_severity_{mod_name}", out_dir=STEP_DERIV_DIR,
-        )
+            idata, sub_df, valid_ids = fit_bayesian_varx1(
+                model_df, unique_ids, id_map,
+                X_person=X_person,
+                include_agesex=True,
+                progressbar=True,
+                fit_id=f"step23_severity_{mod_name}", out_dir=STEP_DERIV_DIR,
+            )
 
         from coupling_model import two_tail_p
         results = extract_results(idata, moderator_name=col)
@@ -374,6 +408,12 @@ def _fit_joint_model(model_df, unique_ids, id_map,
     # call pm.sample directly with its own 2000/2000/0.95, so severity moderation
     # sampled at settings the Methods did not describe and produced no diagnostics.
     idata = run_fit(model, fit_id=fit_id, out_dir=out_dir, cores=4)
+    _report_joint(idata, table_rows, text_rows, verbose)
+
+
+def _report_joint(idata, table_rows, text_rows, verbose=True):
+    """Table and text rows for the joint model's two SP severity moderators."""
+    import arviz as az
 
     # Extract results
     def _summarize(var_name):

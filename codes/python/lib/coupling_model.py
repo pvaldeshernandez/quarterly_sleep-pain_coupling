@@ -146,6 +146,8 @@ import pymc as pm
 import pytensor.tensor as pt
 import arviz as az
 
+import model_version
+
 warnings.filterwarnings("ignore")
 
 # ---------------------------------------------------------------------------
@@ -640,6 +642,10 @@ def load_varx_frame(csv_path, verbose=False):
     # Returning None rather than raising keeps one loader for both, and a fitting
     # step that somehow got a lagless frame fails loudly at first use.
     lag_cols = ["pain_within_lag1", "sleep_within_lag1"]
+    # The latent model works on raw scores and needs their lags; the observed
+    # model's frame is left exactly as it was.
+    if model_version.centering() == "latent" and all(c in df.columns for c in lag_cols):
+        df = add_raw_lags(df)
     model_df = (df.dropna(subset=lag_cols).copy()
                 if all(c in df.columns for c in lag_cols) else None)
 
@@ -659,6 +665,32 @@ def load_varx_frame(csv_path, verbose=False):
         )
 
     return df, model_df, unique_ids, id_map
+
+
+def add_raw_lags(df):
+    """Add ``pain_factor_lag1`` and ``sleep_factor_lag1``: the raw scores one quarter back.
+
+    The lagged point is the row of the same person and segment at quarter - 1, and
+    a raw lag exists exactly where step 07 built the within-person lag
+    (``pain_within_lag1``), so the latent model fits the same transitions. Values
+    are copied, not recomputed (no raw = within + mean arithmetic), so they are
+    the scores step 07 read.
+    """
+    prev = df[["ID", "segment_id", "quarter", "pain_factor", "sleep_factor"]].copy()
+    prev["quarter"] = prev["quarter"] + 1
+    prev = prev.rename(columns={"pain_factor": "pain_factor_lag1",
+                                "sleep_factor": "sleep_factor_lag1"})
+    out = df.drop(columns=[c for c in ("pain_factor_lag1", "sleep_factor_lag1")
+                           if c in df.columns])
+    out = out.merge(prev, on=["ID", "segment_id", "quarter"], how="left",
+                    validate="one_to_one")
+    out.index = df.index
+    for raw, within in (("pain_factor_lag1", "pain_within_lag1"),
+                        ("sleep_factor_lag1", "sleep_within_lag1")):
+        out.loc[out[within].isna(), raw] = np.nan
+        if (out[raw].isna() != out[within].isna()).any():
+            raise ValueError(f"{raw} is missing on different rows than {within}")
+    return out
 
 
 # ===================================================================
@@ -736,32 +768,41 @@ def add_bivariate_innovations_likelihood(
 # Stationary initial points (latent centering)
 # ===================================================================
 
-def _add_stationary_first_points(first_points, alpha_P, alpha_S, phi_p, phi_s,
-                                 lam_sp_person, lam_ps_person, g_sp, g_ps, innov):
+def segment_start_points(model_df):
+    """The transitions whose lagged point starts a run of consecutive quarters.
+
+    A transition at quarter q carries the point at q - 1 as its lag. That point is
+    a start point when no transition in the frame has it as its outcome, i.e. when
+    (ID, q - 1) is not an outcome row. On step 07's full frame these are exactly
+    the first points of the segments; on a subset of transitions (step 11's
+    interpolation-free arm, step 10's complete-covariate rows) a dropped
+    transition makes the next lagged point a start point, which is then modeled
+    rather than silently conditioned on.
+
+    Returns the rows of ``model_df`` (the start values are their
+    ``pain_factor_lag1``, ``sleep_factor_lag1``).
+    """
+    outcomes = set(zip(model_df["ID"], model_df["quarter"]))
+    is_start = [(i, q - 1) not in outcomes
+                for i, q in zip(model_df["ID"], model_df["quarter"])]
+    return model_df.loc[np.asarray(is_start, dtype=bool)]
+
+
+def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
+                                 b, c, innov):
     """Likelihood of each segment's first point under the stationary distribution.
 
-    For the person's transition matrix A = [[phi_p, l_sp], [l_ps, phi_s]] (coupling
-    slopes at K = 0, including the person's random slope and Age/Sex moderation)
-    and innovation covariance Sigma, the stationary covariance V solves
+    ``j`` is each start point's person index and ``y_p``, ``y_s`` its raw scores;
+    ``b``, ``c`` are the sleep->pain and pain->sleep slopes at those rows (K = 0,
+    every moderator included; 0.0 for a direction not in the model). For the
+    transition matrix A = [[phi_p, b], [c, phi_s]] and innovation covariance
+    Sigma, the stationary covariance V solves
     V = A V A' + Sigma. With V symmetric that is three linear equations in
     (V11, V12, V22), solved here in closed form (Cramer's rule) for every row.
     The point is N(alpha_i, V), factored as p(pain) p(sleep | pain). A
     non-stationary A (no positive-definite V) gets log-probability -inf.
     """
-    j = first_points["pid_idx"].values.astype(int)
-    y_p = first_points["pain_factor"].values.astype(float)
-    y_s = first_points["sleep_factor"].values.astype(float)
     a, d = phi_p, phi_s
-    b = lam_sp_person[j] if not isinstance(lam_sp_person, float) else lam_sp_person
-    c = lam_ps_person[j] if not isinstance(lam_ps_person, float) else lam_ps_person
-    for g, name in ((g_sp, "b"), (g_ps, "c")):
-        if g is not None:
-            term = (g[0] * first_points["Age_z"].values.astype(float)
-                    + g[1] * first_points["Sex_c"].values.astype(float))
-            if name == "b":
-                b = b + term
-            else:
-                c = c + term
     sp, ss, r = innov["sigma_pain"], innov["sigma_sleep"], innov["rho_innov"]
     s11, s12, s22 = sp ** 2, r * sp * ss, ss ** 2
 
@@ -896,8 +937,9 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        cores=None,
                        progressbar=True,
                        fit_id=None, out_dir=None,
-                       centering="observed",
-                       first_points=None,
+                       centering=None,
+                       initial_points="stationary",
+                       level_moderators=None,
                        sampler_overrides=None):
     """Fit the Bayesian VARX(1) model with contrast and optional moderators.
 
@@ -962,8 +1004,10 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         ``az.loo`` / ``az.compare``.
     progressbar : bool, default True
         Whether to display MCMC progress bars during sampling.
-    centering : {"observed", "latent"}, default "observed"
-        How each person's usual pain and sleep level is removed.
+    centering : {"observed", "latent"}, optional
+        How each person's usual pain and sleep level is removed. Default: the
+        pipeline's selected model (``lib/model_version.py``; ``run_pipeline.py
+        --model``), which is "observed" unless another model is selected.
 
         ``"observed"`` is the published model: the outcomes and lags are step 07's
         deviations from each person's observed mean (``pain_within``,
@@ -977,22 +1021,33 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
 
         and the same dynamics act on P*, S* with no intercepts. The likelihood is
         on the raw scores (``pain_factor``, ``sleep_factor``), so ``model_df`` must
-        also carry ``pain_factor_lag1`` and ``sleep_factor_lag1``, built within
-        (ID, segment_id) with step 07's rule. The two interaction terms are
+        also carry ``pain_factor_lag1`` and ``sleep_factor_lag1`` (``load_varx_frame``
+        adds them under the latent model). The two interaction terms are
         rebuilt from the latent deviations; the localization contrast K stays on
         its observed-mean deviation, because it enters only as a predictor.
         Removes the short-panel (Nickell 1981) bias that observed-mean centering
         puts on the autoregressions. New parameters: mu_P, mu_S, tau_aP, tau_aS,
         rho_alpha, and the person levels alpha (persons x 2).
-    first_points : DataFrame, optional
-        ``centering="latent"`` only. The first retained point of every segment
-        (the rows with no lag), with ``pid_idx``, ``pain_factor``,
-        ``sleep_factor``, ``Age_z``, ``Sex_c``. When given, those points are
-        modeled from the person's stationary distribution, N(alpha_i, V_i) with
-        V_i = A_i V_i A_i' + Sigma (A_i the person's transition matrix at K = 0,
-        Sigma the innovation covariance), instead of being conditioned on. Without
-        it, a short panel cannot separate persistence from the spread of usual
-        levels (the initial-conditions problem).
+    initial_points : {"stationary", "conditional"}, default "stationary"
+        ``centering="latent"`` only: how the first point of each run of
+        consecutive quarters is treated. A start point is the lagged point of a
+        transition whose own predecessor transition is not in the frame; on the
+        full step 07 frame these are exactly the first points of the segments.
+
+        ``"stationary"`` models each start point from the person's stationary
+        distribution, N(alpha_i, V_i) with V_i = A_i V_i A_i' + Sigma (A_i the
+        person's transition matrix at K = 0, with every moderator of the slopes;
+        Sigma the innovation covariance). ``"conditional"`` conditions on it, as the
+        observed model does. Conditional fails in simulation on this panel: with
+        about nine quarters per person it cannot separate persistence from the
+        spread of usual levels (the initial-conditions problem); see
+        ``extensions/latent_centering/``.
+    level_moderators : dict, optional
+        ``centering="latent"`` only. ``{param_name: (direction, level)}`` with
+        direction "sp" or "ps" and level "pain" or "sleep": adds
+        ``param_name ~ N(0, 1)`` times the person's latent usual level, in SD
+        units of the population of levels, to that coupling slope. The latent
+        counterpart of moderating by a z-scored observed person mean (step 23).
     sampler_overrides : dict, optional
         Exceptions to ``SAMPLER`` (e.g. fewer draws for a simulation-recovery
         fit), forwarded to ``run_fit`` so they are recorded in the diagnostics.
@@ -1027,15 +1082,28 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         raise ValueError(
             "moderator_direction='ps' (or 'both') requires include_ps=True"
         )
+    if centering is None:
+        centering = model_version.centering()
     if centering not in ("observed", "latent"):
         raise ValueError(
             f"centering must be 'observed' or 'latent'; got {centering!r}"
         )
     latent = centering == "latent"
-    if first_points is not None and not latent:
-        raise ValueError("first_points requires centering='latent'")
-    if first_points is not None and X_person is not None:
-        raise NotImplementedError("first_points with X_person is not implemented")
+    if initial_points not in ("stationary", "conditional"):
+        raise ValueError(
+            f"initial_points must be 'stationary' or 'conditional'; "
+            f"got {initial_points!r}"
+        )
+    stationary = latent and initial_points == "stationary"
+    level_moderators = dict(level_moderators or {})
+    if level_moderators and not latent:
+        raise ValueError("level_moderators requires centering='latent'")
+    for name, (direction, level) in level_moderators.items():
+        if direction not in ("sp", "ps") or level not in ("pain", "sleep"):
+            raise ValueError(f"level_moderators[{name!r}] = {(direction, level)!r}")
+        if not (include_sp if direction == "sp" else include_ps):
+            raise ValueError(f"level_moderators[{name!r}]: direction {direction} "
+                             "is not in the model")
 
     # ------------------------------------------------------------------
     # Filter to subjects with external moderator data (Aim 2 only)
@@ -1056,6 +1124,8 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         sub_df = model_df.copy()
 
     n_persons = len(valid_ids)
+    if stationary:
+        start = segment_start_points(sub_df)
 
     # ------------------------------------------------------------------
     # Extract data arrays for PyMC (float64 for numerical stability)
@@ -1153,23 +1223,6 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             u_ps_z = pm.Normal("u_ps_z", mu=0, sigma=1, shape=n_persons)
             u_ps = pm.Deterministic("u_ps", u_ps_z * tau_ps)
 
-        # --- Assemble person-varying coupling slopes ---
-        # If the corresponding direction is disabled, a2_i / b1_i stay
-        # at zero and the corresponding cross-lag term drops out of the
-        # linear predictor below.
-        if include_sp:
-            a2_i = a2 + u_sp[idx]
-            if include_agesex:
-                a2_i = a2_i + g_sp_age * age_z + g_sp_sex * sex_c
-            if attach_sp:
-                a2_i = a2_i + gamma_sp * X_obs
-        if include_ps:
-            b1_i = b1 + u_ps[idx]
-            if include_agesex:
-                b1_i = b1_i + g_ps_age * age_z + g_ps_sex * sex_c
-            if attach_ps:
-                b1_i = b1_i + gamma_ps * X_obs
-
         # --- Latent usual levels (centering="latent" only) ---
         # Bivariate normal, non-centered like u_sp/u_ps (a centered version mixed
         # worse in a short test: BFMI 0.09). The correlation prior is Beta(2, 2) on
@@ -1184,10 +1237,54 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             rho_alpha_raw = pm.Beta("rho_alpha_raw", alpha=2, beta=2)
             rho_alpha = pm.Deterministic("rho_alpha", 2 * rho_alpha_raw - 1)
             alpha_z = pm.Normal("alpha_z", mu=0, sigma=1, shape=(n_persons, 2))
-            alpha_P = mu_P + tau_aP * alpha_z[:, 0]
-            alpha_S = mu_S + tau_aS * (rho_alpha * alpha_z[:, 0]
-                                       + pt.sqrt(1 - rho_alpha ** 2) * alpha_z[:, 1])
+            # Each person's usual levels in SD units of the population of levels:
+            # the latent counterpart of a z-scored person mean (level_moderators).
+            level_z = {"pain": alpha_z[:, 0],
+                       "sleep": rho_alpha * alpha_z[:, 0]
+                       + pt.sqrt(1 - rho_alpha ** 2) * alpha_z[:, 1]}
+            alpha_P = mu_P + tau_aP * level_z["pain"]
+            alpha_S = mu_S + tau_aS * level_z["sleep"]
             pm.Deterministic("alpha", pt.stack([alpha_P, alpha_S], axis=1))
+            level_gammas = {name: (direction, level, pm.Normal(name, mu=0, sigma=1))
+                            for name, (direction, level) in level_moderators.items()}
+
+        # --- Assemble person-varying coupling slopes ---
+        # One builder for any set of rows (person index j, Age_z, Sex_c), so the
+        # transitions and the stationary start points (latent) get the same slope.
+        # A disabled direction returns 0.0 and its cross-lag term drops out of the
+        # linear predictor below.
+        def coupling_slope(direction, j, age, sex, X_rows):
+            if direction == "sp":
+                if not include_sp:
+                    return 0.0
+                s = a2 + u_sp[j]
+                if include_agesex:
+                    s = s + g_sp_age * age + g_sp_sex * sex
+                if attach_sp:
+                    s = s + gamma_sp * X_rows
+            else:
+                if not include_ps:
+                    return 0.0
+                s = b1 + u_ps[j]
+                if include_agesex:
+                    s = s + g_ps_age * age + g_ps_sex * sex
+                if attach_ps:
+                    s = s + gamma_ps * X_rows
+            if latent:
+                for d, level, gamma in level_gammas.values():
+                    if d == direction:
+                        s = s + gamma * level_z[level][j]
+            return s
+
+        X_obs_rows = X_obs if has_moderator else None
+        if include_agesex:
+            a2_i = coupling_slope("sp", idx, age_z, sex_c, X_obs_rows)
+            b1_i = coupling_slope("ps", idx, age_z, sex_c, X_obs_rows)
+        else:
+            a2_i = coupling_slope("sp", idx, None, None, X_obs_rows)
+            b1_i = coupling_slope("ps", idx, None, None, X_obs_rows)
+
+        if latent:
             level_pain, level_sleep = alpha_P[idx], alpha_S[idx]
             pain_lag = pain_lag - level_pain
             sleep_lag = sleep_lag - level_sleep
@@ -1240,13 +1337,18 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             mu_pain=mu_pain, mu_sleep=mu_sleep,
             y_pain=y_pain, y_sleep=y_sleep,
         )
-        if first_points is not None:
+        if stationary:
+            # Slopes at K = 0, from the same builder as the transitions.
+            j = start["pid_idx"].values.astype(int)
+            age_s = start["Age_z"].values.astype(float) if include_agesex else None
+            sex_s = start["Sex_c"].values.astype(float) if include_agesex else None
+            X_s = X_array[j] if has_moderator else None
             _add_stationary_first_points(
-                first_points, alpha_P, alpha_S, a1, b2,
-                a2 + u_sp if include_sp else 0.0,
-                b1 + u_ps if include_ps else 0.0,
-                (g_sp_age, g_sp_sex) if include_agesex and include_sp else None,
-                (g_ps_age, g_ps_sex) if include_agesex and include_ps else None,
+                j, start["pain_factor_lag1"].values.astype(float),
+                start["sleep_factor_lag1"].values.astype(float),
+                alpha_P, alpha_S, a1, b2,
+                coupling_slope("sp", j, age_s, sex_s, X_s),
+                coupling_slope("ps", j, age_s, sex_s, X_s),
                 innov)
 
         # --- MCMC sampling ---
@@ -1257,6 +1359,19 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             extra["cores"] = cores
         if idata_kwargs is not None:
             extra["idata_kwargs"] = idata_kwargs
+        if stationary:
+            # The default jittered start draws explosive person dynamics for some
+            # chains, where the stationary density is -inf and sampling cannot
+            # begin. Start every chain at zero dynamics instead (no jitter); the
+            # override is recorded in the diagnostics like any other.
+            init_zero = {v.name: 0.0 for v in model.free_RVs
+                         if v.name in ("a1", "b2", "a2", "b1", "g_sp_age", "g_sp_sex",
+                                       "g_ps_age", "g_ps_sex", "gamma_sp", "gamma_ps",
+                                       *level_moderators)}
+            # small slope SDs, so the random slopes start near zero as well
+            init_zero.update({v.name: 0.05 for v in model.free_RVs
+                              if v.name in ("tau_sp", "tau_ps")})
+            extra.update({"init": "adapt_diag", "initvals": init_zero})
         if sampler_overrides:
             extra.update(sampler_overrides)
         idata = run_fit(model, fit_id=fit_id, out_dir=out_dir,
@@ -1807,6 +1922,13 @@ def extract_results(trace, moderator_name=None):
         "b0", "b1", "b2", "b3", "b4",
         "tau_sp", "tau_ps", "sigma_pain", "sigma_sleep", "rho_innov",
     ]
+
+    # The latent model has no intercepts; its usual-level parameters take their
+    # place. Under the observed model this leaves the list exactly as it was.
+    if "alpha" in trace.posterior:
+        scalar_vars = [v for v in scalar_vars if v not in ("a0", "b0")]
+        scalar_vars.extend(["mu_P", "mu_S", "tau_aP", "tau_aS", "rho_alpha"])
+    scalar_vars = [v for v in scalar_vars if v in trace.posterior]
 
     has_agesex = "g_sp_age" in trace.posterior
     if has_agesex:

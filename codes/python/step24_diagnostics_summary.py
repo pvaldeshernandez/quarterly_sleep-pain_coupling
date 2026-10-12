@@ -40,9 +40,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
 ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
 
-DERIV_DIR = os.path.join(ROOT, "derivatives")
-RESULTS_DIR = os.path.join(ROOT, "results")
+DERIV_DIR = versioned(ROOT, "derivatives")
+RESULTS_DIR = versioned(ROOT, "results")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step24_diagnostics")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step24_diagnostics")
 
@@ -70,6 +72,11 @@ FAMILIES = [
      lambda n: n in {"sigma_pain", "sigma_sleep", "rho_innov", "rho_raw"}),
     ("Person-specific sleep-to-pain slopes", lambda n: n.startswith("u_sp[")),
     ("Person-specific pain-to-sleep slopes", lambda n: n.startswith("u_ps[")),
+    # Latent model only (absent families are skipped): the usual levels.
+    ("Usual levels: means, SDs and their correlation",
+     lambda n: n in {"mu_P", "mu_S", "tau_aP", "tau_aS", "rho_alpha", "rho_alpha_raw"}),
+    ("Person-specific usual pain levels", lambda n: n.startswith("alpha[") and n.endswith(", 0]")),
+    ("Person-specific usual sleep levels", lambda n: n.startswith("alpha[") and n.endswith(", 1]")),
 ]
 
 

@@ -38,15 +38,17 @@ warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
 
 # lib/ holds the shared helpers; without this the step imports only when
 # something else (run_pipeline.py) has already put lib/ on the path.
 LIB_DIR = os.path.join(HERE, "lib")
 sys.path.insert(0, LIB_DIR)
-DERIV_DIR = os.path.join(ROOT, "derivatives")
+DERIV_DIR = versioned(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step20_ps_roi_values")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
-RESULTS_DIR = os.path.join(ROOT, "results")
+RESULTS_DIR = versioned(ROOT, "results")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step20_ps_roi_extraction")
 #: A step writes into its OWN results folder. tools/collect_deliverables.py
 #: copies what the documents need into results/manuscript/ and

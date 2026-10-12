@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 import time
 import warnings
 
@@ -50,10 +51,12 @@ warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
 
 GLM_DIR   = os.path.join(ROOT, "data", "original", "spm_mats")
 FMRI4D_DIR = os.path.join(ROOT, "data", "original", "fmri_4d")
-DERIV_DIR = os.path.join(ROOT, "derivatives")
+DERIV_DIR = versioned(ROOT, "derivatives")
 
 #: One folder per step, subfolders inside it. The two mask variants are two kinds of
 #: output from ONE step, not two steps, so they are subdirectories rather than

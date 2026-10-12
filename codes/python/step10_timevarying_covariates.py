@@ -81,8 +81,10 @@ warnings.filterwarnings("ignore")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-DERIV_DIR = os.path.join(ROOT, "derivatives")
-RESULTS_DIR = os.path.join(ROOT, "results")
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
+DERIV_DIR = versioned(ROOT, "derivatives")
+RESULTS_DIR = versioned(ROOT, "results")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step10_timevarying_covariates")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step10_timevarying_covariates")
 

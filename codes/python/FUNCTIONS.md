@@ -37,9 +37,12 @@ Bayesian VARX(1) Model for Bidirectional Sleep-Pain Coupling
 - `two_tail_p(prob_neg)` — Two-tailed Bayesian posterior "p-value" from P(parameter < 0).
 - `sign_concordance_p(n_concordant, n_tested)` — Upper-tail binomial p-value for observing ``n_concordant`` out
 - `load_varx_frame(csv_path, verbose)` — Load the VARX-ready long dataframe and prepare it for any
+- `add_raw_lags(df)` — Add ``pain_factor_lag1`` and ``sleep_factor_lag1``: the raw scores one quarter back.
 - `add_bivariate_innovations_likelihood(mu_pain, mu_sleep, y_pain, y_sleep, name_suffix)` — Attach the bivariate-normal innovations likelihood to the current
+- `segment_start_points(model_df)` — The transitions whose lagged point starts a run of consecutive quarters.
+- `_add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s, b, c, innov)` — Likelihood of each segment's first point under the stationary distribution.
 - `build_timevarying(model_df, df_full, raw_long, covars, standardize, binary, interpolate)` — Within-person-centered time-varying covariates and their within-segment lag-1.
-- `fit_bayesian_varx1(model_df, unique_ids, id_map, X_person, include_agesex, include_sp, include_ps, moderator_direction, X_tv, idata_kwargs, cores, progressbar, fit_id, out_dir, centering, sampler_overrides)` — Fit the Bayesian VARX(1) model with contrast and optional moderators. `centering="latent"` estimates each person's usual pain/sleep level inside the model (RI-CLPM style) instead of step 07's observed-mean deviations; `sampler_overrides` reach `run_fit` and are recorded.
+- `fit_bayesian_varx1(model_df, unique_ids, id_map, X_person, include_agesex, include_sp, include_ps, moderator_direction, X_tv, idata_kwargs, cores, progressbar, fit_id, out_dir, centering, initial_points, level_moderators, sampler_overrides)` — Fit the Bayesian VARX(1) model with contrast and optional moderators.
 - `fit_roi_moderation_set(roi_df, model_df, unique_ids, id_map, direction, rois, fit_id_prefix, out_dir, include_agesex, progressbar, verbose)` — Fit one moderation model per ROI and tabulate them.
 - `compute_loo_comparison(data_dir, synthetic)` — Fit four nested coupling-direction models and compare via LOO-CV.
 - `compute_jn_curve(intercept_draws, slope_draws, X_vals, raw_mean, raw_sd, clip_pct)` — Compute a Bayesian Johnson-Neyman (JN) significance curve.
@@ -69,6 +72,15 @@ Measurement-model comparison helpers.
   - `_a(num, denom_var)` — *(undocumented)*
 - `tucker_congruence(x, y)` — Tucker's coefficient of congruence between two loading vectors.
 
+### `model_version.py`
+
+Which version of the coupling model the pipeline runs, and where its outputs go.
+
+- `current()` — The selected model name, validated.
+- `centering()` — The centering ``fit_bayesian_varx1`` uses when the caller names none.
+- `suffix()` — Folder suffix: '' for the published model, '_<name>' for any other.
+- `versioned(root, kind)` — Output folder ``<root>/<kind><suffix>`` (kind: 'derivatives' or 'results').
+
 ### `nuisance.py`
 
 Person-level nuisance covariates: reading them, aligning them, removing them.
@@ -92,6 +104,7 @@ Posterior predictive simulation for the VARX(1) coupling model.
 - `iqr(x)` — *(undocumented)*
 - `kurt(x)` — Excess kurtosis (0 for a Gaussian). a02_diagnostics.py:201.
 - `simulate_replicates(idata, md, n_rep, rng, innovations, return_mu)` — Draw y_rep from the posterior predictive by re-implementing the model.
+- `observed_outcomes(idata, md)` — The outcomes the fit modeled: raw scores (latent model) or within-person deviations.
 - `ppc_table(idata, md, n_rep, seed, innovations, return_arrays)` — Full posterior predictive check table for one fit.
 - `_toy_idata_and_frame(seed, n_obs, n_persons, n_chains, n_draws)` — A tiny fake posterior + model frame. No fitting, no data touched.
 - `verify_gaussian_identity(verbose)` — max |delta| between this module's Gaussian path and a02's must be 0.
@@ -117,6 +130,12 @@ Canonical registry of the baseline sleep instruments used in the R1.1/R2.3 revis
 - `diary_stems(dd, form, n_nights)` — Every item of `form` that has exactly `n_nights` nightly variables.
 - `baseline_frame(wide, dd, min_nights)` — Every column-based baseline sleep measure as person-level values, plus metadata.
 
+### `step00_export.py`
+
+The one way to read baseline variables: step 00's export.
+
+- `baseline(ids, columns, path)` — Step 00's quarter-0 block: one row per subject, ``ID`` as a string column.
+
 ### `stopbang.py`
 
 Canonical STOP-BANG obstructive sleep apnea risk score.
@@ -126,7 +145,7 @@ Canonical STOP-BANG obstructive sleep apnea risk score.
 - `_default_ids()` — The analytic sample, for callers that pass no explicit ID set.
 - `scores(ids, wide)` — STOP-BANG total per participant, restricted to `ids` and to complete scorers.
 - `summary(q13_person_mean, ids, wide)` — Every STOP-BANG figure reported in the paper, in one dict.
-- `test_reproduces_published(q13_person_mean, ids, wide)` — Assert this module reproduces the numbers Section S4 and the Response quote.
+- `test_reproduces_published(q13_person_mean, ids, wide)` — Assert this module reproduces the numbers the supplement and the Response quote.
 
 ## Pipeline steps — `codes/python/`
 
@@ -151,6 +170,7 @@ Step 00 — Extract paper-relevant variables from the legacy wide-format data.
 - `reshape_quarterly_items(wide)` — Reshape ``qhu{quarter}_q{item}__s1`` columns to long format.
 - `apply_gateway_imputation(long)` — Apply gateway-question imputation to quarter 1..11 rows.
 - `build_baseline_rows(wide)` — Build the ``quarter = 0`` rows carrying baseline variables.
+- `derive_baseline_sleep(wide, dict_df)` — The eleven reduced baseline sleep values, one row per subject, indexed by ID.
 - `assemble_long(wide)` — Assemble the full long-format output.
 - `filter_dictionary(dict_df)` — Keep dictionary rows that correspond to extracted variables.
 - `extract(verbose, refit)` — Run the full extraction and write outputs.
@@ -194,10 +214,10 @@ Step 02 — Measurement checks on the published two-factor pain solution.
 Step 03 — Data curation: who is in the analytic sample.
 
 - `segment_filter(df)` — Identify and retain segments of >= MIN_SEGMENT consecutive quarters.
-- `_baseline_sleep(analytic_ids)` — {label -> Series of person-level values} for every baseline sleep instrument.
-- `compute_table3(df_processed, df_full)` — Compute Table 3 demographics for the analytic sample.
+- `_baseline_sleep(baseline, analytic_ids)` — {label -> Series of person-level values} for every baseline sleep instrument.
+- `compute_demographics(df_processed, df_full)` — Compute demographics for the analytic sample.
   - `_add(variable, level, value)` — *(undocumented)*
-- `generate_figure1(df_processed, df_full, out_path)` — Generate Figure 1: data availability grid.
+- `generate_availability_grid(df_processed, df_full, out_path)` — Generate the data availability grid.
 - `run_step03(verbose, refit)` — Curate the analytic sample and report it.
 - `main()` — *(undocumented)*
 
@@ -220,8 +240,8 @@ Step 05 — External validation of the contrast factor.
 
 - `_resolve_kl_column(df)` — Return the name of the KL-grade column present in `df`, or None.
 - `_load_person_mean_contrast()` — Return DataFrame with columns [ID, K_i] from step01 scored output.
-- `generate_figure_s1(verbose)` — Figure S1: body-map endorsement point-biserial correlations.
-- `generate_figure_s2(verbose)` — Figure S2: convergent validity of the contrast factor vs baseline
+- `generate_endorsement_figure(verbose)` — Body-map endorsement point-biserial correlations.
+- `generate_convergent_figure(verbose)` — Convergent validity of the contrast factor vs baseline
 - `generate_text_numbers(verbose)` — Compute and save all convergent validity statistics to
   - `_t(metric, value, note)` — *(undocumented)*
 - `run_step05(verbose, refit)` — *(undocumented)*
@@ -229,7 +249,7 @@ Step 05 — External validation of the contrast factor.
 
 ### `step06_sleep_measure_correlates.py`
 
-Step 06 — Correlates of the quarterly sleep-quality item (Figure S3, Section S4).
+Step 06 — Correlates of the quarterly sleep-quality item (the sleep-stability heatmap).
 
 - `_first_existing(candidates, what)` — The first path that exists, or a FileNotFoundError naming every candidate.
 - `_load_inputs(verbose)` — Read every input and return (wide, dd, rep, ids).
@@ -257,6 +277,7 @@ Step 07 — Build the VARX(1) frame: centering, lags, interaction terms.
 
 Step 08 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 
+- `_with_usual_levels(rows, results)` — The coupling-table rows for the model that was fit.
 - `load_data(csv_path)` — Thin wrapper around lib.coupling_model.load_varx_frame.
 - `_generate_coupling_figure(person_df, pop_mean, pop_ci_lo, pop_ci_hi, col_mean, col_ci_lo, col_ci_hi, col_prob, direction_label, out_path, prob_neg)` — Draw a 2-panel coupling figure (boxstrip + forest) and save.
 - `run_step08(verbose, refit)` — Fit the coupling model and LOO-CV, produce all Step 03 outputs.
@@ -265,15 +286,15 @@ Step 08 — Fit the Bayesian VARX(1) coupling model + LOO-CV.
 
 ### `step09_posterior_predictive_check.py`
 
-Step 09 — Posterior predictive check of the primary coupling model (Table S5, Section S5).
+Step 09 — Posterior predictive check of the primary coupling model.
 
 - `_key_stem(variable, statistic)` — Registry key stem for one table row, e.g. 'pain_kurt', 'joint_corr_innov'.
-- `numbers_from_table(table, meta)` — Every quantity Table S5 and Section S5 quote, under a stable key.
+- `numbers_from_table(table, meta)` — Every quantity the posterior-predictive-check table quotes, under a stable key.
 - `_stat_matrix(reps)` — (n_rep, 6) matrix of the canonical marginal statistics, replicate by replicate.
 - `_check_arrays_match_table(table, stat_pain, stat_sleep, rep_corr, rep_ic)` — The saved arrays must be the arrays the table was scored from.
   - `_want(variable, statistic)` — *(undocumented)*
 - `load_inputs(verbose)` — The model frame the primary fit used, and the posterior it produced.
-- `simulate_and_score(md, idata, innovations, n_rep, seed, verbose)` — Table S5 plus everything a later figure would need, from one posterior.
+- `simulate_and_score(md, idata, innovations, n_rep, seed, verbose)` — The check summary plus everything a later figure would need, from one posterior.
 - `_save(table, arrays, meta)` — *(undocumented)*
 - `_load_saved()` — The table and the run metadata from a previous run; None if incomplete.
 - `run_step09(verbose, refit, n_rep, seed)` — Score the primary model's posterior predictive check.
@@ -295,8 +316,8 @@ Step 10 — Time-varying covariates: fatigue/mood and treatment activity.
 - `panel_a(summary)` — Panel A: coupling and innovation correlation under each of the six models.
 - `panel_b(summary)` — Panel B: the sixteen covariate coefficients (theta), pain and sleep equations.
 - `endorsement_counts(raw_long_df, block)` — How often a binary item was endorsed, on the RAW (uninterpolated) column.
-- `assemble_numbers(summary, design, raw_long_df, diagnostics)` — Every quantity Table S6 and Section S6 quote, under a stable key.
-- `run_step10(verbose, refit)` — Rebuild Table S6 and numbers.json; ``refit`` re-runs the six fits.
+- `assemble_numbers(summary, design, raw_long_df, diagnostics)` — Every quantity the time-varying covariate tables quote, under a stable key.
+- `run_step10(verbose, refit)` — Rebuild the time-varying covariate tables and numbers.json; ``refit`` re-runs the six fits.
 - `main()` — *(undocumented)*
 
 ### `step11_interpolation_sensitivity.py`
@@ -310,13 +331,13 @@ Step 11 — Sensitivity of the coupling estimates to interpolated observations.
 - `load_primary_arm(n_obs, n_persons, verbose)` — The primary fit's posterior summary, from step 08's published outputs.
 - `fit_nointerp_arm(clean, clean_ids, verbose)` — Fit the PRIMARY specification to the interpolation-free transitions.
 - `_cell(summary, arm, param)` — One parameter's row for one arm, or None if the arm does not carry it.
-- `estimate_numbers(summary, verbose)` — Every Table S7 cell, plus the two derived ratios the supplement states.
+- `estimate_numbers(summary, verbose)` — Every table cell, plus the two derived ratios the supplement states.
 - `diagnostic_numbers(verbose)` — The interpolation-free fit's diagnostics, as `run_fit` recorded them.
-- `count_numbers(flags, n_obs, n_persons, n_interp_rows)` — The 'X of Y transitions' block of Section S7, all of it derived, none hardcoded.
+- `count_numbers(flags, n_obs, n_persons, n_interp_rows)` — The 'X of Y transitions' block of the interpolation section, all of it derived, none hardcoded.
 - `_saved_counts()` — The count block of a previous run, read back from its numbers.json.
-- `write_table_s7(summary, path)` — Table S7 DATA: one row per parameter, the two arms side by side.
+- `write_interpolation_table(summary, path)` — TABLE DATA: one row per parameter, the two arms side by side.
 - `plot_arms(table, out_path)` — Forest plot of the two arms, drawn from the table DATA only.
-- `run_step11(verbose, refit)` — Compare the primary fit with its interpolation-free refit (Table S7).
+- `run_step11(verbose, refit)` — Compare the primary fit with its interpolation-free refit .
 - `main()` — *(undocumented)*
 
 ### `step12_contrast_moderation.py`
@@ -343,7 +364,7 @@ Step 13 — Re-estimate first-level fMRI contrasts (masked and unmasked).
 
 ### `step14_extract_sp_rois.py`
 
-Step 14 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
+Step 14 — Extract Sleep-to-Pain fMRI ROI values and ROI brain maps.
 
 - `build_spherical_mask(mni_center, radius_mm, affine, shape)` — Create a boolean 3D mask for a sphere at MNI coordinates.
 - `load_stim_side_map(verbose)` — Return {ID -> 'left' or 'right'} with the hemisphere CONTRALATERAL to
@@ -352,13 +373,13 @@ Step 14 — Extract Sleep-to-Pain fMRI ROI values + Figure S4.
 - `_make_sphere_img(template, mni_center, radius_mm)` — *(undocumented)*
 - `_render_roi_to_image(roi_img, template, cut_coords, title, cmap)` — *(undocumented)*
 - `_make_composite(panels, ncols)` — *(undocumented)*
-- `generate_figure_s4(verbose)` — Generate Figure S4: orthogonal brain slices for all SP ROIs.
+- `generate_roi_figure(verbose)` — Generate orthogonal brain slices for all SP ROIs.
 - `run_step14(verbose, refit)` — *(undocumented)*
 - `main()` — *(undocumented)*
 
 ### `step15_imaging_qc.py`
 
-Step 15 — Imaging quality control of the fMRI subsample (Section S9).
+Step 15 — Imaging quality control of the fMRI subsample .
 
 - `corr_on(ids, map_a, map_b)` — Pearson correlation of two person-level maps over one ID set.
 - `site_contrast(ids, roi_map, site_map)` — Welch t-test and Cohen's d of one ROI's values by scanner site.
@@ -390,7 +411,7 @@ Step 17 — Johnson-Neyman analysis for SP moderation ROIs.
 
 ### `step18_nuisance_adjusted.py`
 
-Step 18 — Nuisance-adjusted sleep-to-pain fMRI moderation (Section S11, Table S8).
+Step 18 — Nuisance-adjusted sleep-to-pain fMRI moderation (the nuisance-sensitivity table).
 
 - `corr_on(ids, map_a, map_b)` — Pearson correlation of two person-level maps over one ID set.
 - `site_contrast(ids, roi_map, site_map)` — Welch t-test and Cohen's d of one ROI's values by scanner site.
@@ -412,7 +433,7 @@ Step 19 — Directional-specificity control for the sleep-to-pain fMRI ROIs.
 
 ### `step20_extract_ps_rois.py`
 
-Step 20 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
+Step 20 — Extract Pain-to-Sleep arousal relay ROI values and ROI brain maps.
 
 - `extract_fmri_arousal(verbose)` — Extract probability-weighted mean BOLD per subject per ROI.
 - `extract_vbm_arousal(verbose)` — Extract probability-weighted GM volume per subject per ROI.
@@ -421,7 +442,7 @@ Step 20 — Extract Pain-to-Sleep arousal relay ROI values + Figure S6.
 - `_get_center_of_mass(roi_img)` — *(undocumented)*
 - `_render_roi_to_image(roi_img, template, cut_coords, title, cmap)` — *(undocumented)*
 - `_make_composite(panels, ncols)` — *(undocumented)*
-- `generate_figure_s6(verbose)` — Generate Figure S6: orthogonal brain slices for all PS arousal ROIs.
+- `generate_roi_figure(verbose)` — Generate orthogonal brain slices for all PS arousal ROIs.
 - `run_step20(verbose, refit)` — *(undocumented)*
 - `publish_subsample_demographics(verbose)` — Demographics of the imaging subsamples, so the Results paragraph is checkable.
 - `main()` — *(undocumented)*
@@ -449,12 +470,13 @@ Step 22 — Johnson-Neyman analysis for PS arousal moderation ROIs.
 
 ### `step23_severity_moderation.py`
 
-Step 23 — Person-mean severity moderation of coupling (Table S2).
+Step 23 — Person-mean severity moderation of coupling.
 
 - `load_data(csv_path)` — Thin wrapper around lib.coupling_model.load_varx_frame.
 - `run_step23(verbose, refit)` — *(undocumented)*
   - `_t(metric, value, note)` — *(undocumented)*
 - `_fit_joint_model(model_df, unique_ids, id_map, pain_mean, pain_sd, sleep_mean, sleep_sd, table_rows, text_rows, verbose, fit_id, out_dir)` — Fit a 2-moderator VARX(1) model with both pain and sleep severity.
+- `_report_joint(idata, table_rows, text_rows, verbose)` — Table and text rows for the joint model's two SP severity moderators.
   - `_summarize(var_name)` — *(undocumented)*
 - `main()` — *(undocumented)*
 
@@ -463,7 +485,7 @@ Step 23 — Person-mean severity moderation of coupling (Table S2).
 Step 24 — Collect the diagnostics of every fit in the paper.
 
 - `collect(verbose)` — Every per-fit diagnostics record the pipeline wrote.
-- `by_family(verbose)` — Table S3: convergence by parameter family, for the primary model.
+- `by_family(verbose)` — Convergence by parameter family, for the primary model.
 - `run_step24(verbose, refit)` — *(undocumented)*
 - `main()` — *(undocumented)*
 
@@ -471,12 +493,12 @@ Step 24 — Collect the diagnostics of every fit in the paper.
 
 Step 25 — The optimal measurement interval implied by the fitted coupling matrix.
 
-- `read_transition_matrix(path)` — The four coefficients of A, from the primary fit's published Table 4.
+- `read_transition_matrix(path)` — The four coefficients of A, from the primary fit's published the coupling-parameter table.
 - `eigenvalues(phi_p, phi_s, lambda_sp, lambda_ps)` — (lambda_1, lambda_2, discriminant) of the bivariate transition matrix.
 - `amplification(omega, phi_p, phi_s)` — f(omega), the cross-lagged amplification at lag omega, normalized so f(1) = 1.
 - `unidirectional_optimum(phi_p, phi_s)` — Eq. S3's omega_opt, in quarters; NaN when the logarithms do not exist.
-- `derive(coeffs, verbose)` — Every quantity Section S15 reports. Returns (tidy DataFrame, numbers dict).
-- `run_step25(verbose, refit)` — Derive Section S15's optimal-lag quantities from the primary fit.
+- `derive(coeffs, verbose)` — Every quantity the optimal-lag section reports. Returns (tidy DataFrame, numbers dict).
+- `run_step25(verbose, refit)` — Derive the optimal-lag quantities from the primary fit.
 - `main()` — *(undocumented)*
 
 ## Tools — `tools/`
@@ -486,6 +508,7 @@ Step 25 — The optimal measurement interval implied by the fitted coupling matr
 Copy each step's figures and tables into the two document folders.
 
 - `collect(mapping, outdir, dry)` — *(undocumented)*
+- `sweep(mapping, outdir, dry)` — Move deliverables no longer in the mapping into `archive/`.
 - `collect_values(dry)` — Merge every named value into one file: name, value, producing step.
 - `main()` — *(undocumented)*
 
@@ -495,7 +518,7 @@ Compare the two interpolation arms on everything the paper concludes.
 
 - `credible(lo, hi)` — *(undocumented)*
 - `load(root_results, root_deriv, rel)` — *(undocumented)*
-- `table4(res, der)` — *(undocumented)*
+- `coupling_table(res, der)` — *(undocumented)*
 - `section(title)` — *(undocumented)*
 - `main()` — *(undocumented)*
 
@@ -554,18 +577,19 @@ Did the re-run reproduce the results it was supposed to reproduce?
 
 ### `latent_centering.py`
 
-The primary coupling model refit with latent mean centering; simulation recovery on the real panel; report beside the published fit.
+Extension — the primary coupling model refit with LATENT mean centering.
 
-- `add_raw_lags(df)` — Raw-score lags `pain_factor_lag1`, `sleep_factor_lag1` via step 07's `create_lagged_variables`.
-- `load_latent_frame(csv_path)` — `load_varx_frame` plus raw lags, on exactly step 08's rows; checks lag NaN pattern and raw − mean = within.
-- `simulate_panel(frame, rep, truth)` — Raw pain/sleep generated on the real panel (people, quarters, segments), analyzed with step 07's decomposition and lags.
-- `data_csv(data)` — Input CSV for `real` or `simK`.
-- `run_one_fit(data, centering, tune, draws)` — One fit through `fit_bayesian_varx1`; saves InferenceData and diagnostics.
-- `standardization_sds()` — Within-person pain and sleep SDs step 08 standardizes with.
-- `tidy(idata)` — `summarize_posterior` plus the two standardized couplings.
-- `table_vs_published(pub, lat)` — Published vs latent population parameters.
-- `lag_quantities(phi_p, phi_s, lambda_sp, lambda_ps)` — Step 25's eigenvalues and optimal lags (reciprocal and unidirectional) from step 25's functions.
-- `table_optimal_lag(fits, thin)` — `lag_quantities` at posterior means plus posterior 95% intervals.
-- `table_recovery()` — True vs observed-centering vs latent-centering estimates per simulated replicate.
-- `run_report()` — Write every report CSV from saved fits only.
-- `main()` — CLI: `simulate`, `fit`, `report`.
+- `load_latent_frame(csv_path)` — ``load_varx_frame`` plus raw lags, on exactly the rows step 08 fits.
+- `simulate_panel(frame, rep, truth)` — Raw pain and sleep scores generated on the real panel structure.
+- `data_csv(data)` — *(undocumented)*
+- `run_one_fit(data, centering, tune, draws, initial)` — One fit, saved as InferenceData; diagnostics written by run_fit.
+- `_load_idata(path)` — *(undocumented)*
+- `standardization_sds()` — The SDs step 08 standardizes with: within-person pain and sleep, analytic frame.
+- `tidy(idata)` — summarize_posterior, plus the two standardized couplings (step 08's formula).
+- `table_vs_published(tables)` — One row per parameter; one block of columns per fit in ``tables`` (tag -> tidy).
+- `lag_quantities(phi_p, phi_s, lambda_sp, lambda_ps)` — Step 25's quantities, from step 25's own functions.
+- `table_optimal_lag(fits, thin)` — Point values from posterior means (as step 25), plus posterior 95% intervals.
+- `table_recovery()` — *(undocumented)*
+- `run_report()` — *(undocumented)*
+- `main()` — *(undocumented)*
+

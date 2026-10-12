@@ -56,11 +56,13 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))  # repo root
+sys.path.insert(0, os.path.join(HERE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
 
-DERIV_DIR = os.path.join(ROOT, "derivatives")
+DERIV_DIR = versioned(ROOT, "derivatives")
 STEP_DERIV_DIR = os.path.join(DERIV_DIR, "step04_raw_descriptives")
 os.makedirs(STEP_DERIV_DIR, exist_ok=True)
-RESULTS_DIR = os.path.join(ROOT, "results")
+RESULTS_DIR = versioned(ROOT, "results")
 STEP_RESULTS_DIR = os.path.join(RESULTS_DIR, "step04_raw_descriptives")
 os.makedirs(STEP_RESULTS_DIR, exist_ok=True)
 

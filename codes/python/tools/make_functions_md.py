@@ -30,6 +30,8 @@ SECTIONS = [
      lambda n: n.startswith("step") or n in ("run_pipeline.py",
                                              "generate_all_results.py")),
     ("Tools — `tools/`", "tools", lambda n: True),
+    ("Extensions — `codes/python/extensions/` (not pipeline steps; outputs in "
+     "`extensions/<name>/`)", "extensions", lambda n: True),
 ]
 
 #: not part of the pipeline; one-shot sandbox scripts, kept but not registered

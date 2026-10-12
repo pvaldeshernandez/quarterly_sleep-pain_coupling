@@ -52,7 +52,10 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 CODE = os.path.dirname(HERE)
 ROOT = os.path.dirname(os.path.dirname(CODE))
-RESULTS = os.path.join(ROOT, "results")
+sys.path.insert(0, os.path.join(CODE, "lib"))
+from model_version import versioned  # noqa: E402  one selector for output folders
+
+RESULTS = versioned(ROOT, "results")
 
 OUT_MANUSCRIPT = os.path.join(RESULTS, "manuscript")
 OUT_SUPPLEMENT = os.path.join(RESULTS, "supplementary_materials")
@@ -163,7 +166,7 @@ def collect_values(dry):
     # and globbing "*text_numbers*" silently missed two of them, including step01's
     # eigenvalues, which open the Results. Any CSV whose header is metric,value is a
     # named-value file whatever it is called.
-    for root in (os.path.join(ROOT, "derivatives"), RESULTS):
+    for root in (versioned(ROOT, "derivatives"), RESULTS):
         for path in sorted(glob.glob(os.path.join(root, "*", "*.csv"))):
             step = os.path.basename(os.path.dirname(path))
             try:
