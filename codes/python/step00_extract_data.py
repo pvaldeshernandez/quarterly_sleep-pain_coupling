@@ -114,6 +114,9 @@ OUT_DICT_XLSX = os.path.join(DATA_DIR, "step00_extracted_dictionary.xlsx")
 #   KL_Index__s1                 : the baseline-characteristics table
 #   phq_knee_pain_days__s1       : the baseline-characteristics table, the convergent-validity figure
 #   phq_percent_pain__s1         : the baseline-characteristics table, the convergent-validity figure
+#   phq_pain_length__s1          : sample description -- how long knee pain had lasted
+#                                  (1 <6 mo, 2 6-12 mo, 3 1-3 y, 4 3-5 y, 5 >5 y; the
+#                                  categories of Valdes-Hernandez et al., Pain 2023)
 #   qst_knee_pain_rating__s1     : the baseline-characteristics table, the convergent-validity figure
 #   gcps_pain_intensity__s1      : GCPS characteristic pain intensity (0-100)
 #   gcps_interference__s1        : GCPS pain interference (0-100)
@@ -149,6 +152,8 @@ BASELINE_VARS = [
     # PHQ clinical (the baseline-characteristics table + the convergent-validity figure)
     "phq_knee_pain_days__s1",
     "phq_percent_pain__s1",
+    # Knee pain duration, 5 categories (sample description: who had chronic pain)
+    "phq_pain_length__s1",
 
     # QST knee pain rating (the baseline-characteristics table + the convergent-validity figure)
     "qst_knee_pain_rating__s1",
