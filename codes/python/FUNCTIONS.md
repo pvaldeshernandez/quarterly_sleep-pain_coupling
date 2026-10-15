@@ -41,10 +41,13 @@ Bayesian VARX(1) Model for Bidirectional Sleep-Pain Coupling
 - `add_bivariate_innovations_likelihood(mu_pain, mu_sleep, y_pain, y_sleep, name_suffix)` — Attach the bivariate-normal innovations likelihood to the current
 - `segment_start_points(model_df, time_col)` — The transitions whose lagged point starts a run of consecutive time steps.
 - `_finite_horizon_cov(a, b, c, d, s11, s12, s22, horizon_log2)` — V_H = sum_{k<H} A^k Sigma A^k' for A = [[a, b], [c, d]], H = 2**horizon_log2.
+- `_nested_slopes(direction, tau, person_idx, n_people, n_units)` — Random coupling slopes of units (e.g. diary weeks) nested in persons.
+- `_unit_levels(alpha_P, alpha_S, person_idx, n_units)` — Units' usual levels: their person's, plus a deviation per unit.
+- `_level_shifts(alpha_P, alpha_S, X, names)` — Fixed shifts of the usual levels by unit-level covariates, N(0, 5) each:
 - `_add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s, b, c, innov)` — Likelihood of each segment's first point under the stationary distribution.
 - `_stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid)` — Bivariate-normal log-density of the start points as p(pain) p(sleep | pain).
 - `build_timevarying(model_df, df_full, raw_long, covars, standardize, binary, interpolate)` — Within-person-centered time-varying covariates and their within-segment lag-1.
-- `fit_bayesian_varx1(model_df, unique_ids, id_map, X_person, include_agesex, include_sp, include_ps, moderator_direction, X_tv, idata_kwargs, cores, progressbar, fit_id, out_dir, centering, initial_points, level_moderators, sampler_overrides, include_contrast, columns)` — Fit the Bayesian VARX(1) model with contrast and optional moderators.
+- `fit_bayesian_varx1(model_df, unique_ids, id_map, X_person, include_agesex, include_sp, include_ps, moderator_direction, X_tv, idata_kwargs, cores, progressbar, fit_id, out_dir, centering, initial_points, level_moderators, sampler_overrides, include_contrast, columns, persons, X_level)` — Fit the Bayesian VARX(1) model with contrast and optional moderators.
 - `fit_roi_moderation_set(roi_df, model_df, unique_ids, id_map, direction, rois, fit_id_prefix, out_dir, include_agesex, progressbar, verbose)` — Fit one moderation model per ROI and tabulate them.
 - `compute_loo_comparison(data_dir, synthetic)` — Fit four nested coupling-direction models and compare via LOO-CV.
 - `compute_jn_curve(intercept_draws, slope_draws, X_vals, raw_mean, raw_sd, clip_pct)` — Compute a Bayesian Johnson-Neyman (JN) significance curve.

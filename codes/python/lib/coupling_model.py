@@ -834,6 +834,43 @@ def _finite_horizon_cov(a, b, c, d, s11, s12, s22, horizon_log2=START_HORIZON_LO
     return v11, v12, v22
 
 
+def _nested_slopes(direction, tau, person_idx, n_people, n_units):
+    """Random coupling slopes of units (e.g. diary weeks) nested in persons.
+
+    u = u_person[person] + u_unit, with u_person ~ N(0, tau^2) shared by all of a
+    person's units and u_unit ~ N(0, kappa^2) each unit's own deviation, kappa ~
+    HalfCauchy(1). Both non-centered. ``u_<dir>`` (per unit) and
+    ``u_<dir>_person`` (per person) are kept in the posterior.
+    """
+    kappa = pm.HalfCauchy(f"kappa_{direction}", beta=1)
+    zp = pm.Normal(f"u_{direction}_person_z", mu=0, sigma=1, shape=n_people)
+    zu = pm.Normal(f"u_{direction}_unit_z", mu=0, sigma=1, shape=n_units)
+    up = pm.Deterministic(f"u_{direction}_person", zp * tau)
+    return pm.Deterministic(f"u_{direction}", up[person_idx] + zu * kappa)
+
+
+def _unit_levels(alpha_P, alpha_S, person_idx, n_units):
+    """Units' usual levels: their person's, plus a deviation per unit.
+
+    alpha_unit = alpha_person[person] + (kappa_aP z_P, kappa_aS z_S), with z ~ N(0, 1)
+    (``alpha_w_z``) and kappa_a* ~ HalfCauchy(1).
+    """
+    kappa_aP = pm.HalfCauchy("kappa_aP", beta=1)
+    kappa_aS = pm.HalfCauchy("kappa_aS", beta=1)
+    w_z = pm.Normal("alpha_w_z", mu=0, sigma=1, shape=(n_units, 2))
+    return (alpha_P[person_idx] + kappa_aP * w_z[:, 0],
+            alpha_S[person_idx] + kappa_aS * w_z[:, 1])
+
+
+def _level_shifts(alpha_P, alpha_S, X, names):
+    """Fixed shifts of the usual levels by unit-level covariates, N(0, 5) each:
+    ``beta_P_<name>`` and ``beta_S_<name>``."""
+    for m, name in enumerate(names):
+        alpha_P = alpha_P + pm.Normal(f"beta_P_{name}", mu=0, sigma=5) * X[:, m]
+        alpha_S = alpha_S + pm.Normal(f"beta_S_{name}", mu=0, sigma=5) * X[:, m]
+    return alpha_P, alpha_S
+
+
 def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
                                  b, c, innov):
     """Likelihood of each segment's first point under the stationary distribution.
@@ -1030,7 +1067,9 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        level_moderators=None,
                        sampler_overrides=None,
                        include_contrast=True,
-                       columns=None):
+                       columns=None,
+                       persons=None,
+                       X_level=None):
     """Fit the Bayesian VARX(1) model with contrast and optional moderators.
 
     This is the core model-fitting function used by all analyses. It builds
@@ -1152,6 +1191,18 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
     columns : dict, optional
         Column names that differ from ``FRAME_COLUMNS`` (step 07's frame), e.g.
         ``{"time": "day_number", "pain": "pain_z", ...}`` for daily data.
+    persons : dict, optional
+        ``{unit_ID: person_ID}`` when the IDs of ``model_df`` are units nested in
+        persons (e.g. one diary week per visit). Each unit's coupling slopes are its
+        person's plus its own deviation (``tau_sp``/``tau_ps`` the person-level SDs,
+        ``kappa_sp``/``kappa_ps`` the unit-level SDs; ``_nested_slopes``), and under
+        ``centering="latent"`` so are its usual levels (``kappa_aP``, ``kappa_aS``;
+        ``_unit_levels``). ``X_person`` and Age_z/Sex_c are then given per unit.
+        Not combinable with ``level_moderators``.
+    X_level : DataFrame, optional
+        ``centering="latent"`` only. Indexed by ID (unit), one column per covariate:
+        fixed shifts of the usual pain and sleep levels, ``beta_P_<column>`` and
+        ``beta_S_<column>`` ~ N(0, 5) (e.g. a visit indicator).
 
     Returns
     -------
@@ -1245,6 +1296,24 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         sub_df = model_df.copy()
 
     n_persons = len(valid_ids)
+    nested = persons is not None
+    if nested:
+        if level_moderators:
+            raise ValueError("persons cannot be combined with level_moderators")
+        missing = [u for u in valid_ids if u not in persons]
+        if missing:
+            raise KeyError(f"persons has no person for units {missing[:5]}")
+        people = sorted({persons[u] for u in valid_ids}, key=str)
+        person_pos = {p: k for k, p in enumerate(people)}
+        person_idx = np.array([person_pos[persons[u]] for u in valid_ids])
+        n_people = len(people)
+    if X_level is not None:
+        if not latent:
+            raise ValueError("X_level requires centering='latent'")
+        X_level_names = [str(c) for c in X_level.columns]
+        X_level_arr = X_level.astype(float).loc[valid_ids].values
+        if not np.isfinite(X_level_arr).all():
+            raise ValueError("X_level has missing or non-finite values for fitted units")
     if stationary:
         start = segment_start_points(sub_df, time_col=cols["time"])
 
@@ -1360,12 +1429,18 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             # still excludes every person-level parameter. Naming it `z_sp` would
             # silently turn "worst population-level parameter" into a max over 458
             # person-level offsets.
-            u_sp_z = pm.Normal("u_sp_z", mu=0, sigma=1, shape=n_persons)
-            u_sp = pm.Deterministic("u_sp", u_sp_z * tau_sp)
+            if nested:
+                u_sp = _nested_slopes("sp", tau_sp, person_idx, n_people, n_persons)
+            else:
+                u_sp_z = pm.Normal("u_sp_z", mu=0, sigma=1, shape=n_persons)
+                u_sp = pm.Deterministic("u_sp", u_sp_z * tau_sp)
         if include_ps:
             tau_ps = pm.HalfCauchy("tau_ps", beta=1)
-            u_ps_z = pm.Normal("u_ps_z", mu=0, sigma=1, shape=n_persons)
-            u_ps = pm.Deterministic("u_ps", u_ps_z * tau_ps)
+            if nested:
+                u_ps = _nested_slopes("ps", tau_ps, person_idx, n_people, n_persons)
+            else:
+                u_ps_z = pm.Normal("u_ps_z", mu=0, sigma=1, shape=n_persons)
+                u_ps = pm.Deterministic("u_ps", u_ps_z * tau_ps)
 
         # --- Latent usual levels (centering="latent" only) ---
         # Bivariate normal, non-centered like u_sp/u_ps (a centered version mixed
@@ -1380,7 +1455,8 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             tau_aS = pm.HalfCauchy("tau_aS", beta=1)
             rho_alpha_raw = pm.Beta("rho_alpha_raw", alpha=2, beta=2)
             rho_alpha = pm.Deterministic("rho_alpha", 2 * rho_alpha_raw - 1)
-            alpha_z = pm.Normal("alpha_z", mu=0, sigma=1, shape=(n_persons, 2))
+            alpha_z = pm.Normal("alpha_z", mu=0, sigma=1,
+                                shape=(n_people if nested else n_persons, 2))
             # Each person's usual levels in SD units of the population of levels:
             # the latent counterpart of a z-scored person mean (level_moderators).
             level_z = {"pain": alpha_z[:, 0],
@@ -1388,6 +1464,10 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        + pt.sqrt(1 - rho_alpha ** 2) * alpha_z[:, 1]}
             alpha_P = mu_P + tau_aP * level_z["pain"]
             alpha_S = mu_S + tau_aS * level_z["sleep"]
+            if nested:      # person levels -> unit levels
+                alpha_P, alpha_S = _unit_levels(alpha_P, alpha_S, person_idx, n_persons)
+            if X_level is not None:
+                alpha_P, alpha_S = _level_shifts(alpha_P, alpha_S, X_level_arr, X_level_names)
             pm.Deterministic("alpha", pt.stack([alpha_P, alpha_S], axis=1))
             level_gammas = {name: (direction, level, pm.Normal(name, mu=0, sigma=1))
                             for name, (direction, level) in level_moderators.items()}
@@ -1527,7 +1607,7 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                                          for n in (X_names or ())))}
             # small slope SDs, so the random slopes start near zero as well
             init_zero.update({v.name: 0.05 for v in model.free_RVs
-                              if v.name in ("tau_sp", "tau_ps")})
+                              if v.name in ("tau_sp", "tau_ps", "kappa_sp", "kappa_ps")})
             extra.update({"init": "adapt_diag", "initvals": init_zero})
         if sampler_overrides:
             extra.update(sampler_overrides)
