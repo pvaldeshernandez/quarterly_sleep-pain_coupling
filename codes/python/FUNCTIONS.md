@@ -59,6 +59,18 @@ Item-level descriptives and the canonical item lists.
 - `icc_varcomp(df, value, group)` — One-way random-effects ICC from VARIANCE COMPONENTS, not a variance ratio.
 - `restrict_to_analytic(raw, analytic, by)` — The rows of ``raw`` whose ``by`` key appears in ``analytic``.
 
+### `gcps.py`
+
+Graded Chronic Pain Scale: intensity, disability, grade and pain impact.
+
+- `characteristic_pain_intensity(current, worst, average)` — CPI, 0-100: ten times the mean of the three 0-10 intensity ratings.
+- `disability_score(interference, social, work)` — Disability score, 0-100: ten times the mean of the three 0-10 ratings.
+- `_points(values, edges)` — 0..len(edges) points by the bin a value falls in; missing stays missing.
+- `disability_points(score, days)` — Disability points, 0-6: score points plus days points.
+- `grade(cpi, points)` — GCPS grade 0-4 (IV = 4) from CPI and disability points.
+- `impact(grade_values)` — 'no impact', 'low impact' or 'high impact' for each grade (missing stays).
+- `score_items(frame, items)` — Every GCPS score for the rows of ``frame``.
+
 ### `heatmap.py`
 
 The stability heatmap: one cell per (measure, occasion), carrying r, p and n.
