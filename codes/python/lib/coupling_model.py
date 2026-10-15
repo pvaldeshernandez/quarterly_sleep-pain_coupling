@@ -1046,10 +1046,14 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         Sorted unique subject IDs (defines the person indexing).
     id_map : dict
         Mapping {subject_ID: integer_index}.
-    X_person : dict or None, default None
+    X_person : dict, DataFrame or None, default None
         If provided, a dictionary {subject_ID: z-scored_moderator_value}
         adding gamma_sp and gamma_ps parameters for the external moderator.
-        Subjects not in X_person are excluded from the analysis.
+        Several moderators at once (e.g. the dummy codes of a categorical
+        moderator): a DataFrame indexed by subject ID with one column per
+        moderator, adding ``gamma_sp_<column>`` and ``gamma_ps_<column>`` for
+        each. Subjects not in X_person, or with any non-finite value, are
+        excluded from the analysis.
     include_agesex : bool, default True
         Whether to include Age (z-scored) and Sex (centered) as moderators
         of the coupling slopes. Set to False for simpler nested models.
@@ -1206,11 +1210,26 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         raise ValueError(f"columns: unknown keys {sorted(unknown)}; "
                          f"known: {sorted(FRAME_COLUMNS)}")
     cols = {**FRAME_COLUMNS, **(columns or {})}
+    # One moderator (a dict): gamma_sp, gamma_ps. Several (a DataFrame, one column
+    # each): gamma_sp_<column>, gamma_ps_<column>.
+    X_names = None
+    if isinstance(X_person, pd.DataFrame):
+        X_names = [str(c) for c in X_person.columns]
+        X_table = X_person.astype(float)
+        clash = {f"gamma_{d}_{n}" for d in ("sp", "ps") for n in X_names} & set(level_moderators)
+        if clash:
+            raise ValueError(f"X_person columns clash with level_moderators: {sorted(clash)}")
 
     # ------------------------------------------------------------------
     # Filter to subjects with external moderator data (Aim 2 only)
     # ------------------------------------------------------------------
-    if X_person is not None:
+    if X_names is not None:
+        valid_ids = [pid for pid in unique_ids
+                     if pid in X_table.index and np.isfinite(X_table.loc[pid].values).all()]
+        sub_df = model_df[model_df["ID"].isin(valid_ids)].copy()
+        valid_id_map = {pid: i for i, pid in enumerate(valid_ids)}
+        sub_df["pid_idx"] = sub_df["ID"].map(valid_id_map)
+    elif X_person is not None:
         # Keep only subjects present in both the coupling data and the
         # moderator dictionary, and with finite moderator values
         valid_ids = [
@@ -1254,7 +1273,10 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
     # Build observation-level moderator array from person-level dict
     has_moderator = X_person is not None
     if has_moderator:
-        X_array = np.array([X_person[pid] for pid in valid_ids])
+        if X_names is None:
+            X_array = np.array([X_person[pid] for pid in valid_ids])
+        else:
+            X_array = X_table.loc[valid_ids].values      # persons x moderators
         X_obs = X_array[idx]  # broadcast person-level to observation-level
 
     # ------------------------------------------------------------------
@@ -1301,10 +1323,24 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         # moderator_direction, independent of include_sp/include_ps.
         attach_sp = has_moderator and moderator_direction in ("sp", "both")
         attach_ps = has_moderator and moderator_direction in ("ps", "both")
+        def moderator_gammas(direction):
+            if X_names is None:
+                return pm.Normal(f"gamma_{direction}", mu=0, sigma=1)
+            return [pm.Normal(f"gamma_{direction}_{n}", mu=0, sigma=1) for n in X_names]
+
+        def moderation(gamma, X_rows):
+            """gamma * X, summed over the moderators when there are several."""
+            if X_names is None:
+                return gamma * X_rows
+            term = gamma[0] * X_rows[:, 0]
+            for m in range(1, len(gamma)):
+                term = term + gamma[m] * X_rows[:, m]
+            return term
+
         if attach_sp:
-            gamma_sp = pm.Normal("gamma_sp", mu=0, sigma=1)
+            gamma_sp = moderator_gammas("sp")
         if attach_ps:
-            gamma_ps = pm.Normal("gamma_ps", mu=0, sigma=1)
+            gamma_ps = moderator_gammas("ps")
 
         # --- Person-specific random coupling slopes ---
         # tau controls the between-person heterogeneity in coupling.
@@ -1369,7 +1405,7 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                 if include_agesex:
                     s = s + g_sp_age * age + g_sp_sex * sex
                 if attach_sp:
-                    s = s + gamma_sp * X_rows
+                    s = s + moderation(gamma_sp, X_rows)
             else:
                 if not include_ps:
                     return 0.0
@@ -1377,7 +1413,7 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                 if include_agesex:
                     s = s + g_ps_age * age + g_ps_sex * sex
                 if attach_ps:
-                    s = s + gamma_ps * X_rows
+                    s = s + moderation(gamma_ps, X_rows)
             if latent:
                 for d, level, gamma in level_gammas.values():
                     if d == direction:
@@ -1486,7 +1522,9 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             init_zero = {v.name: 0.0 for v in model.free_RVs
                          if v.name in ("a1", "b2", "a2", "b1", "g_sp_age", "g_sp_sex",
                                        "g_ps_age", "g_ps_sex", "gamma_sp", "gamma_ps",
-                                       *level_moderators)}
+                                       *level_moderators,
+                                       *(f"gamma_{d}_{n}" for d in ("sp", "ps")
+                                         for n in (X_names or ())))}
             # small slope SDs, so the random slopes start near zero as well
             init_zero.update({v.name: 0.05 for v in model.free_RVs
                               if v.name in ("tau_sp", "tau_ps")})
