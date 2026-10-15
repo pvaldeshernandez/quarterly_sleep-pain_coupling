@@ -261,6 +261,11 @@ BASELINE_VARS = [
     # The second visit's diary week: the same items as the first.
     *[f"sleep_{item}{k}__s2" for item in ("quality", "pain_today", "pain_rating")
       for k in range(1, 8)],
+    # ... and its other nightly sleep items (night 1 of "refreshed" has no trailing 1)
+    "sleep_refreshed__s2", *[f"sleep_refreshed{k}__s2" for k in range(2, 8)],
+    *[f"sleep_{item}{k}__s2" for item in ("awakenings_length", "fall_asleep_length",
+                                          "wake_up_times", "sleep_length")
+      for k in range(1, 8)],
     # GCPS items at both visits, from which lib/gcps.py grades pain impact (no, low,
     # high) at the second visit, where the export carries no PainGrade_* columns.
     *[f"gcps_q{k}__{s}" for s in ("s1", "s2") for k in range(1, 8)],
