@@ -11,8 +11,15 @@
 #   D  24-25   diagnostics, optimal lag, and the deliverables        (after B and C)
 # B and C write to different step folders, so they run side by side. CPU only:
 # NUTS on these models gains nothing from a GPU.
+#
+# Environment overrides:
+#   QOS=cruzalmeida-b   the burst queue, when the lab's regular CPU quota is full
+#   STAGES="B C D"      submit only these stages (e.g. after A has finished); a
+#                       stage waits only on the earlier stages submitted with it
 set -euo pipefail
 MODEL=${1:?usage: submit_model_version.sh <model>}
+QOS=${QOS:-cruzalmeida}
+STAGES=${STAGES:-A B C D}
 CODE="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$CODE/../.." && pwd)"
 LOGS="$ROOT/derivatives_${MODEL}/logs"
@@ -21,7 +28,7 @@ mkdir -p "$LOGS"
 submit() {  # name, dependency ("" for none), run_pipeline.py arguments...
   local name=$1 dep=$2; shift 2
   sbatch --parsable --job-name="${MODEL}_${name}" ${dep:+--dependency=afterany:$dep} \
-    --account=cruzalmeida --partition=hpg-default \
+    --account=cruzalmeida --qos="$QOS" --partition=hpg-default \
     --nodes=1 --ntasks=1 --cpus-per-task=4 --mem=32G --time=4-00:00:00 \
     --output="$LOGS/%x_%j.log" \
     --wrap="module load conda/25.7.0 && \
@@ -29,8 +36,11 @@ export PYTENSOR_FLAGS=base_compiledir=/orange/cruzalmeida/pvaldeshernandez/.pyte
 cd '$CODE' && python run_pipeline.py --refit --model $MODEL $*"
 }
 
-A=$(submit A_00-08 "" --from 00 --to 08)
-B=$(submit B_09-12 "$A" --from 09 --to 12)
-C=$(submit C_13-23 "$A" --from 13 --to 23)
-D=$(submit D_24-25 "$B:$C" --from 24 --to 25)
-echo "submitted: A=$A B=$B C=$C D=$D  logs: $LOGS"
+want() { [[ " $STAGES " == *" $1 "* ]]; }
+deps() { local IFS=:; local d=("$@"); echo "${d[*]}"; }   # join non-empty ids with ':'
+A= B= C= D=
+want A && A=$(submit A_00-08 "" --from 00 --to 08)
+want B && B=$(submit B_09-12 "$A" --from 09 --to 12)
+want C && C=$(submit C_13-23 "$A" --from 13 --to 23)
+want D && D=$(submit D_24-25 "$(deps $B $C)" --from 24 --to 25)
+echo "submitted (qos $QOS): A=${A:--} B=${B:--} C=${C:--} D=${D:--}  logs: $LOGS"
