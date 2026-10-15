@@ -578,6 +578,18 @@ def sign_concordance_p(n_concordant, n_tested):
 # Shared dataframe loader for step08 / step16 / step21 / step23
 # ===================================================================
 
+#: Column names of the model frame, as step 07 writes them. A dataset whose frame
+#: names these differently (LAMPS: ``day_number`` and standardized diary scores)
+#: passes the names that differ as ``columns=`` to ``fit_bayesian_varx1``.
+FRAME_COLUMNS = {
+    "time": "quarter",                    # integer time step within a person
+    "pain": "pain_factor", "sleep": "sleep_factor",                  # raw scores
+    "pain_lag": "pain_factor_lag1", "sleep_lag": "sleep_factor_lag1",
+    "pain_within": "pain_within", "sleep_within": "sleep_within",    # observed-mean
+    "pain_within_lag": "pain_within_lag1", "sleep_within_lag": "sleep_within_lag1",
+}
+
+
 def load_varx_frame(csv_path, verbose=False):
     """Load the VARX-ready long dataframe and prepare it for any
     ``fit_bayesian_varx1`` / step23 call.
@@ -768,23 +780,22 @@ def add_bivariate_innovations_likelihood(
 # Stationary initial points (latent centering)
 # ===================================================================
 
-def segment_start_points(model_df):
-    """The transitions whose lagged point starts a run of consecutive quarters.
+def segment_start_points(model_df, time_col=FRAME_COLUMNS["time"]):
+    """The transitions whose lagged point starts a run of consecutive time steps.
 
-    A transition at quarter q carries the point at q - 1 as its lag. That point is
-    a start point when no transition in the frame has it as its outcome, i.e. when
-    (ID, q - 1) is not an outcome row. On step 07's full frame these are exactly
-    the first points of the segments; on a subset of transitions (step 11's
-    interpolation-free arm, step 10's complete-covariate rows) a dropped
-    transition makes the next lagged point a start point, which is then modeled
-    rather than silently conditioned on.
+    A transition at step q (a quarter in UPLOAD2, a day in LAMPS; ``time_col``)
+    carries the point at q - 1 as its lag. That point is a start point when no
+    transition in the frame has it as its outcome, i.e. when (ID, q - 1) is not an
+    outcome row. On step 07's full frame these are exactly the first points of the
+    segments; on a subset of transitions (step 11's interpolation-free arm, step
+    10's complete-covariate rows) a dropped transition makes the next lagged point
+    a start point, which is then modeled rather than silently conditioned on.
 
-    Returns the rows of ``model_df`` (the start values are their
-    ``pain_factor_lag1``, ``sleep_factor_lag1``).
+    Returns the rows of ``model_df`` (the start values are their raw lags).
     """
-    outcomes = set(zip(model_df["ID"], model_df["quarter"]))
+    outcomes = set(zip(model_df["ID"], model_df[time_col]))
     is_start = [(i, q - 1) not in outcomes
-                for i, q in zip(model_df["ID"], model_df["quarter"])]
+                for i, q in zip(model_df["ID"], model_df[time_col])]
     return model_df.loc[np.asarray(is_start, dtype=bool)]
 
 
@@ -961,7 +972,9 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        centering=None,
                        initial_points="stationary",
                        level_moderators=None,
-                       sampler_overrides=None):
+                       sampler_overrides=None,
+                       include_contrast=True,
+                       columns=None):
     """Fit the Bayesian VARX(1) model with contrast and optional moderators.
 
     This is the core model-fitting function used by all analyses. It builds
@@ -1072,6 +1085,13 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
     sampler_overrides : dict, optional
         Exceptions to ``SAMPLER`` (e.g. fewer draws for a simulation-recovery
         fit), forwarded to ``run_fit`` so they are recorded in the diagnostics.
+    include_contrast : bool, default True
+        Whether the pain localization contrast K enters (delta_p, delta_s and the
+        interactions omega_sp, omega_ps). False for a dataset without K (LAMPS);
+        then ``model_df`` needs no contrast columns.
+    columns : dict, optional
+        Column names that differ from ``FRAME_COLUMNS`` (step 07's frame), e.g.
+        ``{"time": "day_number", "pain": "pain_z", ...}`` for daily data.
 
     Returns
     -------
@@ -1125,6 +1145,11 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         if not (include_sp if direction == "sp" else include_ps):
             raise ValueError(f"level_moderators[{name!r}]: direction {direction} "
                              "is not in the model")
+    unknown = set(columns or {}) - set(FRAME_COLUMNS)
+    if unknown:
+        raise ValueError(f"columns: unknown keys {sorted(unknown)}; "
+                         f"known: {sorted(FRAME_COLUMNS)}")
+    cols = {**FRAME_COLUMNS, **(columns or {})}
 
     # ------------------------------------------------------------------
     # Filter to subjects with external moderator data (Aim 2 only)
@@ -1146,22 +1171,24 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
 
     n_persons = len(valid_ids)
     if stationary:
-        start = segment_start_points(sub_df)
+        start = segment_start_points(sub_df, time_col=cols["time"])
 
     # ------------------------------------------------------------------
     # Extract data arrays for PyMC (float64 for numerical stability)
     # ------------------------------------------------------------------
     # Latent centering models the RAW scores; the observed-mean deviations and
     # their products are step 07's and would reintroduce the centering it removes.
-    y_cols = (("pain_factor", "sleep_factor", "pain_factor_lag1", "sleep_factor_lag1")
+    y_cols = ((cols["pain"], cols["sleep"], cols["pain_lag"], cols["sleep_lag"])
               if latent else
-              ("pain_within", "sleep_within", "pain_within_lag1", "sleep_within_lag1"))
+              (cols["pain_within"], cols["sleep_within"],
+               cols["pain_within_lag"], cols["sleep_within_lag"]))
     y_pain, y_sleep, pain_lag, sleep_lag = (
         sub_df[c].values.astype(float) for c in y_cols)
-    contrast_lag = sub_df["contrast_within_lag1"].values.astype(float)
-    if not latent:
-        sleep_x_contrast = sub_df["sleep_x_contrast_lag1"].values.astype(float)
-        pain_x_contrast = sub_df["pain_x_contrast_lag1"].values.astype(float)
+    if include_contrast:
+        contrast_lag = sub_df["contrast_within_lag1"].values.astype(float)
+        if not latent:
+            sleep_x_contrast = sub_df["sleep_x_contrast_lag1"].values.astype(float)
+            pain_x_contrast = sub_df["pain_x_contrast_lag1"].values.astype(float)
     idx = sub_df["pid_idx"].values.astype(int)
 
     if include_agesex:
@@ -1186,19 +1213,23 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         if not latent:
             a0 = pm.Normal("a0", mu=0, sigma=5)   # mu_p: intercept
         a1 = pm.Normal("a1", mu=0, sigma=5)   # phi_p: pain AR
-        a3 = pm.Normal("a3", mu=0, sigma=5)   # delta_p: contrast -> pain
+        if include_contrast:
+            a3 = pm.Normal("a3", mu=0, sigma=5)   # delta_p: contrast -> pain
         if include_sp:
             a2 = pm.Normal("a2", mu=0, sigma=5)  # lambda_sp: SP coupling
-            a4 = pm.Normal("a4", mu=0, sigma=5)  # omega_sp: sleep*contrast
+            if include_contrast:
+                a4 = pm.Normal("a4", mu=0, sigma=5)  # omega_sp: sleep*contrast
 
         # Sleep equation parameters (analogous).
         if not latent:
             b0 = pm.Normal("b0", mu=0, sigma=5)   # mu_s: intercept
         b2 = pm.Normal("b2", mu=0, sigma=5)   # phi_s: sleep AR
-        b3 = pm.Normal("b3", mu=0, sigma=5)   # delta_s: contrast -> sleep
+        if include_contrast:
+            b3 = pm.Normal("b3", mu=0, sigma=5)   # delta_s: contrast -> sleep
         if include_ps:
             b1 = pm.Normal("b1", mu=0, sigma=5)  # lambda_ps: PS coupling
-            b4 = pm.Normal("b4", mu=0, sigma=5)  # omega_ps: pain*contrast
+            if include_contrast:
+                b4 = pm.Normal("b4", mu=0, sigma=5)  # omega_ps: pain*contrast
 
         # --- Age & Sex moderation of coupling slopes (gamma ~ N(0,1)) ---
         # Only attach to whichever coupling direction is present.
@@ -1309,14 +1340,19 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             level_pain, level_sleep = alpha_P[idx], alpha_S[idx]
             pain_lag = pain_lag - level_pain
             sleep_lag = sleep_lag - level_sleep
-            sleep_x_contrast = sleep_lag * contrast_lag
-            pain_x_contrast = pain_lag * contrast_lag
+            if include_contrast:
+                sleep_x_contrast = sleep_lag * contrast_lag
+                pain_x_contrast = pain_lag * contrast_lag
             intercept_pain, intercept_sleep = level_pain, level_sleep
         else:
             intercept_pain, intercept_sleep = a0, b0
 
         # --- Linear predictors ---
-        mu_pain = intercept_pain + a1 * pain_lag + a3 * contrast_lag
+        # Terms are added one at a time in the order the published model sums them,
+        # so the graph (and its floating-point result) is unchanged when K is in.
+        mu_pain = intercept_pain + a1 * pain_lag
+        if include_contrast:
+            mu_pain = mu_pain + a3 * contrast_lag
 
         # --- Time-varying covariates, main effects only ---------------------
         # One theta per covariate per equation, N(0, 5) as for the localization
@@ -1344,14 +1380,20 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             x_tv = model_df[col].values.astype("float64")
             mu_pain = mu_pain + pm.Normal(f"theta_p_{col}", mu=0, sigma=5) * x_tv
         if include_sp:
-            mu_pain = mu_pain + a2_i * sleep_lag + a4 * sleep_x_contrast
+            mu_pain = mu_pain + a2_i * sleep_lag
+            if include_contrast:
+                mu_pain = mu_pain + a4 * sleep_x_contrast
 
-        mu_sleep = intercept_sleep + b2 * sleep_lag + b3 * contrast_lag
+        mu_sleep = intercept_sleep + b2 * sleep_lag
+        if include_contrast:
+            mu_sleep = mu_sleep + b3 * contrast_lag
         for col in tv_cols:
             x_tv = model_df[col].values.astype("float64")
             mu_sleep = mu_sleep + pm.Normal(f"theta_s_{col}", mu=0, sigma=5) * x_tv
         if include_ps:
-            mu_sleep = mu_sleep + b1_i * pain_lag + b4 * pain_x_contrast
+            mu_sleep = mu_sleep + b1_i * pain_lag
+            if include_contrast:
+                mu_sleep = mu_sleep + b4 * pain_x_contrast
 
         # --- Correlated innovations via Cholesky trick ---
         innov = add_bivariate_innovations_likelihood(
@@ -1365,8 +1407,8 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             sex_s = start["Sex_c"].values.astype(float) if include_agesex else None
             X_s = X_array[j] if has_moderator else None
             _add_stationary_first_points(
-                j, start["pain_factor_lag1"].values.astype(float),
-                start["sleep_factor_lag1"].values.astype(float),
+                j, start[cols["pain_lag"]].values.astype(float),
+                start[cols["sleep_lag"]].values.astype(float),
                 alpha_P, alpha_S, a1, b2,
                 coupling_slope("sp", j, age_s, sex_s, X_s),
                 coupling_slope("ps", j, age_s, sex_s, X_s),
@@ -2000,12 +2042,14 @@ def extract_results(trace, moderator_name=None):
     return results
 
 
-def extract_person_posteriors(idata, unique_ids, direction):
+def extract_person_posteriors(idata, unique_ids, direction, covariates=None):
     """Extract person-specific coupling posterior summaries.
 
     Computes the full posterior distribution of each person's coupling
     slope by combining the population mean with their random effect:
       person_coupling_i = population_mean + u_i
+    and, when ``covariates`` is given, the person's age and sex terms:
+      + g_age * Age_z_i + g_sex * Sex_c_i
 
     Parameters
     ----------
@@ -2016,6 +2060,10 @@ def extract_person_posteriors(idata, unique_ids, direction):
     direction : str
         ``'sp'`` for sleep-to-pain (a2 + u_sp) or
         ``'ps'`` for pain-to-sleep (b1 + u_ps).
+    covariates : DataFrame, optional
+        One row per person in ``unique_ids`` order, with ``Age_z`` and
+        ``Sex_c``. Their moderation terms are added when the fit has them
+        (``include_agesex=True``). Default: the slope at average age and sex.
 
     Returns
     -------
@@ -2040,6 +2088,12 @@ def extract_person_posteriors(idata, unique_ids, direction):
 
     # Person-specific coupling = population mean + person random effect
     coupling_samples = beta_flat[:, None] + u_flat
+    if covariates is not None:
+        for name, col in ((f"g_{direction}_age", "Age_z"), (f"g_{direction}_sex", "Sex_c")):
+            if name in idata.posterior:
+                g = idata.posterior[name].values.reshape(-1)
+                x = np.asarray(covariates[col], dtype=float)
+                coupling_samples = coupling_samples + g[:, None] * x[None, :]
 
     # Summarize each person's posterior
     rows = []

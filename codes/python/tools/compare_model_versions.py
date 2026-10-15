@@ -62,6 +62,7 @@ FAMILIES = [
 
 
 def read_diagnostics(deriv_dir):
+    """Every fit's diagnostics_*.json under one derivatives folder, indexed by fit_id."""
     rows = []
     for path in sorted(glob.glob(os.path.join(deriv_dir, "step*", "diagnostics_*.json"))):
         with open(path) as fh:
@@ -70,6 +71,7 @@ def read_diagnostics(deriv_dir):
 
 
 def family_of(fit_id):
+    """The analysis family (summary row label) a fit belongs to."""
     for prefix, label in FAMILIES:
         if fit_id.startswith(prefix):
             return label
@@ -77,6 +79,7 @@ def family_of(fit_id):
 
 
 def by_fit(pub, new, name):
+    """Every diagnostic of every fit, published beside version ``name``."""
     ids = sorted(set(pub.index) | set(new.index))
     out = pd.DataFrame(index=pd.Index(ids, name="fit_id"))
     out["family"] = [family_of(i) for i in ids]
@@ -87,7 +90,9 @@ def by_fit(pub, new, name):
 
 
 def summarize(fits, name):
+    """Worst case of each diagnostic per analysis family and over all fits."""
     def agg(frame, how, col):
+        """max, min or sum of one column, ignoring fits that lack it."""
         s = pd.to_numeric(frame[col], errors="coerce").dropna()
         if s.empty:
             return None
@@ -110,6 +115,7 @@ def summarize(fits, name):
 
 
 def side_by_side(path_pub, path_new, keys, value_cols, name, read=None):
+    """One table from both versions, joined on ``keys``; None if either is missing."""
     read = read or (lambda p: pd.read_csv(p, float_precision="round_trip"))
     if not (os.path.exists(path_pub) and os.path.exists(path_new)):
         return None
@@ -119,6 +125,7 @@ def side_by_side(path_pub, path_new, keys, value_cols, name, read=None):
 
 
 def main():
+    """Write the comparison tables for ``--model``."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True, choices=sorted(set(model_version.MODELS) - {"observed"}))

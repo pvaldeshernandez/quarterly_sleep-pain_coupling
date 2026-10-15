@@ -39,15 +39,16 @@ Bayesian VARX(1) Model for Bidirectional Sleep-Pain Coupling
 - `load_varx_frame(csv_path, verbose)` — Load the VARX-ready long dataframe and prepare it for any
 - `add_raw_lags(df)` — Add ``pain_factor_lag1`` and ``sleep_factor_lag1``: the raw scores one quarter back.
 - `add_bivariate_innovations_likelihood(mu_pain, mu_sleep, y_pain, y_sleep, name_suffix)` — Attach the bivariate-normal innovations likelihood to the current
-- `segment_start_points(model_df)` — The transitions whose lagged point starts a run of consecutive quarters.
+- `segment_start_points(model_df, time_col)` — The transitions whose lagged point starts a run of consecutive time steps.
 - `_add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s, b, c, innov)` — Likelihood of each segment's first point under the stationary distribution.
+- `_stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid)` — Bivariate-normal log-density of the start points as p(pain) p(sleep | pain).
 - `build_timevarying(model_df, df_full, raw_long, covars, standardize, binary, interpolate)` — Within-person-centered time-varying covariates and their within-segment lag-1.
-- `fit_bayesian_varx1(model_df, unique_ids, id_map, X_person, include_agesex, include_sp, include_ps, moderator_direction, X_tv, idata_kwargs, cores, progressbar, fit_id, out_dir, centering, initial_points, level_moderators, sampler_overrides)` — Fit the Bayesian VARX(1) model with contrast and optional moderators.
+- `fit_bayesian_varx1(model_df, unique_ids, id_map, X_person, include_agesex, include_sp, include_ps, moderator_direction, X_tv, idata_kwargs, cores, progressbar, fit_id, out_dir, centering, initial_points, level_moderators, sampler_overrides, include_contrast, columns)` — Fit the Bayesian VARX(1) model with contrast and optional moderators.
 - `fit_roi_moderation_set(roi_df, model_df, unique_ids, id_map, direction, rois, fit_id_prefix, out_dir, include_agesex, progressbar, verbose)` — Fit one moderation model per ROI and tabulate them.
 - `compute_loo_comparison(data_dir, synthetic)` — Fit four nested coupling-direction models and compare via LOO-CV.
 - `compute_jn_curve(intercept_draws, slope_draws, X_vals, raw_mean, raw_sd, clip_pct)` — Compute a Bayesian Johnson-Neyman (JN) significance curve.
 - `extract_results(trace, moderator_name)` — Extract summary statistics from the posterior.
-- `extract_person_posteriors(idata, unique_ids, direction)` — Extract person-specific coupling posterior summaries.
+- `extract_person_posteriors(idata, unique_ids, direction, covariates)` — Extract person-specific coupling posterior summaries.
 
 ### `descriptives.py`
 
@@ -522,6 +523,18 @@ Compare the two interpolation arms on everything the paper concludes.
 - `section(title)` — *(undocumented)*
 - `main()` — *(undocumented)*
 
+### `compare_model_versions.py`
+
+Compare a model version's checks with the published (observed) version.
+
+- `read_diagnostics(deriv_dir)` — Every fit's diagnostics_*.json under one derivatives folder, indexed by fit_id.
+- `family_of(fit_id)` — The analysis family (summary row label) a fit belongs to.
+- `by_fit(pub, new, name)` — Every diagnostic of every fit, published beside version ``name``.
+- `summarize(fits, name)` — Worst case of each diagnostic per analysis family and over all fits.
+  - `agg(frame, how, col)` — max, min or sum of one column, ignoring fits that lack it.
+- `side_by_side(path_pub, path_new, keys, value_cols, name, read)` — One table from both versions, joined on ``keys``; None if either is missing.
+- `main()` — Write the comparison tables for ``--model``.
+
 ### `compare_registries.py`
 
 Diff two runs of the pipeline, by NAME rather than by file.
@@ -536,7 +549,7 @@ Regenerate `codes/python/FUNCTIONS.md` from the code itself.
 - `summarize(node)` — First docstring line of a callable, or a visible placeholder.
 - `signature(node)` — `(a, b, *rest, kw, **kwargs)` — names only; defaults are in the source.
 - `walk(node, depth, lines)` — Emit one bullet per callable, indented by nesting depth.
-- `render()` — The whole registry as one Markdown string.
+- `render(code, sections, generator)` — The whole registry as one Markdown string.
 - `main()` — *(undocumented)*
 
 ### `renumber_pipeline.py`
