@@ -40,6 +40,7 @@ Bayesian VARX(1) Model for Bidirectional Sleep-Pain Coupling
 - `add_raw_lags(df)` — Add ``pain_factor_lag1`` and ``sleep_factor_lag1``: the raw scores one quarter back.
 - `add_bivariate_innovations_likelihood(mu_pain, mu_sleep, y_pain, y_sleep, name_suffix)` — Attach the bivariate-normal innovations likelihood to the current
 - `segment_start_points(model_df, time_col)` — The transitions whose lagged point starts a run of consecutive time steps.
+- `_finite_horizon_cov(a, b, c, d, s11, s12, s22, horizon_log2)` — V_H = sum_{k<H} A^k Sigma A^k' for A = [[a, b], [c, d]], H = 2**horizon_log2.
 - `_add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s, b, c, innov)` — Likelihood of each segment's first point under the stationary distribution.
 - `_stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid)` — Bivariate-normal log-density of the start points as p(pain) p(sleep | pain).
 - `build_timevarying(model_df, df_full, raw_long, covars, standardize, binary, interpolate)` — Within-person-centered time-varying covariates and their within-segment lag-1.

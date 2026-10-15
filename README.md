@@ -2,7 +2,21 @@
 
 Reproducible analysis code for:
 
-> Valdes-Hernandez PA, Montesino-Goicolea S, Li X, Peraza JA, Weber E, Mickle AM, Staud R, Lai S, Sibille KT, Goodin BR, Fillingim RB, Cruz-Almeida Y. **Quarterly Sleep-Pain Coupling in Knee Pain: Pain-to-Sleep Dominance and NAcc-Gated Sleep-to-Pain Coupling.** *[Journal TBD]*, 2026.
+> Valdes-Hernandez PA, Montesino-Goicolea S, Li X, Peraza JA, Weber E, Mickle AM, Staud R, Lai S, Sibille KT, Goodin BR, Fillingim RB, Cruz-Almeida Y. **Quarterly Sleep–Pain Coupling in Knee Pain: Pain-to-Sleep Dominance, Localization Dependence, and Reward-Circuit Moderation of Sleep-to-Pain Coupling.** *The Journal of Pain*. 2026;106459. doi:[10.1016/j.jpain.2026.106459](https://doi.org/10.1016/j.jpain.2026.106459). [Full text](https://www.jpain.org/article/S1526-5900(26)00277-4/fulltext)
+
+> [!IMPORTANT]
+> **The default model is not the published one.** Since the paper came out, the pipeline
+> runs an improved coupling model by default (`latent`), so a plain `run_pipeline.py --refit`
+> does **not** reproduce the paper's numbers. To reproduce the paper, select the published
+> model, `observed`:
+>
+> ```bash
+> python run_pipeline.py --refit --model observed     # or: export COUPLING_MODEL=observed
+> ```
+>
+> The two models write to different folders and never overwrite each other: the
+> published model to `derivatives/` and `results/`, the default to `derivatives_latent/` and
+> `results_latent/`. See [Model versions](#model-versions).
 
 ---
 
@@ -22,7 +36,8 @@ see [Atlases](#atlases). Then:
 
 ```bash
 cd codes/python
-python run_pipeline.py --refit     # recompute everything, in order
+python run_pipeline.py --refit                    # recompute everything, in order (default model)
+python run_pipeline.py --refit --model observed   # the published paper's model
 ```
 
 There is no list of steps to copy and paste. `run_pipeline.py` discovers them from the
@@ -36,22 +51,28 @@ python run_pipeline.py --list      # print the order and exit
 python run_pipeline.py --from 07 --to 10
 python run_pipeline.py --only 15,18
 python run_pipeline.py --strict    # stop at the first failure instead of continuing
-python run_pipeline.py --refit --model latent   # the latent-centering version
+python run_pipeline.py --refit --model observed   # the published paper's model
 ```
 
-**Model versions.** `--model` selects the coupling model for every step
-(`lib/model_version.py`; a step run on its own reads `COUPLING_MODEL`). `observed`, the
-default, is the published model and writes to `derivatives/` and `results/`. `latent`
-estimates each person's usual pain and sleep level inside the model and models each
-segment's first quarter from the person's stationary distribution (validated by
-simulation in `extensions/latent_centering/`); it writes to `derivatives_latent/` and
-`results_latent/`, so the two versions never overwrite each other. `data/` is shared.
+### Model versions
+
+`--model` selects the coupling model for every step (`lib/model_version.py`; a step run on
+its own reads the environment variable `COUPLING_MODEL`). `data/` is shared by both.
+
+| `--model` | What it is | Writes to |
+|---|---|---|
+| `latent` (default) | Each person's usual pain and sleep level is a parameter of the model (the random intercept of the RI-CLPM / dynamic SEM), and the first quarter of every segment is modeled from the person's stationary distribution. This removes the short-panel bias that subtracting each person's observed mean introduces into the autoregressive and coupling estimates (validated by simulation in `extensions/latent_centering/`). | `derivatives_latent/`, `results_latent/` |
+| `observed` | **The published model.** Each person's observed mean is subtracted before fitting (step 07). Use it to reproduce the paper. | `derivatives/`, `results/` |
+
+The default changed after publication; the published model is kept unchanged and can always
+be selected, either per run (`--model observed`) or for every run and every step run on its
+own (`export COUPLING_MODEL=observed`). Both versions are seeded and bit-reproducible.
 
 Without `--refit`, each step loads its saved derivative and redraws — so changing a figure's
 styling costs seconds, not a refit. With `--refit`, it recomputes.
 
-A full `--refit` of all 26 steps takes **three hours**, measured on a run from an empty
-`derivatives/` and `results/`. Nearly all of it is sampling: step 08 takes 28 minutes for
+A full `--refit` of all 26 steps of the published model (`--model observed`) takes
+**three hours**, measured on a run from an empty `derivatives/` and `results/`. Nearly all of it is sampling: step 08 takes 28 minutes for
 its four models, step 18 forty-four for its sixteen, step 16 twenty-two for its eight.
 **Step 13** re-estimates all 188 first-level GLMs in 8 minutes — it solves the OLS directly
 from the SPM design matrices rather than re-running SPM, so it is not the bottleneck an
@@ -109,8 +130,9 @@ quarterly_sleep-pain_coupling/
 │       └── lib/                         # helpers
 │
 ├── data/                                # inputs (not committed)
-├── derivatives/                         # what a step computed — one folder per step
-├── results/                             # what a step reported — one folder per step
+├── derivatives/                         # what a step computed — one folder per step (published model)
+├── results/                             # what a step reported — one folder per step (published model)
+├── derivatives_latent/, results_latent/ # the same, for the default model
 │   ├── manuscript/                      # figure1.png .. figure6.png
 │   ├── supplementary_materials/         # figureS*.png, tableS*.csv
 │   └── reported_values.csv              # every named value, and the step that made it
@@ -294,9 +316,16 @@ results into documents is an interactive activity, not a pipeline stage.
 ```
 Valdes-Hernandez PA, Montesino-Goicolea S, Li X, Peraza JA, Weber E,
 Mickle AM, Staud R, Lai S, Sibille KT, Goodin BR, Fillingim RB,
-Cruz-Almeida Y. Quarterly Sleep-Pain Coupling in Knee Pain: Pain-to-Sleep
-Dominance and NAcc-Gated Sleep-to-Pain Coupling. [Journal TBD], 2026.
+Cruz-Almeida Y. Quarterly Sleep–Pain Coupling in Knee Pain: Pain-to-Sleep
+Dominance, Localization Dependence, and Reward-Circuit Moderation of
+Sleep-to-Pain Coupling. The Journal of Pain. 2026;106459.
+doi:10.1016/j.jpain.2026.106459
 ```
+
+Full text: <https://www.jpain.org/article/S1526-5900(26)00277-4/fulltext>
+
+The numbers in the paper come from the published model (`--model observed`), not from the
+current default.
 
 ---
 

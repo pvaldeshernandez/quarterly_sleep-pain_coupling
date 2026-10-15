@@ -799,6 +799,41 @@ def segment_start_points(model_df, time_col=FRAME_COLUMNS["time"]):
     return model_df.loc[np.asarray(is_start, dtype=bool)]
 
 
+#: Horizon of the start-point covariance when both coupling directions are in the
+#: model: the start point is the state 2**START_HORIZON_LOG2 = 256 steps (64 years
+#: of quarters) after the person sat at their usual level. For any stationary
+#: person this is the stationary covariance to within rho(A)**512 (< 1e-11 at
+#: rho = 0.95); unlike the exact solution it is finite and smooth for every A, so
+#: the sampler meets a steep but smooth wall instead of a -inf cliff at the
+#: stationarity boundary (the source of the latent model's divergences).
+START_HORIZON_LOG2 = 8
+
+
+def _finite_horizon_cov(a, b, c, d, s11, s12, s22, horizon_log2=START_HORIZON_LOG2):
+    """V_H = sum_{k<H} A^k Sigma A^k' for A = [[a, b], [c, d]], H = 2**horizon_log2.
+
+    The covariance of the state H steps after starting at the mean, for
+    Sigma = [[s11, s12], [s12, s22]]. Computed by doubling, V_2k = V_k + A^k V_k A^k'
+    and A^2k = A^k A^k, so it is a polynomial in A: finite, smooth and positive
+    definite for every A, and equal to the stationary covariance (the solution of
+    V = A V A' + Sigma) up to O(rho(A)^(2H)) when A is stationary. Elementwise, so
+    the arguments may be tensors or arrays of any common shape.
+    """
+    p11, p12, p21, p22 = a, b, c, d
+    v11, v12, v22 = s11, s12, s22
+    for _ in range(horizon_log2):
+        w11 = p11 * v11 + p12 * v12          # W = A^k V_k
+        w12 = p11 * v12 + p12 * v22
+        w21 = p21 * v11 + p22 * v12
+        w22 = p21 * v12 + p22 * v22
+        v11, v12, v22 = (v11 + w11 * p11 + w12 * p12,   # V_k + W A^k'
+                         v12 + w11 * p21 + w12 * p22,
+                         v22 + w21 * p21 + w22 * p22)
+        p11, p12, p21, p22 = (p11 * p11 + p12 * p21, p11 * p12 + p12 * p22,
+                              p21 * p11 + p22 * p21, p21 * p12 + p22 * p22)
+    return v11, v12, v22
+
+
 def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
                                  b, c, innov):
     """Likelihood of each segment's first point under the stationary distribution.
@@ -812,6 +847,13 @@ def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
     (V11, V12, V22), solved here in closed form (Cramer's rule) for every row.
     The point is N(alpha_i, V), factored as p(pain) p(sleep | pain). A
     non-stationary A (no positive-definite V) gets log-probability -inf.
+
+    With both coupling directions in the model, V is instead the covariance after
+    2**START_HORIZON_LOG2 steps (``_finite_horizon_cov``): the same for any
+    stationary person, and finite rather than -inf for a non-stationary one, whose
+    start point is then heavily penalized (its variance grows as rho(A)^512) but
+    not excluded. That removes the -inf cliff that NUTS trajectories hit when two
+    large person slopes b_i, c_i push rho(A_i) past 1.
     """
     a, d = phi_p, phi_s
     sp, ss, r = innov["sigma_pain"], innov["sigma_sleep"], innov["rho_innov"]
@@ -830,6 +872,14 @@ def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
         valid = (pt.abs(detA) < 1) & (pt.abs(trA) < 1 + detA) & (v11 > 0) & (cond_var > 0)
         return _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid)
 
+    if not (isinstance(b, float) or isinstance(c, float)):
+        # both directions: finite-horizon covariance, no stationarity indicator
+        v11, v12, v22 = _finite_horizon_cov(a, b, c, d, s11, s12, s22)
+        cond_var = v22 - v12 ** 2 / v11
+        return _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var,
+                                     valid=None)
+
+    # One direction (A triangular, eigenvalues phi_p and phi_s): exact solution.
     # (I - K) v = s, K rows: [a^2, 2ab, b^2], [ac, ad + bc, bd], [c^2, 2cd, d^2]
     m11, m12, m13 = 1 - a ** 2, -2 * a * b, -b ** 2
     m21, m22, m23 = -a * c, 1 - (a * d + b * c), -b * d
@@ -855,15 +905,21 @@ def _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, val
     """Bivariate-normal log-density of the start points as p(pain) p(sleep | pain).
 
     -inf when the person's dynamics are not stationary (``valid`` False anywhere).
+    ``valid=None``: V is finite and positive definite by construction (the
+    finite-horizon covariance), so there is no indicator and no -inf.
     """
-    v11_safe = pt.switch(valid, v11, 1.0)
-    cond_safe = pt.switch(valid, cond_var, 1.0)
+    if valid is not None:
+        v11 = pt.switch(valid, v11, 1.0)
+        v12 = pt.switch(valid, v12, 0.0)
+        cond_var = pt.switch(valid, cond_var, 1.0)
     e_p = y_p - alpha_P[j]
-    e_s = y_s - alpha_S[j] - pt.switch(valid, v12 / v11_safe, 0.0) * e_p
-    logp = (-0.5 * (pt.log(2 * np.pi * v11_safe) + e_p ** 2 / v11_safe)
-            - 0.5 * (pt.log(2 * np.pi * cond_safe) + e_s ** 2 / cond_safe))
-    pm.Potential("first_points_stationary",
-                 pt.switch(pt.all(valid), pt.sum(logp), -np.inf))
+    e_s = y_s - alpha_S[j] - (v12 / v11) * e_p
+    logp = (-0.5 * (pt.log(2 * np.pi * v11) + e_p ** 2 / v11)
+            - 0.5 * (pt.log(2 * np.pi * cond_var) + e_s ** 2 / cond_var))
+    total = pt.sum(logp)
+    if valid is not None:
+        total = pt.switch(pt.all(valid), total, -np.inf)
+    pm.Potential("first_points_stationary", total)
 
 
 # ===================================================================
@@ -1041,7 +1097,7 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
     centering : {"observed", "latent"}, optional
         How each person's usual pain and sleep level is removed. Default: the
         pipeline's selected model (``lib/model_version.py``; ``run_pipeline.py
-        --model``), which is "observed" unless another model is selected.
+        --model``), which is "latent" unless another model is selected.
 
         ``"observed"`` is the published model: the outcomes and lags are step 07's
         deviations from each person's observed mean (``pain_within``,

@@ -5,12 +5,13 @@
     python run_pipeline.py --refit          # recompute everything (hours)
     python run_pipeline.py --from 07 --to 10
     python run_pipeline.py --list
-    python run_pipeline.py --refit --model latent   # the latent-centering version
+    python run_pipeline.py --refit --model observed   # the published paper's model
 
 `--model` picks the coupling model for every step (lib/model_version.py). The
-published model, `observed`, writes to derivatives/ and results/; any other model
-writes to derivatives_<model>/ and results_<model>/, so versions never overwrite
-each other.
+default is `latent`, which differs from the published paper. The published
+model, `observed`, writes to derivatives/ and results/; any other model writes
+to derivatives_<model>/ and results_<model>/, so versions never overwrite each
+other.
 
 Steps are discovered from the filenames rather than listed here, so inserting
 `step09_posterior_predictive_check.py` makes it part of the pipeline with no edit to
@@ -78,7 +79,8 @@ def main() -> int:
     ap.add_argument("--strict", action="store_true", help="stop at the first failure")
     ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--model", default=None, choices=sorted(model_version.MODELS),
-                    help="coupling model; default: $COUPLING_MODEL, else observed")
+                    help="coupling model; default: $COUPLING_MODEL, else latent "
+                         "(observed = the published paper's model)")
     args = ap.parse_args()
     # Set before any step is imported: steps resolve their output folders at import.
     # The environment also carries it to the collector subprocess.
