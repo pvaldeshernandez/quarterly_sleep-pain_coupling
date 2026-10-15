@@ -255,6 +255,16 @@ BASELINE_VARS = [
     "sleep_pain_rating4__s1", "sleep_pain_rating5__s1", "sleep_pain_rating6__s1",
     "sleep_pain_rating7__s1",
 
+    # --- Daily diary coupling and pain impact at both visits (Oct 2026) ------------
+    # "Any pain today?" gates the pain rating, so a day without pain can be scored 0.
+    *[f"sleep_pain_today{k}__s1" for k in range(1, 8)],
+    # The second visit's diary week: the same items as the first.
+    *[f"sleep_{item}{k}__s2" for item in ("quality", "pain_today", "pain_rating")
+      for k in range(1, 8)],
+    # GCPS items at both visits, from which lib/gcps.py grades pain impact (no, low,
+    # high) at the second visit, where the export carries no PainGrade_* columns.
+    *[f"gcps_q{k}__{s}" for s in ("s1", "s2") for k in range(1, 8)],
+
     # ISI sub-items (the total is listed above)
     "sleep_insomnia_q1__s1", "sleep_insomnia_q2__s1", "sleep_insomnia_q3__s1",
 
