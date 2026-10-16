@@ -144,6 +144,7 @@ import numpy as np
 import pandas as pd
 import pymc as pm
 import pytensor.tensor as pt
+from pymc.distributions.dist_math import log_diff_normal_cdf, normal_lccdf, normal_lcdf
 import arviz as az
 
 import model_version
@@ -709,8 +710,49 @@ def add_raw_lags(df):
 # Correlated-innovations likelihood (shared helper)
 # ===================================================================
 
+def _ordinal_log_probs(eta, sigma, cut):
+    """Log-probability of every category of a rating that is the category of a
+    latent N(eta, sigma^2) value, cut at ``cut`` (ascending): rows x categories.
+    Category 0 is below cut[0], the last above cut[-1] (the cumulative probit)."""
+    probits = pt.shape_padright(eta) - cut
+    return pt.concatenate(
+        [pt.shape_padright(normal_lccdf(0, sigma, probits[..., 0])),
+         log_diff_normal_cdf(0, pt.shape_padright(sigma), probits[..., :-1], probits[..., 1:]),
+         pt.shape_padright(normal_lcdf(0, sigma, probits[..., -1]))],
+        axis=-1)
+
+
+def sleep_rating_cutpoints(values):
+    """Cutpoints of a sleep rating on the model's scale, for ``sleep_categories``.
+
+    ``values`` are the rating's possible values on that scale (e.g. 0..4 z-scored),
+    ascending. The outer two cutpoints are fixed at the midpoints of their neighbouring
+    values, which ties the latent sleep's location and scale to the rating's own; the
+    inner ones are free, ordered by Dirichlet(1) gaps (``sleep_cut_gaps``), so the
+    categories need not be equally spaced. Returns the cutpoints (``sleep_cutpoints``).
+    """
+    v = np.asarray(values, dtype=float)
+    lo, hi = (v[0] + v[1]) / 2, (v[-2] + v[-1]) / 2
+    n_inner = len(v) - 3
+    if n_inner < 1:
+        return pm.Deterministic("sleep_cutpoints", pt.as_tensor_variable(np.array([lo, hi])))
+    gaps = pm.Dirichlet("sleep_cut_gaps", a=np.ones(n_inner + 1))
+    inner = lo + (hi - lo) * pt.cumsum(gaps[:-1])
+    return pm.Deterministic("sleep_cutpoints", pt.concatenate([[lo], inner, [hi]]))
+
+
+def rating_codes(y, values):
+    """Each value's category index in ``values`` (exact matches only)."""
+    v = np.asarray(values, dtype=float)
+    k = np.abs(np.asarray(y, dtype=float)[:, None] - v[None, :]).argmin(axis=1)
+    off = np.abs(np.asarray(y, dtype=float) - v[k]).max() if len(k) else 0.0
+    if off > 1e-6:
+        raise ValueError(f"sleep values off the rating's categories by up to {off}")
+    return k
+
+
 def add_bivariate_innovations_likelihood(
-    mu_pain, mu_sleep, y_pain, y_sleep, name_suffix=""
+    mu_pain, mu_sleep, y_pain, y_sleep, name_suffix="", sleep_cut=None
 ):
     """Attach the bivariate-normal innovations likelihood to the current
     PyMC model via the sequential-conditioning Cholesky trick.
@@ -738,6 +780,11 @@ def add_bivariate_innovations_likelihood(
         Appended to the two observation-node names (``y_pain`` and
         ``y_sleep``) so multiple likelihoods can coexist in one model
         if ever needed. Default empty.
+    sleep_cut : tensor, optional
+        Cutpoints of a sleep rating (``sleep_rating_cutpoints``). Sleep is then
+        the category of the latent continuous sleep (``y_sleep`` holds category
+        indices, ``rating_codes``): the same conditional normal, cut into the
+        rating's categories (cumulative probit). Default: sleep is continuous.
 
     Returns
     -------
@@ -764,10 +811,17 @@ def add_bivariate_innovations_likelihood(
         mu_sleep + rho_innov * (sigma_sleep / sigma_pain) * eps_pain
     )
     sigma_sleep_cond = sigma_sleep * pt.sqrt(1 - rho_innov ** 2)
-    pm.Normal(
-        f"y_sleep{name_suffix}",
-        mu=mu_sleep_cond, sigma=sigma_sleep_cond, observed=y_sleep,
-    )
+    if sleep_cut is None:
+        pm.Normal(
+            f"y_sleep{name_suffix}",
+            mu=mu_sleep_cond, sigma=sigma_sleep_cond, observed=y_sleep,
+        )
+    else:
+        pm.Categorical(
+            f"y_sleep{name_suffix}",
+            logit_p=_ordinal_log_probs(mu_sleep_cond, sigma_sleep_cond, sleep_cut),
+            observed=y_sleep,
+        )
 
     return {
         "sigma_pain": sigma_pain,
@@ -872,7 +926,7 @@ def _level_shifts(alpha_P, alpha_S, X, names):
 
 
 def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
-                                 b, c, innov):
+                                 b, c, innov, sleep_cut=None, sleep_code=None):
     """Likelihood of each segment's first point under the stationary distribution.
 
     ``j`` is each start point's person index and ``y_p``, ``y_s`` its raw scores;
@@ -891,7 +945,12 @@ def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
     start point is then heavily penalized (its variance grows as rho(A)^512) but
     not excluded. That removes the -inf cliff that NUTS trajectories hit when two
     large person slopes b_i, c_i push rho(A_i) past 1.
+
+    ``sleep_cut``, ``sleep_code``: sleep is a rating (``fit_bayesian_varx1``'s
+    ``sleep_categories``); its start point is then the probability of its category
+    under the same conditional normal.
     """
+    rating = dict(sleep_cut=sleep_cut, sleep_code=sleep_code)
     a, d = phi_p, phi_s
     sp, ss, r = innov["sigma_pain"], innov["sigma_sleep"], innov["rho_innov"]
     s11, s12, s22 = sp ** 2, r * sp * ss, ss ** 2
@@ -907,14 +966,15 @@ def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
         detA, trA = a * d, a + d
         cond_var = v22 - v12 ** 2 / v11
         valid = (pt.abs(detA) < 1) & (pt.abs(trA) < 1 + detA) & (v11 > 0) & (cond_var > 0)
-        return _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid)
+        return _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid,
+                                     **rating)
 
     if not (isinstance(b, float) or isinstance(c, float)):
         # both directions: finite-horizon covariance, no stationarity indicator
         v11, v12, v22 = _finite_horizon_cov(a, b, c, d, s11, s12, s22)
         cond_var = v22 - v12 ** 2 / v11
         return _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var,
-                                     valid=None)
+                                     valid=None, **rating)
 
     # One direction (A triangular, eigenvalues phi_p and phi_s): exact solution.
     # (I - K) v = s, K rows: [a^2, 2ab, b^2], [ac, ad + bc, bd], [c^2, 2cd, d^2]
@@ -935,24 +995,32 @@ def _add_stationary_first_points(j, y_p, y_s, alpha_P, alpha_S, phi_p, phi_s,
     detA, trA = a * d - b * c, a + d
     cond_var = v22 - v12 ** 2 / v11
     valid = (pt.abs(detA) < 1) & (pt.abs(trA) < 1 + detA) & (v11 > 0) & (cond_var > 0)
-    return _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid)
+    return _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid,
+                                 **rating)
 
 
-def _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid):
+def _stationary_potential(j, y_p, y_s, alpha_P, alpha_S, v11, v12, cond_var, valid,
+                          sleep_cut=None, sleep_code=None):
     """Bivariate-normal log-density of the start points as p(pain) p(sleep | pain).
 
     -inf when the person's dynamics are not stationary (``valid`` False anywhere).
     ``valid=None``: V is finite and positive definite by construction (the
     finite-horizon covariance), so there is no indicator and no -inf.
+    ``sleep_cut``: sleep is a rating, scored by the probability of its category
+    (``sleep_code``) under the conditional normal instead of its density.
     """
     if valid is not None:
         v11 = pt.switch(valid, v11, 1.0)
         v12 = pt.switch(valid, v12, 0.0)
         cond_var = pt.switch(valid, cond_var, 1.0)
     e_p = y_p - alpha_P[j]
-    e_s = y_s - alpha_S[j] - (v12 / v11) * e_p
-    logp = (-0.5 * (pt.log(2 * np.pi * v11) + e_p ** 2 / v11)
-            - 0.5 * (pt.log(2 * np.pi * cond_var) + e_s ** 2 / cond_var))
+    logp_pain = -0.5 * (pt.log(2 * np.pi * v11) + e_p ** 2 / v11)
+    if sleep_cut is None:
+        e_s = y_s - alpha_S[j] - (v12 / v11) * e_p
+        logp = logp_pain - 0.5 * (pt.log(2 * np.pi * cond_var) + e_s ** 2 / cond_var)
+    else:
+        lp = _ordinal_log_probs(alpha_S[j] + (v12 / v11) * e_p, pt.sqrt(cond_var), sleep_cut)
+        logp = logp_pain + lp[pt.arange(lp.shape[0]), sleep_code]
     total = pt.sum(logp)
     if valid is not None:
         total = pt.switch(pt.all(valid), total, -np.inf)
@@ -1069,7 +1137,8 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                        include_contrast=True,
                        columns=None,
                        persons=None,
-                       X_level=None):
+                       X_level=None,
+                       sleep_categories=None):
     """Fit the Bayesian VARX(1) model with contrast and optional moderators.
 
     This is the core model-fitting function used by all analyses. It builds
@@ -1203,6 +1272,15 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
         ``centering="latent"`` only. Indexed by ID (unit), one column per covariate:
         fixed shifts of the usual pain and sleep levels, ``beta_P_<column>`` and
         ``beta_S_<column>`` ~ N(0, 5) (e.g. a visit indicator).
+    sleep_categories : sequence of float, optional
+        ``centering="latent"`` only. Sleep is a rating with these possible values
+        on the model's scale (ascending, e.g. a 0-4 item z-scored). The sleep
+        OUTCOME is then the category of a latent continuous sleep that follows the
+        same equation (a cumulative probit with the conditional normal's mean and
+        SD; ``sleep_rating_cutpoints``: outer cutpoints fixed at the midpoints of
+        the rating's values, inner ones free), for the transitions and the start
+        points. The lagged sleep predictor stays the observed rating. Default:
+        sleep is continuous.
 
     Returns
     -------
@@ -1316,6 +1394,8 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
             raise ValueError("X_level has missing or non-finite values for fitted units")
     if stationary:
         start = segment_start_points(sub_df, time_col=cols["time"])
+    if sleep_categories is not None and not latent:
+        raise ValueError("sleep_categories requires centering='latent'")
 
     # ------------------------------------------------------------------
     # Extract data arrays for PyMC (float64 for numerical stability)
@@ -1568,9 +1648,13 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                 mu_sleep = mu_sleep + b4 * pain_x_contrast
 
         # --- Correlated innovations via Cholesky trick ---
+        rating = {}
+        if sleep_categories is not None:
+            rating["sleep_cut"] = sleep_rating_cutpoints(sleep_categories)
+            y_sleep = rating_codes(y_sleep, sleep_categories)
         innov = add_bivariate_innovations_likelihood(
             mu_pain=mu_pain, mu_sleep=mu_sleep,
-            y_pain=y_pain, y_sleep=y_sleep,
+            y_pain=y_pain, y_sleep=y_sleep, **rating,
         )
         if stationary:
             # Slopes at K = 0, from the same builder as the transitions.
@@ -1584,7 +1668,10 @@ def fit_bayesian_varx1(model_df, unique_ids, id_map,
                 alpha_P, alpha_S, a1, b2,
                 coupling_slope("sp", j, age_s, sex_s, X_s),
                 coupling_slope("ps", j, age_s, sex_s, X_s),
-                innov)
+                innov, **({"sleep_cut": rating["sleep_cut"],
+                           "sleep_code": rating_codes(start[cols["sleep_lag"]].values,
+                                                      sleep_categories)}
+                          if rating else {}))
 
         # --- MCMC sampling ---
         # Delegated so that this function does not decide sampler settings and does
